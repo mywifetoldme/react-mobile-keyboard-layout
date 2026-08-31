@@ -1,0 +1,61 @@
+{
+  "name": "react-mobile-keyboard-layout",
+  "version": "0.1.0",
+  "description": "Zero-shift header, 0.0px scroll anchoring, and seamless floating input for mobile web and iOS Safari.",
+  "author": "Clubsandwich",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mywifetoldme/react-mobile-keyboard-layout.git"
+  },
+  "keywords": [
+    "react",
+    "mobile",
+    "keyboard",
+    "safari",
+    "ios",
+    "visualViewport",
+    "floating-input",
+    "scroll-restoration",
+    "subpage-layout",
+    "zero-shift"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./dist/index.css": "./dist/index.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "16.2.0",
+    "@types/react": "19.0.10",
+    "@types/react-dom": "19.0.4",
+    "jsdom": "26.0.0",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "tsup": "8.3.6",
+    "typescript": "5.7.3",
+    "vitest": "3.0.7"
+  }
+}
