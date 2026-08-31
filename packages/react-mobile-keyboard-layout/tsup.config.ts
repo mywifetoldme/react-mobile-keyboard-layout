@@ -7,5 +7,8 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   minify: false,
+  banner: {
+    js: "'use client';",
+  },
   external: ['react', 'react-dom'],
 })
