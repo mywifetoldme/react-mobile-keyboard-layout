@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'stack-*']
+  pull_request:
+    branches: [main, 'stack-*']
+
+jobs:
+  verify:
+    name: Verify Codebase
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build Package
+        run: npm run build --workspace=packages/react-mobile-keyboard-layout
+
+      - name: Run Tests
+        run: npm run test --workspace=packages/react-mobile-keyboard-layout
+
+      - name: Build Showcase
+        run: npm run build --workspace=apps/showcase
