@@ -1,6 +1,14 @@
 'use client'
 
-import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type CSSProperties,
+  type RefObject,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
 
 export type ActiveInputType = 'none' | 'floating' | 'body'
@@ -43,7 +51,7 @@ export interface UseMobileKeyboardReturn {
   /** Blur handler for floating input */
   handleFloatingBlur: () => void
   /** Delegated pointerdown handler for scrollable body */
-  handleBodyPointerDown: (e: React.PointerEvent<HTMLElement> | PointerEvent) => void
+  handleBodyPointerDown: (e: ReactPointerEvent<HTMLElement> | PointerEvent) => void
   /** Smoothly scroll feed to bottom and sync baseline closed anchor */
   scrollToBottom: (behavior?: ScrollBehavior) => void
   /** Imperatively lock window scroll position to top (0, 0) */
@@ -93,25 +101,28 @@ export const useMobileKeyboard = ({
   }, [])
 
   // 1. Continuous rAF Top-Lock Loop (Clamps window.scrollY = 0 during keyboard transitions)
-  const startContinuousLockLoop = (duration = lockDurationMs) => {
-    if (typeof window === 'undefined') return
-    if (animationFrameIdRef.current !== null) {
-      cancelAnimationFrame(animationFrameIdRef.current)
-    }
-    lockLoopStartTimeRef.current = performance.now()
+  const startContinuousLockLoop = useCallback(
+    (duration = lockDurationMs) => {
+      if (typeof window === 'undefined') return
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current)
+      }
+      lockLoopStartTimeRef.current = performance.now()
 
-    const step = (now: number) => {
-      if (window.scrollY !== 0) {
-        window.scrollTo(0, 0)
+      const step = (now: number) => {
+        if (window.scrollY !== 0) {
+          window.scrollTo(0, 0)
+        }
+        if (now - lockLoopStartTimeRef.current < duration) {
+          animationFrameIdRef.current = requestAnimationFrame(step)
+        } else {
+          animationFrameIdRef.current = null
+        }
       }
-      if (now - lockLoopStartTimeRef.current < duration) {
-        animationFrameIdRef.current = requestAnimationFrame(step)
-      } else {
-        animationFrameIdRef.current = null
-      }
-    }
-    animationFrameIdRef.current = requestAnimationFrame(step)
-  }
+      animationFrameIdRef.current = requestAnimationFrame(step)
+    },
+    [lockDurationMs],
+  )
 
   // 2. Track visualViewport height and keyboard open/close state
   useEffect(() => {
@@ -152,7 +163,13 @@ export const useMobileKeyboard = ({
         cancelAnimationFrame(animationFrameIdRef.current)
       }
     }
-  }, [keyboardThreshold, lockDurationMs, activeInputType, isBodyInputFocused])
+  }, [
+    keyboardThreshold,
+    lockDurationMs,
+    activeInputType,
+    isBodyInputFocused,
+    startContinuousLockLoop,
+  ])
 
   // 3. Absolute Coordinate Estimation with Frozen Base Values (0.0px exact anchor)
   useEffect(() => {
@@ -180,7 +197,10 @@ export const useMobileKeyboard = ({
         } else {
           // Dynamic viewport contraction adjustment:
           // As container shrinks by deltaH, increase scrollTop by deltaH to anchor pixel row motionless.
-          if (closedBodyHeightRef.current !== null && closedBodyHeightRef.current > currHeight) {
+          if (
+            closedBodyHeightRef.current !== null &&
+            closedBodyHeightRef.current > currHeight
+          ) {
             const deltaH = closedBodyHeightRef.current - currHeight
             const targetScrollTop = closedScrollTopRef.current + deltaH
             isProgrammaticScrollRef.current = true
@@ -227,7 +247,7 @@ export const useMobileKeyboard = ({
       el.removeEventListener('focusin', handleFocusIn)
       el.removeEventListener('focusout', handleFocusOut)
     }
-  }, [bodyRef, lockDurationMs])
+  }, [bodyRef, lockDurationMs, startContinuousLockLoop])
 
   // 5. Global focusout listener to reset input ownership when clicking backdrop
   useEffect(() => {
@@ -274,7 +294,7 @@ export const useMobileKeyboard = ({
         }
       }
     }
-  }, [bodyRef, isKeyboardOpen, isBodyInputFocused, lockDurationMs])
+  }, [bodyRef, isKeyboardOpen, isBodyInputFocused, lockDurationMs, startContinuousLockLoop])
 
   // 7. Floating input focus/blur handlers
   const handleFloatingFocus = () => {
@@ -288,7 +308,9 @@ export const useMobileKeyboard = ({
   }
 
   // 8. Prevent iOS Safari auto-scroll jump when tapping text inputs in body
-  const handleBodyPointerDown = (e: React.PointerEvent<HTMLElement> | PointerEvent) => {
+  const handleBodyPointerDown = (
+    e: ReactPointerEvent<HTMLElement> | PointerEvent,
+  ) => {
     const target = e.target as HTMLElement | null
     if (target && isKeyboardTextInput(target)) {
       e.stopPropagation()
