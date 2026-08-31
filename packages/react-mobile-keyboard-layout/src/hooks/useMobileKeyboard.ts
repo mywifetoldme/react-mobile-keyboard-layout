@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
 import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
 
@@ -18,6 +20,11 @@ export interface UseMobileKeyboardOptions {
    * Default: 350
    */
   lockDurationMs?: number
+  /**
+   * Whether to prevent rubber-banding on non-scrollable background areas outside bodyRef.
+   * Default: false (avoiding global window side-effects unless explicitly enabled).
+   */
+  preventOuterScroll?: boolean
 }
 
 export interface UseMobileKeyboardReturn {
@@ -46,7 +53,7 @@ export interface UseMobileKeyboardReturn {
 /**
  * useMobileKeyboard
  *
- * Core zero-jerk mobile keyboard engine for iOS Safari, Android Chrome, and Mobile Web:
+ * Core zero-jerk mobile keyboard engine:
  * 1. 0.0px Coordinate Preservation Formula: S_new = S_0 + (H_closed - H_curr)
  * 2. 120Hz rAF Continuous Window Top-Lock Loop during keyboard slide animation
  * 3. 3-State Focus Handover State Machine (ActiveInputType: 'none' | 'floating' | 'body')
@@ -56,6 +63,7 @@ export const useMobileKeyboard = ({
   bodyRef,
   keyboardThreshold = 100,
   lockDurationMs = 350,
+  preventOuterScroll = false,
 }: UseMobileKeyboardOptions = {}): UseMobileKeyboardReturn => {
   const [vvHeight, setVvHeight] = useState<number | null>(() => {
     if (typeof window !== 'undefined' && window.visualViewport) {
@@ -74,6 +82,15 @@ export const useMobileKeyboard = ({
   const isProgrammaticScrollRef = useRef<boolean>(false)
   const animationFrameIdRef = useRef<number | null>(null)
   const lockLoopStartTimeRef = useRef<number>(0)
+
+  // Global unmount cleanup
+  useEffect(() => {
+    return () => {
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current)
+      }
+    }
+  }, [])
 
   // 1. Continuous rAF Top-Lock Loop (Clamps window.scrollY = 0 during keyboard transitions)
   const startContinuousLockLoop = (duration = lockDurationMs) => {
@@ -98,8 +115,13 @@ export const useMobileKeyboard = ({
 
   // 2. Track visualViewport height and keyboard open/close state
   useEffect(() => {
+    if (typeof window === 'undefined') return
     const vv = window.visualViewport
     if (!vv) return
+
+    const isTouchDevice =
+      typeof navigator !== 'undefined' &&
+      (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)
 
     const handleResize = () => {
       const currentH = vv.height
@@ -107,7 +129,12 @@ export const useMobileKeyboard = ({
 
       const screenH = window.innerHeight || currentH
       const diff = screenH - currentH
-      const open = diff > keyboardThreshold
+
+      // Only flag keyboard on touch devices or when an input is actively engaged
+      const open =
+        diff > keyboardThreshold &&
+        (isTouchDevice || activeInputType !== 'none' || isBodyInputFocused)
+
       setIsKeyboardOpen(open)
 
       if (open) {
@@ -125,7 +152,7 @@ export const useMobileKeyboard = ({
         cancelAnimationFrame(animationFrameIdRef.current)
       }
     }
-  }, [keyboardThreshold, lockDurationMs])
+  }, [keyboardThreshold, lockDurationMs, activeInputType, isBodyInputFocused])
 
   // 3. Absolute Coordinate Estimation with Frozen Base Values (0.0px exact anchor)
   useEffect(() => {
@@ -204,6 +231,8 @@ export const useMobileKeyboard = ({
 
   // 5. Global focusout listener to reset input ownership when clicking backdrop
   useEffect(() => {
+    if (typeof window === 'undefined') return
+
     const handleGlobalFocusOut = (e: FocusEvent) => {
       const target = e.target as HTMLElement | null
       if (target && isKeyboardTextInput(target)) {
@@ -275,8 +304,10 @@ export const useMobileKeyboard = ({
     }
   }
 
-  // 10. Prevent accidental rubber-banding on outer non-scrollable areas
+  // 10. Optional touchmove clamp (only active if preventOuterScroll is explicitly enabled)
   useEffect(() => {
+    if (!preventOuterScroll || typeof window === 'undefined') return
+
     const preventOuterTouchMove = (e: TouchEvent) => {
       const target = e.target as HTMLElement | null
       const scrollableBody = bodyRef?.current
@@ -290,11 +321,9 @@ export const useMobileKeyboard = ({
 
     window.addEventListener('touchmove', preventOuterTouchMove, { passive: false })
     return () => window.removeEventListener('touchmove', preventOuterTouchMove)
-  }, [bodyRef])
+  }, [bodyRef, preventOuterScroll])
 
-  // 11. Smart bottom scroll helper:
-  // Scrolls the active viewport to the bottom, while simultaneously calculating and caching
-  // the expected closed-state baseline anchor (S_bottom = scrollHeight - H_closed).
+  // 11. Smart bottom scroll helper
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     const el = bodyRef?.current
     if (!el) return
