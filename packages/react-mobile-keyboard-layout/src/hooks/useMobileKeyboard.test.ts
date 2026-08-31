@@ -12,13 +12,16 @@ describe('useMobileKeyboard hook', () => {
     vi.restoreAllMocks()
   })
 
-  it('initializes with default metrics', () => {
+  it('initializes with default metrics and grouped props', () => {
     const bodyRef = { current: document.createElement('div') }
     const { result } = renderHook(() => useMobileKeyboard({ bodyRef }))
 
     expect(result.current.isKeyboardOpen).toBe(false)
     expect(result.current.isFloatingSuppressed).toBe(false)
-    expect(result.current.activeInputType).toBe('none')
+    expect(typeof result.current.floatingProps.onFocus).toBe('function')
+    expect(typeof result.current.floatingProps.onBlur).toBe('function')
+    expect(typeof result.current.bodyProps.onPointerDown).toBe('function')
+    expect(typeof result.current.scrollToBottom).toBe('function')
   })
 
   it('intercepts text inputs on pointerDown with preventScroll: true', () => {
@@ -35,7 +38,7 @@ describe('useMobileKeyboard hook', () => {
     } as unknown as React.PointerEvent<HTMLElement>
 
     act(() => {
-      result.current.handleBodyPointerDown(fakeEvent)
+      result.current.bodyProps.onPointerDown(fakeEvent)
     })
 
     expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
@@ -56,7 +59,7 @@ describe('useMobileKeyboard hook', () => {
     } as unknown as React.PointerEvent<HTMLElement>
 
     act(() => {
-      result.current.handleBodyPointerDown(fakeEvent)
+      result.current.bodyProps.onPointerDown(fakeEvent)
     })
 
     expect(focusSpy).not.toHaveBeenCalled()
@@ -77,17 +80,5 @@ describe('useMobileKeyboard hook', () => {
     })
 
     expect(scrollToSpy).toHaveBeenCalledWith({ top: 600, behavior: 'smooth' })
-  })
-
-  it('locks window to top when window.scrollY > 0', () => {
-    Object.defineProperty(window, 'scrollY', { value: 50, configurable: true })
-    const bodyRef = { current: document.createElement('div') }
-    const { result } = renderHook(() => useMobileKeyboard({ bodyRef }))
-
-    act(() => {
-      result.current.lockToTop()
-    })
-
-    expect(window.scrollTo).toHaveBeenCalledWith(0, 0)
   })
 })

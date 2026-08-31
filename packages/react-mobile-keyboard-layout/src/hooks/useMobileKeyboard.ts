@@ -1,9 +1,9 @@
 'use client'
 
 import {
+  useState,
   useEffect,
   useRef,
-  useState,
   useCallback,
   type CSSProperties,
   type RefObject,
@@ -14,24 +14,13 @@ import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
 export type ActiveInputType = 'none' | 'floating' | 'body'
 
 export interface UseMobileKeyboardOptions {
-  /**
-   * Ref to the scrollable content container.
-   */
+  /** Ref to the scrollable content container */
   bodyRef?: RefObject<HTMLElement | null>
-  /**
-   * Threshold in pixels to treat viewport height contraction as keyboard opening.
-   * Default: 100
-   */
+  /** Threshold in pixels to treat viewport height contraction as keyboard opening. Default: 100 */
   keyboardThreshold?: number
-  /**
-   * Duration in milliseconds for the continuous rAF top-lock loop during keyboard transition.
-   * Default: 350
-   */
+  /** Duration in milliseconds for continuous rAF top-lock loop. Default: 350 */
   lockDurationMs?: number
-  /**
-   * Whether to prevent rubber-banding on non-scrollable background areas outside bodyRef.
-   * Default: false (avoiding global window side-effects unless explicitly enabled).
-   */
+  /** Whether to prevent rubber-banding on non-scrollable background areas. Default: false */
   preventOuterScroll?: boolean
 }
 
@@ -42,30 +31,185 @@ export interface UseMobileKeyboardReturn {
   isKeyboardOpen: boolean
   /** Whether floating input should be hidden/suppressed due to body input focus */
   isFloatingSuppressed: boolean
-  /** Whether a body input is actively focused */
-  isBodyInputFocused: boolean
-  /** Which input type currently owns focus */
-  activeInputType: ActiveInputType
-  /** Focus handler for floating input */
-  handleFloatingFocus: () => void
-  /** Blur handler for floating input */
-  handleFloatingBlur: () => void
-  /** Delegated pointerdown handler for scrollable body */
-  handleBodyPointerDown: (e: ReactPointerEvent<HTMLElement> | PointerEvent) => void
+  /** Grouped props to spread onto the floating input component */
+  floatingProps: {
+    onFocus: () => void
+    onBlur: () => void
+  }
+  /** Grouped props to spread onto the scrollable body container */
+  bodyProps: {
+    onPointerDown: (e: ReactPointerEvent<HTMLElement> | PointerEvent) => void
+  }
   /** Smoothly scroll feed to bottom and sync baseline closed anchor */
   scrollToBottom: (behavior?: ScrollBehavior) => void
-  /** Imperatively lock window scroll position to top (0, 0) */
-  lockToTop: () => void
 }
+
+/* ==========================================================================
+   Pure Lifecycle & Geometry Helpers (Extracted from React Hooks)
+   ========================================================================== */
+
+const isTouchDevice = (): boolean => {
+  return (
+    typeof navigator !== 'undefined' &&
+    (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)
+  )
+}
+
+/**
+ * 0.0px Coordinate Preservation Formula:
+ * Delta_H = H_closed - H_current
+ * S_new = S_0 + Delta_H
+ */
+const calculatePreservedScrollTop = (
+  closedHeight: number | null,
+  currHeight: number,
+  closedScrollTop: number,
+): number | null => {
+  if (closedHeight !== null && closedHeight > currHeight) {
+    const deltaH = closedHeight - currHeight
+    return closedScrollTop + deltaH
+  }
+  return null
+}
+
+const subscribeVisualViewport = (
+  vv: VisualViewport,
+  threshold: number,
+  onUpdate: (height: number, isOpen: boolean) => void,
+) => {
+  const handleUpdate = () => {
+    const currentH = vv.height
+    const screenH = window.innerHeight || currentH
+    const isOpen = screenH - currentH > threshold && isTouchDevice()
+    onUpdate(currentH, isOpen)
+  }
+
+  handleUpdate()
+  const events = ['resize', 'scroll'] as const
+  events.forEach((evt) => vv.addEventListener(evt, handleUpdate))
+
+  return () => {
+    events.forEach((evt) => vv.removeEventListener(evt, handleUpdate))
+  }
+}
+
+interface CoordinateObserverMetrics {
+  getClosedHeight: () => number | null
+  setClosedHeight: (h: number) => void
+  getClosedScrollTop: () => number
+  setClosedScrollTop: (st: number) => void
+  isKeyboardActive: () => boolean
+}
+
+const createCoordinateObserver = (
+  el: HTMLElement,
+  metrics: CoordinateObserverMetrics,
+) => {
+  let isProgrammatic = false
+
+  const handleScroll = () => {
+    if (isProgrammatic || metrics.isKeyboardActive()) return
+    metrics.setClosedScrollTop(el.scrollTop)
+    metrics.setClosedHeight(el.clientHeight)
+  }
+
+  el.addEventListener('scroll', handleScroll, { passive: true })
+
+  const ro = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      const currHeight = entry.contentRect.height
+      if (currHeight <= 0) continue
+
+      if (!metrics.isKeyboardActive()) {
+        metrics.setClosedHeight(currHeight)
+        metrics.setClosedScrollTop(el.scrollTop)
+      } else {
+        const targetScrollTop = calculatePreservedScrollTop(
+          metrics.getClosedHeight(),
+          currHeight,
+          metrics.getClosedScrollTop(),
+        )
+        if (targetScrollTop !== null) {
+          isProgrammatic = true
+          el.scrollTop = targetScrollTop
+          requestAnimationFrame(() => {
+            isProgrammatic = false
+          })
+        }
+      }
+    }
+  })
+
+  ro.observe(el)
+
+  return () => {
+    el.removeEventListener('scroll', handleScroll)
+    ro.disconnect()
+  }
+}
+
+const bindBodyFocusListeners = (
+  el: HTMLElement,
+  onFocusIn: () => void,
+  onFocusOut: () => void,
+) => {
+  const handleFocusIn = (e: FocusEvent) => {
+    if (isKeyboardTextInput(e.target)) onFocusIn()
+  }
+  const handleFocusOut = (e: FocusEvent) => {
+    if (isKeyboardTextInput(e.target)) onFocusOut()
+  }
+
+  el.addEventListener('focusin', handleFocusIn)
+  el.addEventListener('focusout', handleFocusOut)
+  return () => {
+    el.removeEventListener('focusin', handleFocusIn)
+    el.removeEventListener('focusout', handleFocusOut)
+  }
+}
+
+const bindGlobalFocusOutListener = (onResetFocus: () => void) => {
+  if (typeof window === 'undefined') return () => {}
+
+  const handleGlobalFocusOut = (e: FocusEvent) => {
+    if (isKeyboardTextInput(e.target)) {
+      setTimeout(() => {
+        const active = document.activeElement
+        if (!active || active === document.body) {
+          onResetFocus()
+        }
+      }, 50)
+    }
+  }
+
+  window.addEventListener('focusout', handleGlobalFocusOut)
+  return () => window.removeEventListener('focusout', handleGlobalFocusOut)
+}
+
+const bindOuterScrollLock = (
+  scrollableElement: HTMLElement | null,
+  enabled: boolean,
+) => {
+  if (!enabled || typeof window === 'undefined') return () => {}
+
+  const preventOuterTouchMove = (e: TouchEvent) => {
+    const target = e.target as HTMLElement | null
+    if (scrollableElement && scrollableElement.contains(target)) return
+    if (e.cancelable) e.preventDefault()
+  }
+
+  window.addEventListener('touchmove', preventOuterTouchMove, { passive: false })
+  return () => window.removeEventListener('touchmove', preventOuterTouchMove)
+}
+
+/* ==========================================================================
+   Main Headless Hook (Declarative Orchestration Facade)
+   ========================================================================== */
 
 /**
  * useMobileKeyboard
  *
- * Core zero-shift mobile keyboard engine:
- * 1. 0.0px Coordinate Preservation Formula: S_new = S_0 + (H_closed - H_curr)
- * 2. 120Hz rAF Continuous Window Top-Lock Loop during keyboard slide animation
- * 3. 3-State Focus Handover State Machine (ActiveInputType: 'none' | 'floating' | 'body')
- * 4. Smart Bottom Scroll Anchor Synchronization
+ * Zero-shift mobile keyboard layout engine with 0.0px scroll preservation.
  */
 export const useMobileKeyboard = ({
   bodyRef,
@@ -83,11 +227,10 @@ export const useMobileKeyboard = ({
   const [activeInputType, setActiveInputType] = useState<ActiveInputType>('none')
   const [isBodyInputFocused, setIsBodyInputFocused] = useState<boolean>(false)
 
-  // Baseline frozen metrics when keyboard is closed
+  // Frozen baseline coordinates
   const closedScrollTopRef = useRef<number>(0)
   const closedBodyHeightRef = useRef<number | null>(null)
   const isKeyboardActiveRef = useRef<boolean>(false)
-  const isProgrammaticScrollRef = useRef<boolean>(false)
   const animationFrameIdRef = useRef<number | null>(null)
   const lockLoopStartTimeRef = useRef<number>(0)
 
@@ -100,7 +243,7 @@ export const useMobileKeyboard = ({
     }
   }, [])
 
-  // 1. Continuous rAF Top-Lock Loop (Clamps window.scrollY = 0 during keyboard transitions)
+  // 120Hz continuous window top-lock loop (clamps window.scrollY = 0)
   const startContinuousLockLoop = useCallback(
     (duration = lockDurationMs) => {
       if (typeof window === 'undefined') return
@@ -124,153 +267,39 @@ export const useMobileKeyboard = ({
     [lockDurationMs],
   )
 
-  // 2. Track visualViewport height and keyboard open/close state
+  // 1. VisualViewport subscription
   useEffect(() => {
-    if (typeof window === 'undefined') return
     const vv = window.visualViewport
     if (!vv) return
+    return subscribeVisualViewport(
+      vv,
+      keyboardThreshold,
+      (height, open) => {
+        setVvHeight(height)
+        setIsKeyboardOpen(open)
+        if (open) startContinuousLockLoop()
+      },
+    )
+  }, [keyboardThreshold, startContinuousLockLoop])
 
-    const isTouchDevice =
-      typeof navigator !== 'undefined' &&
-      (navigator.maxTouchPoints > 0 || 'ontouchstart' in window)
-
-    const handleResize = () => {
-      const currentH = vv.height
-      setVvHeight(currentH)
-
-      const screenH = window.innerHeight || currentH
-      const diff = screenH - currentH
-
-      // Only flag keyboard on touch devices or when an input is actively engaged
-      const open =
-        diff > keyboardThreshold &&
-        (isTouchDevice || activeInputType !== 'none' || isBodyInputFocused)
-
-      setIsKeyboardOpen(open)
-
-      if (open) {
-        startContinuousLockLoop(lockDurationMs)
-      }
-    }
-
-    handleResize()
-    vv.addEventListener('resize', handleResize)
-    vv.addEventListener('scroll', handleResize)
-    return () => {
-      vv.removeEventListener('resize', handleResize)
-      vv.removeEventListener('scroll', handleResize)
-      if (animationFrameIdRef.current !== null) {
-        cancelAnimationFrame(animationFrameIdRef.current)
-      }
-    }
-  }, [
-    keyboardThreshold,
-    lockDurationMs,
-    activeInputType,
-    isBodyInputFocused,
-    startContinuousLockLoop,
-  ])
-
-  // 3. Absolute Coordinate Estimation with Frozen Base Values (0.0px exact anchor)
+  // 2. ResizeObserver & Coordinate Preservation
   useEffect(() => {
     const el = bodyRef?.current
     if (!el || typeof ResizeObserver === 'undefined') return
-
-    const handleScroll = () => {
-      if (isProgrammaticScrollRef.current || !el) return
-      if (!isKeyboardActiveRef.current) {
-        closedScrollTopRef.current = el.scrollTop
-        closedBodyHeightRef.current = el.clientHeight
-      }
-    }
-
-    el.addEventListener('scroll', handleScroll, { passive: true })
-
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const currHeight = entry.contentRect.height
-        if (currHeight <= 0) continue
-
-        if (!isKeyboardActiveRef.current) {
-          closedBodyHeightRef.current = currHeight
-          closedScrollTopRef.current = el.scrollTop
-        } else {
-          // Dynamic viewport contraction adjustment:
-          // As container shrinks by deltaH, increase scrollTop by deltaH to anchor pixel row motionless.
-          if (
-            closedBodyHeightRef.current !== null &&
-            closedBodyHeightRef.current > currHeight
-          ) {
-            const deltaH = closedBodyHeightRef.current - currHeight
-            const targetScrollTop = closedScrollTopRef.current + deltaH
-            isProgrammaticScrollRef.current = true
-            el.scrollTop = targetScrollTop
-            requestAnimationFrame(() => {
-              isProgrammaticScrollRef.current = false
-            })
-          }
-        }
-      }
+    return createCoordinateObserver(el, {
+      getClosedHeight: () => closedBodyHeightRef.current,
+      setClosedHeight: (h) => {
+        closedBodyHeightRef.current = h
+      },
+      getClosedScrollTop: () => closedScrollTopRef.current,
+      setClosedScrollTop: (st) => {
+        closedScrollTopRef.current = st
+      },
+      isKeyboardActive: () => isKeyboardActiveRef.current,
     })
-
-    ro.observe(el)
-    return () => {
-      el.removeEventListener('scroll', handleScroll)
-      ro.disconnect()
-    }
   }, [bodyRef])
 
-  // 4. Capture native focus events inside the scrollable body
-  useEffect(() => {
-    const el = bodyRef?.current
-    if (!el) return
-
-    const handleFocusIn = (e: FocusEvent) => {
-      const target = e.target as HTMLElement | null
-      if (target && isKeyboardTextInput(target)) {
-        setActiveInputType('body')
-        setIsBodyInputFocused(true)
-        startContinuousLockLoop(lockDurationMs)
-      }
-    }
-
-    const handleFocusOut = (e: FocusEvent) => {
-      const target = e.target as HTMLElement | null
-      if (target && isKeyboardTextInput(target)) {
-        startContinuousLockLoop(lockDurationMs)
-      }
-    }
-
-    el.addEventListener('focusin', handleFocusIn)
-    el.addEventListener('focusout', handleFocusOut)
-    return () => {
-      el.removeEventListener('focusin', handleFocusIn)
-      el.removeEventListener('focusout', handleFocusOut)
-    }
-  }, [bodyRef, lockDurationMs, startContinuousLockLoop])
-
-  // 5. Global focusout listener to reset input ownership when clicking backdrop
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    const handleGlobalFocusOut = (e: FocusEvent) => {
-      const target = e.target as HTMLElement | null
-      if (target && isKeyboardTextInput(target)) {
-        setTimeout(() => {
-          const active = document.activeElement
-          if (!active || active === document.body) {
-            setActiveInputType('none')
-            setIsBodyInputFocused(false)
-          }
-        }, 50)
-      }
-    }
-
-    window.addEventListener('focusout', handleGlobalFocusOut)
-    return () => window.removeEventListener('focusout', handleGlobalFocusOut)
-  }, [])
-
-  // 6. Sync keyboard open/close transitions with exact position restoration
+  // 3. Sync baseline metrics on open/close transitions
   useEffect(() => {
     const el = bodyRef?.current
     if (!el) return
@@ -283,83 +312,83 @@ export const useMobileKeyboard = ({
       }
     } else {
       if (isKeyboardActiveRef.current) {
-        startContinuousLockLoop(lockDurationMs)
+        startContinuousLockLoop()
         isKeyboardActiveRef.current = false
         if (!isBodyInputFocused) {
-          isProgrammaticScrollRef.current = true
           el.scrollTop = closedScrollTopRef.current
-          requestAnimationFrame(() => {
-            isProgrammaticScrollRef.current = false
-          })
         }
       }
     }
-  }, [bodyRef, isKeyboardOpen, isBodyInputFocused, lockDurationMs, startContinuousLockLoop])
+  }, [bodyRef, isKeyboardOpen, isBodyInputFocused, startContinuousLockLoop])
 
-  // 7. Floating input focus/blur handlers
-  const handleFloatingFocus = () => {
-    setActiveInputType('floating')
-    setIsBodyInputFocused(false)
-    startContinuousLockLoop(lockDurationMs)
-  }
-
-  const handleFloatingBlur = () => {
-    startContinuousLockLoop(lockDurationMs)
-  }
-
-  // 8. Prevent iOS Safari auto-scroll jump when tapping text inputs in body
-  const handleBodyPointerDown = (
-    e: ReactPointerEvent<HTMLElement> | PointerEvent,
-  ) => {
-    const target = e.target as HTMLElement | null
-    if (target && isKeyboardTextInput(target)) {
-      e.stopPropagation()
-      startContinuousLockLoop(lockDurationMs)
-      target.focus({ preventScroll: true })
-    }
-  }
-
-  // 9. Manual lockToTop helper
-  const lockToTop = () => {
-    if (typeof window !== 'undefined' && window.scrollY !== 0) {
-      window.scrollTo(0, 0)
-    }
-  }
-
-  // 10. Optional touchmove clamp (only active if preventOuterScroll is explicitly enabled)
+  // 4. Focus Handover FSM (Body + Global)
   useEffect(() => {
-    if (!preventOuterScroll || typeof window === 'undefined') return
+    const el = bodyRef?.current
+    const cleanupBody = el
+      ? bindBodyFocusListeners(
+          el,
+          () => {
+            setActiveInputType('body')
+            setIsBodyInputFocused(true)
+            startContinuousLockLoop()
+          },
+          () => startContinuousLockLoop(),
+        )
+      : () => {}
 
-    const preventOuterTouchMove = (e: TouchEvent) => {
-      const target = e.target as HTMLElement | null
-      const scrollableBody = bodyRef?.current
-      if (scrollableBody && scrollableBody.contains(target)) {
-        return
-      }
-      if (e.cancelable) {
-        e.preventDefault()
-      }
+    const cleanupGlobal = bindGlobalFocusOutListener(() => {
+      setActiveInputType('none')
+      setIsBodyInputFocused(false)
+    })
+
+    return () => {
+      cleanupBody()
+      cleanupGlobal()
     }
+  }, [bodyRef, startContinuousLockLoop])
 
-    window.addEventListener('touchmove', preventOuterTouchMove, { passive: false })
-    return () => window.removeEventListener('touchmove', preventOuterTouchMove)
+  // 5. Optional touchmove clamp
+  useEffect(() => {
+    return bindOuterScrollLock(bodyRef?.current ?? null, preventOuterScroll)
   }, [bodyRef, preventOuterScroll])
 
-  // 11. Smart bottom scroll helper
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    const el = bodyRef?.current
-    if (!el) return
-    const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
-    isProgrammaticScrollRef.current = true
-    const closedHeight = closedBodyHeightRef.current ?? el.clientHeight
-    closedScrollTopRef.current = Math.max(0, el.scrollHeight - closedHeight)
-    el.scrollTo({ top: maxScroll, behavior })
-    requestAnimationFrame(() => {
-      isProgrammaticScrollRef.current = false
-    })
-  }
+  // Floating input handlers
+  const handleFloatingFocus = useCallback(() => {
+    setActiveInputType('floating')
+    setIsBodyInputFocused(false)
+    startContinuousLockLoop()
+  }, [startContinuousLockLoop])
 
-  // Floating input is ONLY suppressed if the body input is the active focus owner
+  const handleFloatingBlur = useCallback(() => {
+    startContinuousLockLoop()
+  }, [startContinuousLockLoop])
+
+  // Body pointerdown preventScroll handler
+  const handleBodyPointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLElement> | PointerEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target && isKeyboardTextInput(target)) {
+        e.stopPropagation()
+        startContinuousLockLoop()
+        target.focus({ preventScroll: true })
+      }
+    },
+    [startContinuousLockLoop],
+  )
+
+  // Smart bottom scroll helper
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = 'smooth') => {
+      const el = bodyRef?.current
+      if (!el) return
+      const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
+      const closedHeight = closedBodyHeightRef.current ?? el.clientHeight
+      closedScrollTopRef.current = Math.max(0, el.scrollHeight - closedHeight)
+      el.scrollTo({ top: maxScroll, behavior })
+    },
+    [bodyRef],
+  )
+
   const isFloatingSuppressed =
     activeInputType === 'body' && (isBodyInputFocused || isKeyboardOpen)
 
@@ -375,12 +404,13 @@ export const useMobileKeyboard = ({
     containerStyle,
     isKeyboardOpen,
     isFloatingSuppressed,
-    isBodyInputFocused,
-    activeInputType,
-    handleFloatingFocus,
-    handleFloatingBlur,
-    handleBodyPointerDown,
+    floatingProps: {
+      onFocus: handleFloatingFocus,
+      onBlur: handleFloatingBlur,
+    },
+    bodyProps: {
+      onPointerDown: handleBodyPointerDown,
+    },
     scrollToBottom,
-    lockToTop,
   }
 }
