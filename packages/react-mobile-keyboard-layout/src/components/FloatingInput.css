@@ -1,0 +1,61 @@
+.rmkl-floating-input-wrapper {
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  background-color: var(--rmkl-bg);
+  border-top: 1px solid var(--rmkl-border);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.rmkl-floating-input-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  background-color: var(--rmkl-input-bg);
+  border: 1px solid var(--rmkl-input-border);
+  border-radius: 20px;
+  padding: 6px 6px 6px 14px;
+}
+
+.rmkl-floating-input-textarea {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  resize: none;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 20px;
+  color: var(--rmkl-input-text);
+  max-height: 120px;
+  padding: 2px 0;
+  margin: 0;
+}
+
+.rmkl-floating-input-textarea::placeholder {
+  color: #a1a1aa;
+}
+
+.rmkl-floating-input-send {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: transparent;
+  color: #a1a1aa;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.rmkl-floating-input-send--active {
+  background-color: var(--rmkl-primary);
+  color: var(--rmkl-primary-text);
+}
+
+.rmkl-floating-input-send:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}

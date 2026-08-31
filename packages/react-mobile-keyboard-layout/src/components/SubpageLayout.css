@@ -1,0 +1,99 @@
+:root {
+  --rmkl-bg: #ffffff;
+  --rmkl-text: #18181b;
+  --rmkl-border: #e4e4e7;
+  --rmkl-header-height: 56px;
+  --rmkl-header-bg: rgba(255, 255, 255, 0.85);
+  --rmkl-header-border: #e4e4e7;
+  --rmkl-input-bg: #f4f4f5;
+  --rmkl-input-text: #18181b;
+  --rmkl-input-border: #e4e4e7;
+  --rmkl-primary: #2563eb;
+  --rmkl-primary-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rmkl-bg: #09090b;
+    --rmkl-text: #f4f4f5;
+    --rmkl-border: #27272a;
+    --rmkl-header-bg: rgba(9, 9, 11, 0.85);
+    --rmkl-header-border: #27272a;
+    --rmkl-input-bg: #18181b;
+    --rmkl-input-text: #f4f4f5;
+    --rmkl-input-border: #27272a;
+    --rmkl-primary: #3b82f6;
+    --rmkl-primary-text: #ffffff;
+  }
+}
+
+.rmkl-subpage-root {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--rmkl-bg);
+  color: var(--rmkl-text);
+  touch-action: none;
+}
+
+.rmkl-subpage-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--rmkl-header-height, 56px);
+  padding-top: env(safe-area-inset-top, 0px);
+  background-color: var(--rmkl-header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rmkl-header-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 16px;
+  padding-right: 16px;
+  z-index: 50;
+}
+
+.rmkl-header-left,
+.rmkl-header-right {
+  display: flex;
+  align-items: center;
+  min-width: 40px;
+}
+
+.rmkl-header-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+
+.rmkl-subpage-body-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding-top: calc(var(--rmkl-header-height, 56px) + env(safe-area-inset-top, 0px));
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.rmkl-subpage-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
+.rmkl-subpage-footer {
+  position: relative;
+  z-index: 40;
+  flex-shrink: 0;
+}
