@@ -1,7 +1,7 @@
 {
   "name": "react-mobile-keyboard-layout",
   "version": "0.1.0",
-  "description": "Zero-jerk header, 0.0px scroll anchoring, and seamless floating input for mobile web and iOS Safari.",
+  "description": "Zero-shift header, 0.0px scroll anchoring, and seamless floating input for mobile web and iOS Safari.",
   "author": "Clubsandwich",
   "license": "MIT",
   "repository": {
@@ -17,7 +17,8 @@
     "visualViewport",
     "floating-input",
     "scroll-restoration",
-    "subpage-layout"
+    "subpage-layout",
+    "zero-shift"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
