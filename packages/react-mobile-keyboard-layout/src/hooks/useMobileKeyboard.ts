@@ -53,7 +53,7 @@ export interface UseMobileKeyboardReturn {
 /**
  * useMobileKeyboard
  *
- * Core zero-jerk mobile keyboard engine:
+ * Core zero-shift mobile keyboard engine:
  * 1. 0.0px Coordinate Preservation Formula: S_new = S_0 + (H_closed - H_curr)
  * 2. 120Hz rAF Continuous Window Top-Lock Loop during keyboard slide animation
  * 3. 3-State Focus Handover State Machine (ActiveInputType: 'none' | 'floating' | 'body')
