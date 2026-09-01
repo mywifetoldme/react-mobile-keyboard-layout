@@ -337,10 +337,10 @@ export const LABS_DATA: LabInfo[] = [
     },
     hypothesis: {
       en: 'Decoupling header outside visualViewport container + preventScroll + 350ms rAF lock + 3-state FSM achieves Native App Parity.',
-      ko: '헤더를 수축 컨테이너 바깥 최상단에 물리적으로 격리 고정하고, preventScroll과 350ms rAF 락, 3-상태 FSM을 결합하면 완벽한 0.0px 헤더 고정과 네이티브 앱 동등 수준을 달성할 수 있다.',
+      ko: '헤더를 수축 컨테이너 바깥 최상단에 물리적으로 격리 고정하고, preventScroll과 350ms rAF 락, 3-상태 FSM을 결합하면 완벽한 상단 헤더 고정과 네이티브 앱 동등 수준을 달성할 수 있다.',
     },
     evaluations: [
-      { id: '1-1', pass: true, comment: { en: 'Header physically isolated; 0.0px motionless top-lock achieved!', ko: '헤더 물리 격리 + 350ms rAF 락으로 상단 헤더 0.0px 완전 고정 달성!' } },
+      { id: '1-1', pass: true, comment: { en: 'Header physically isolated; motionless top-lock achieved!', ko: '헤더 물리 격리 + 350ms rAF 락으로 상단 헤더 고정 완벽 달성!' } },
       { id: '1-2', pass: true, comment: { en: 'Single unified scroll with 100% feed reachability', ko: '단일 스크롤로 헤더부터 바닥까지 100% 완벽 도달' } },
       { id: '1-3', pass: true, comment: { en: 'Safe Area removed on open; snaps with compact margin', ko: '34px Safe Area Inset 제거 + 12px 최적 여백 초밀착' } },
       { id: '1-4', pass: true, comment: { en: 'Reading line anchored with 0.0px visual drift', ko: '동결 기준값 기반 0.0px Scroll Anchoring 완벽 고정' } },
@@ -348,8 +348,8 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', pass: true, comment: { en: '3-state FSM eliminates dismiss flicker 100%', ko: '3-상태 FSM 도입으로 포커스 해제 시 깜빡임 완전 박멸!' } },
     ],
     keyFinding: {
-      en: 'Native App Parity achieved! 0.0px header lock, single unified scroll, 0.0px Scroll Anchoring, compact snap, and zero flicker across all iOS devices.',
-      ko: '상단 헤더 0.0px 완전 고정 + 단일 스크롤 + 0.0px Scroll Anchoring + 12px 초밀착 + FSM 깜빡임 완전 박멸로 네이티브 앱 동등 수준 달성!',
+      en: 'Native App Parity achieved! Header top-lock, single unified scroll, 0.0px Scroll Anchoring, compact snap, and zero flicker across all iOS devices.',
+      ko: '상단 헤더 고정 + 단일 스크롤 + 0.0px Scroll Anchoring + 12px 초밀착 + FSM 깜빡임 완전 박멸로 네이티브 앱 동등 수준 달성!',
     },
     nextDecision: {
       en: 'Adopted as the core production engine of react-mobile-keyboard-layout library!',
