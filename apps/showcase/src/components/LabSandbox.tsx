@@ -54,6 +54,25 @@ const StatusBadge = ({ status, lang }: { status: EvaluationItem['status']; lang:
   )
 }
 
+const LabHeroSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) => (
+  <div style={{
+    padding: '12px',
+    borderRadius: '12px',
+    backgroundColor: '#18181b',
+    border: '1px solid #27272a',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  }}>
+    <div style={{ fontSize: '11px', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      🎯 {lang === 'ko' ? '실험 가설 (Hypothesis)' : 'Hypothesis'}
+    </div>
+    <div style={{ fontSize: '13px', color: '#f4f4f5', lineHeight: '1.5', fontWeight: 500 }}>
+      {lab.hypothesis[lang]}
+    </div>
+  </div>
+)
+
 const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) => {
   const evalCriteria: Record<string, { ko: string; en: string }> = {
     '1-1': { ko: '1-1. 키보드 활성화 시 상단 헤더 고정', en: '1-1. Header Pinned on Keyboard Open' },
@@ -128,6 +147,91 @@ const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) =
     </div>
   )
 }
+
+const LabFindingDecisionSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    {/* Key Finding */}
+    <div style={{
+      padding: '12px',
+      borderRadius: '12px',
+      backgroundColor: lab.status === 'winner' ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+      border: `1px solid ${lab.status === 'winner' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '6px',
+    }}>
+      <div style={{
+        fontSize: '11px',
+        fontWeight: 700,
+        color: lab.status === 'winner' ? '#4ade80' : '#f87171',
+        textTransform: 'uppercase',
+        letterSpacing: '0.05em',
+      }}>
+        🔍 {lang === 'ko' ? '실기기 관찰 결과 & 결함 발견' : 'Key On-Device Finding'}
+      </div>
+      <div style={{
+        fontSize: '12px',
+        color: lab.status === 'winner' ? '#bbf7d0' : '#fca5a5',
+        lineHeight: '1.5',
+      }}>
+        {lab.keyFinding[lang]}
+      </div>
+    </div>
+
+    {/* Next Engineering Decision */}
+    <div style={{
+      padding: '12px',
+      borderRadius: '12px',
+      backgroundColor: 'rgba(59, 130, 246, 0.08)',
+      border: '1px solid rgba(59, 130, 246, 0.3)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '6px',
+    }}>
+      <div style={{ fontSize: '11px', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        💡 {lang === 'ko' ? '엔지니어링 판단 & 다음 결정' : 'Engineering Judgment & Next Decision'}
+      </div>
+      <div style={{ fontSize: '12px', color: '#93c5fd', lineHeight: '1.5', fontWeight: 500 }}>
+        {lab.nextDecision[lang]}
+      </div>
+    </div>
+  </div>
+)
+
+const LabMessagesSection = ({ messages, lang }: { messages: string[]; lang: Language }) => (
+  <div style={{
+    padding: '12px',
+    borderRadius: '12px',
+    backgroundColor: '#18181b',
+    border: '1px solid #27272a',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  }}>
+    <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>
+      💬 {lang === 'ko' ? `실시간 메시지 로그 (${messages.length})` : `Live Message Log (${messages.length})`}
+    </div>
+    {messages.length === 0 ? (
+      <div style={{ fontSize: '12px', color: '#71717a' }}>
+        {lang === 'ko' ? '하단 플로팅 인풋에 글을 입력하고 전송해 보세요.' : 'Type a message in the bottom floating input and tap Send.'}
+      </div>
+    ) : (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {messages.map((msg, i) => (
+          <div key={i} style={{
+            padding: '6px 10px',
+            borderRadius: '6px',
+            backgroundColor: '#27272a',
+            fontSize: '13px',
+            color: '#f4f4f5',
+          }}>
+            #{i + 1}: {msg}
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+)
 
 const LabHeader = ({ lab, lang, onClose, windowScrollY }: { lab: LabInfo; lang: Language; onClose: () => void; windowScrollY: number }) => (
   <header style={{
@@ -265,12 +369,14 @@ const LabFormSection = ({
 const LabFloatingInput = ({
   value,
   onChange,
+  onSubmit,
   onFocus,
   placeholder,
   style,
 }: {
   value: string
   onChange: (v: string) => void
+  onSubmit?: () => void
   onFocus?: () => void
   placeholder: string
   style?: CSSProperties
@@ -299,6 +405,12 @@ const LabFloatingInput = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            onSubmit?.()
+          }
+        }}
         placeholder={placeholder}
         style={{
           flex: 1,
@@ -311,7 +423,7 @@ const LabFloatingInput = ({
       />
       <button
         type="button"
-        onClick={() => onChange('')}
+        onClick={onSubmit}
         style={{
           padding: '6px 12px',
           borderRadius: '16px',
@@ -338,6 +450,7 @@ function Exp01ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -345,151 +458,10 @@ function Exp01ASandbox({ lab, lang, onClose }: LabSandboxProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: '#09090b',
-      color: '#f4f4f5',
-      zIndex: 300,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
-      <LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />
-
-      <main style={{
-        flex: 1,
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        padding: '14px 16px 90px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '14px',
-      }}>
-        <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
-        <LabEvaluationSection lab={lab} lang={lang} />
-        <div style={{ height: '90px', flexShrink: 0 }} />
-      </main>
-
-      <LabFloatingInput
-        value={floatingVal}
-        onChange={setFloatingVal}
-        placeholder="Naive fixed input (Safari pans window)..."
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-        }}
-      />
-    </div>
-  )
-}
-
-/* ==========================================================================
-   2. EXP-01-B: Dynamic Safe Area Inset
-   ========================================================================== */
-
-function Exp01BSandbox({ lab, lang, onClose }: LabSandboxProps) {
-  const [scrollY, setScrollY] = useState(0)
-  const [bodyVal, setBodyVal] = useState('')
-  const [dateVal, setDateVal] = useState('2026-09-01')
-  const [floatingVal, setFloatingVal] = useState('')
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
-
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY)
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const handleResize = () => {
-      const open = vv.height < window.innerHeight - 80
-      setIsKeyboardOpen(open)
-    }
-    vv.addEventListener('resize', handleResize)
-    return () => vv.removeEventListener('resize', handleResize)
-  }, [])
-
-  return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: '#09090b',
-      color: '#f4f4f5',
-      zIndex: 300,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
-      <LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />
-
-      <main style={{
-        flex: 1,
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        padding: '14px 16px 90px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '14px',
-      }}>
-        <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
-        <LabEvaluationSection lab={lab} lang={lang} />
-        <div style={{ height: '90px', flexShrink: 0 }} />
-      </main>
-
-      <LabFloatingInput
-        value={floatingVal}
-        onChange={setFloatingVal}
-        placeholder="Dynamic Inset attempt (visualViewport check)..."
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
-        }}
-      />
-    </div>
-  )
-}
-
-/* ==========================================================================
-   3. EXP-01-C: Document Scroll Lock (Header Lock Attempt)
-   ========================================================================== */
-
-function Exp01CSandbox({ lab, lang, onClose }: LabSandboxProps) {
-  const [scrollY, setScrollY] = useState(0)
-  const [bodyVal, setBodyVal] = useState('')
-  const [dateVal, setDateVal] = useState('2026-09-01')
-  const [floatingVal, setFloatingVal] = useState('')
-
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY)
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  const handleFloatingFocus = () => {
-    const lockDocumentScroll = () => {
-      window.scrollTo(0, 0)
-      if (document.scrollingElement) document.scrollingElement.scrollTop = 0
-      if (document.documentElement) document.documentElement.scrollTop = 0
-      if (document.body) document.body.scrollTop = 0
-    }
-    lockDocumentScroll()
-    requestAnimationFrame(lockDocumentScroll)
-    setTimeout(lockDocumentScroll, 50)
-    setTimeout(lockDocumentScroll, 150)
-    setTimeout(lockDocumentScroll, 300)
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
   }
 
   return (
@@ -516,8 +488,180 @@ function Exp01CSandbox({ lab, lang, onClose }: LabSandboxProps) {
         flexDirection: 'column',
         gap: '14px',
       }}>
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
+        <div style={{ height: '90px', flexShrink: 0 }} />
+      </main>
+
+      <LabFloatingInput
+        value={floatingVal}
+        onChange={setFloatingVal}
+        onSubmit={handleSubmit}
+        placeholder="Naive fixed input (Safari pans window)..."
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+        }}
+      />
+    </div>
+  )
+}
+
+/* ==========================================================================
+   2. EXP-01-B: Dynamic Safe Area Inset
+   ========================================================================== */
+
+function Exp01BSandbox({ lab, lang, onClose }: LabSandboxProps) {
+  const [scrollY, setScrollY] = useState(0)
+  const [bodyVal, setBodyVal] = useState('')
+  const [dateVal, setDateVal] = useState('2026-09-01')
+  const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const handleResize = () => {
+      const open = vv.height < window.innerHeight - 80
+      setIsKeyboardOpen(open)
+    }
+    vv.addEventListener('resize', handleResize)
+    return () => vv.removeEventListener('resize', handleResize)
+  }, [])
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#09090b',
+      color: '#f4f4f5',
+      zIndex: 300,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      <LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />
+
+      <main style={{
+        flex: 1,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        padding: '14px 16px 90px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+      }}>
+        <LabHeroSection lab={lab} lang={lang} />
+        <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
+        <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
+        <div style={{ height: '90px', flexShrink: 0 }} />
+      </main>
+
+      <LabFloatingInput
+        value={floatingVal}
+        onChange={setFloatingVal}
+        onSubmit={handleSubmit}
+        placeholder="Dynamic Inset attempt (visualViewport check)..."
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
+        }}
+      />
+    </div>
+  )
+}
+
+/* ==========================================================================
+   3. EXP-01-C: Document Scroll Lock (Header Lock Attempt)
+   ========================================================================== */
+
+function Exp01CSandbox({ lab, lang, onClose }: LabSandboxProps) {
+  const [scrollY, setScrollY] = useState(0)
+  const [bodyVal, setBodyVal] = useState('')
+  const [dateVal, setDateVal] = useState('2026-09-01')
+  const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const handleFloatingFocus = () => {
+    const lockDocumentScroll = () => {
+      window.scrollTo(0, 0)
+      if (document.scrollingElement) document.scrollingElement.scrollTop = 0
+      if (document.documentElement) document.documentElement.scrollTop = 0
+      if (document.body) document.body.scrollTop = 0
+    }
+    lockDocumentScroll()
+    requestAnimationFrame(lockDocumentScroll)
+    setTimeout(lockDocumentScroll, 50)
+    setTimeout(lockDocumentScroll, 150)
+    setTimeout(lockDocumentScroll, 300)
+  }
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
+  return (
+    <div style={{
+      position: 'fixed',
+      inset: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: '#09090b',
+      color: '#f4f4f5',
+      zIndex: 300,
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      <LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />
+
+      <main style={{
+        flex: 1,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        padding: '14px 16px 90px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+      }}>
+        <LabHeroSection lab={lab} lang={lang} />
+        <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
+        <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '90px', flexShrink: 0 }} />
       </main>
 
@@ -525,6 +669,7 @@ function Exp01CSandbox({ lab, lang, onClose }: LabSandboxProps) {
         value={floatingVal}
         onChange={setFloatingVal}
         onFocus={handleFloatingFocus}
+        onSubmit={handleSubmit}
         placeholder="Tap to test scrollTo(0,0) (input gets buried!)..."
         style={{
           position: 'fixed',
@@ -546,12 +691,19 @@ function Exp01DSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
 
   return (
     <div style={{
@@ -578,14 +730,18 @@ function Exp01DSandbox({ lab, lang, onClose }: LabSandboxProps) {
         flexDirection: 'column',
         gap: '14px',
       }}>
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </main>
 
       <LabFloatingInput
         value={floatingVal}
         onChange={setFloatingVal}
+        onSubmit={handleSubmit}
         placeholder="Pure CSS 100dvh In-Flow input..."
       />
     </div>
@@ -602,6 +758,7 @@ function Exp02ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -621,6 +778,12 @@ function Exp02ASandbox({ lab, lang, onClose }: LabSandboxProps) {
       window.removeEventListener('resize', updateHeight)
     }
   }, [])
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
 
   const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
@@ -650,14 +813,18 @@ function Exp02ASandbox({ lab, lang, onClose }: LabSandboxProps) {
         flexDirection: 'column',
         gap: '14px',
       }}>
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </main>
 
       <LabFloatingInput
         value={floatingVal}
         onChange={setFloatingVal}
+        onSubmit={handleSubmit}
         placeholder="Dynamic visualViewport.height 1:1 input..."
       />
     </div>
@@ -674,6 +841,7 @@ function Exp02BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
 
   const lockToTop = () => {
     if (typeof window === 'undefined') return
@@ -716,6 +884,12 @@ function Exp02BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     setTimeout(lockToTop, 150)
   }
 
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
   const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
@@ -744,8 +918,11 @@ function Exp02BSandbox({ lab, lang, onClose }: LabSandboxProps) {
         flexDirection: 'column',
         gap: '14px',
       }}>
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </main>
 
@@ -753,6 +930,7 @@ function Exp02BSandbox({ lab, lang, onClose }: LabSandboxProps) {
         value={floatingVal}
         onChange={setFloatingVal}
         onFocus={handleFocus}
+        onSubmit={handleSubmit}
         placeholder="Top:0 Lock (336px space concealed)..."
       />
     </div>
@@ -770,6 +948,7 @@ function Exp02CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -796,6 +975,12 @@ function Exp02CSandbox({ lab, lang, onClose }: LabSandboxProps) {
       window.removeEventListener('scroll', handleSync)
     }
   }, [])
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
 
   const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
@@ -826,14 +1011,18 @@ function Exp02CSandbox({ lab, lang, onClose }: LabSandboxProps) {
         flexDirection: 'column',
         gap: '14px',
       }}>
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </main>
 
       <LabFloatingInput
         value={floatingVal}
         onChange={setFloatingVal}
+        onSubmit={handleSubmit}
         placeholder="Offset translateY Tracking (120Hz strobe artifact)..."
       />
     </div>
@@ -850,6 +1039,7 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
 
   const lockToTop = () => {
     if (typeof window === 'undefined') return
@@ -907,6 +1097,12 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
     setTimeout(lockToTop, 150)
   }
 
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
   const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
@@ -938,8 +1134,11 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
           gap: '14px',
         }}
       >
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </main>
 
@@ -947,6 +1146,7 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
         value={floatingVal}
         onChange={setFloatingVal}
         onFocus={handleFocus}
+        onSubmit={handleSubmit}
         placeholder="EXP-02-D Zero-Jank Touch Lock (0px motionless)..."
       />
     </div>
@@ -964,6 +1164,7 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
 
   const lockToTop = () => {
     if (typeof window === 'undefined') return
@@ -1006,6 +1207,12 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
     requestAnimationFrame(lockToTop)
     setTimeout(lockToTop, 50)
     setTimeout(lockToTop, 150)
+  }
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
   }
 
   const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
@@ -1036,8 +1243,11 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
         flexDirection: 'column',
         gap: '14px',
       }}>
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </main>
 
@@ -1045,6 +1255,7 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
         value={floatingVal}
         onChange={setFloatingVal}
         onFocus={handleFocus}
+        onSubmit={handleSubmit}
         placeholder="Safe area drops to 8px (causes 34px scroll jump)..."
         style={{
           padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
@@ -1065,6 +1276,7 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
 
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const closedScrollTopRef = useRef(0)
@@ -1130,6 +1342,12 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     setTimeout(lockToTop, 150)
   }
 
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
   const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
@@ -1161,8 +1379,11 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
           gap: '14px',
         }}
       >
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </main>
 
@@ -1170,6 +1391,7 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
         value={floatingVal}
         onChange={setFloatingVal}
         onFocus={handleFocus}
+        onSubmit={handleSubmit}
         placeholder="ResizeObserver delta-H scroll compensation..."
         style={{
           padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
@@ -1191,6 +1413,7 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+  const [messages, setMessages] = useState<string[]>([])
 
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const closedScrollTopRef = useRef(0)
@@ -1256,6 +1479,12 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
     setTimeout(lockToTop, 150)
   }
 
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
   const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
@@ -1287,6 +1516,7 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
           gap: '14px',
         }}
       >
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection
           lang={lang}
           bodyVal={bodyVal}
@@ -1299,6 +1529,8 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
           }}
         />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </main>
 
@@ -1310,6 +1542,7 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
             setIsSuppressed(false)
             handleFocus()
           }}
+          onSubmit={handleSubmit}
           placeholder="Focus Handover (0px collapse on body input focus)..."
           style={{
             padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
@@ -1328,11 +1561,18 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [floatingVal, setFloatingVal] = useState('')
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
+  const [messages, setMessages] = useState<string[]>([])
   const bodyRef = useRef<HTMLDivElement | null>(null)
 
   const engine = useMobileKeyboard({
     bodyRef,
   })
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
 
   return (
     <SubpageLayout
@@ -1378,7 +1618,7 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
         <FloatingInput
           value={floatingVal}
           onChange={setFloatingVal}
-          onSubmit={() => setFloatingVal('')}
+          onSubmit={handleSubmit}
           placeholder={lang === 'ko' ? 'Zero-Shift 키보드 테스트...' : 'Test zero-shift keyboard input...'}
           {...engine.floatingProps}
           isSuppressed={engine.isFloatingSuppressed}
@@ -1387,8 +1627,11 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
       }
     >
       <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </div>
     </SubpageLayout>
