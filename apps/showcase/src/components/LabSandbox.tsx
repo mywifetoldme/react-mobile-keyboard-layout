@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type CSSProperties } from 'react'
+import { useState, useEffect, useRef, type CSSProperties, type RefObject } from 'react'
 import type { LabInfo, EvaluationItem } from '../data/labsData'
 import type { Language } from '../i18n'
 import {
@@ -293,14 +293,18 @@ const LabFormSection = ({
   setBodyVal,
   dateVal,
   setDateVal,
+  bodyInputRef,
   onBodyFocus,
+  onBodyBlur,
 }: {
   lang: Language
   bodyVal: string
   setBodyVal: (v: string) => void
   dateVal: string
   setDateVal: (v: string) => void
+  bodyInputRef?: RefObject<HTMLInputElement | null>
   onBodyFocus?: () => void
+  onBodyBlur?: () => void
 }) => (
   <div style={{
     padding: '12px',
@@ -320,10 +324,12 @@ const LabFormSection = ({
         {lang === 'ko' ? '본문 텍스트 인풋' : 'Body Text Input'}
       </label>
       <input
+        ref={bodyInputRef}
         type="text"
         value={bodyVal}
         onChange={(e) => setBodyVal(e.target.value)}
         onFocus={onBodyFocus}
+        onBlur={onBodyBlur}
         placeholder={lang === 'ko' ? '터치하여 본문 인풋 테스트...' : 'Tap to test body focus...'}
         style={{
           width: '100%',
@@ -1151,7 +1157,7 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
 }
 
 /* ==========================================================================
-   9. EXP-03-A: Zero-Gap Inset & HUD Relocation
+   9. EXP-03-A: Zero-Gap Inset & Compact Snap
    ========================================================================== */
 
 function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
@@ -1464,14 +1470,14 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
 function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [scrollY, setScrollY] = useState(0)
   const [vvHeight, setVvHeight] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : 0)
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
-  const [isSuppressed, setIsSuppressed] = useState(false)
+  const [isBodyInputFocused, setIsBodyInputFocused] = useState(false)
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
   const [messages, setMessages] = useState<string[]>([])
 
   const bodyRef = useRef<HTMLDivElement | null>(null)
+  const inlineInputRef = useRef<HTMLInputElement | null>(null)
   const closedScrollTopRef = useRef<number>(0)
   const closedBodyHeightRef = useRef<number | null>(null)
   const isKeyboardActiveRef = useRef<boolean>(false)
@@ -1497,8 +1503,6 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
     if (!vv) return
     const updateHeightAndLock = () => {
       setVvHeight(vv.height)
-      const open = window.innerHeight - vv.height > 80
-      setIsKeyboardOpen(open)
       lockToTop()
     }
     updateHeightAndLock()
@@ -1538,7 +1542,8 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
         return
       }
 
-      if (isKeyboardActiveRef.current && closedBodyHeightRef.current !== null) {
+      // If floating input is active (not body inline), apply 0.0px scroll compensation
+      if (isKeyboardActiveRef.current && !isBodyInputFocused && closedBodyHeightRef.current !== null) {
         const deltaH = Math.round(Math.max(0, closedBodyHeightRef.current - currHeight))
         if (deltaH > 0) {
           isProgrammaticScrollRef.current = true
@@ -1555,7 +1560,11 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
       el.removeEventListener('scroll', handleScroll)
       resizeObserver.disconnect()
     }
-  }, [])
+  }, [isBodyInputFocused])
+
+  const isKeyboardOpen = Boolean(
+    vvHeight && typeof window !== 'undefined' && vvHeight < window.innerHeight - 80
+  )
 
   // Sync keyboard open/close transitions with exact position restoration
   useEffect(() => {
@@ -1571,16 +1580,19 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
     } else {
       if (isKeyboardActiveRef.current) {
         isKeyboardActiveRef.current = false
-        isProgrammaticScrollRef.current = true
-        el.scrollTop = closedScrollTopRef.current
-        requestAnimationFrame(() => {
-          isProgrammaticScrollRef.current = false
-        })
+        if (!isBodyInputFocused) {
+          isProgrammaticScrollRef.current = true
+          el.scrollTop = closedScrollTopRef.current
+          requestAnimationFrame(() => {
+            isProgrammaticScrollRef.current = false
+          })
+        }
       }
     }
-  }, [isKeyboardOpen])
+  }, [isKeyboardOpen, isBodyInputFocused])
 
-  const handleFocus = () => {
+  const handleFloatingFocus = () => {
+    setIsBodyInputFocused(false)
     if (bodyRef.current && !isKeyboardActiveRef.current) {
       isKeyboardActiveRef.current = true
       closedScrollTopRef.current = bodyRef.current.scrollTop
@@ -1590,6 +1602,20 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
     requestAnimationFrame(lockToTop)
     setTimeout(lockToTop, 50)
     setTimeout(lockToTop, 150)
+  }
+
+  const handleBodyInputFocus = () => {
+    setIsBodyInputFocused(true)
+    lockToTop()
+    setTimeout(() => {
+      if (inlineInputRef.current) {
+        inlineInputRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      }
+    }, 100)
+  }
+
+  const handleBodyInputBlur = () => {
+    setIsBodyInputFocused(false)
   }
 
   const handleSubmit = () => {
@@ -1636,10 +1662,9 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
           setBodyVal={setBodyVal}
           dateVal={dateVal}
           setDateVal={setDateVal}
-          onBodyFocus={() => {
-            setIsSuppressed(true)
-            handleFocus()
-          }}
+          bodyInputRef={inlineInputRef}
+          onBodyFocus={handleBodyInputFocus}
+          onBodyBlur={handleBodyInputBlur}
         />
         <LabEvaluationSection lab={lab} lang={lang} />
         <LabFindingDecisionSection lab={lab} lang={lang} />
@@ -1647,14 +1672,11 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
         <div style={{ height: '40px', flexShrink: 0 }} />
       </main>
 
-      {!isSuppressed && (
+      {!isBodyInputFocused && (
         <LabFloatingInput
           value={floatingVal}
           onChange={setFloatingVal}
-          onFocus={() => {
-            setIsSuppressed(false)
-            handleFocus()
-          }}
+          onFocus={handleFloatingFocus}
           onSubmit={handleSubmit}
           placeholder="Focus Handover (0px collapse on body input focus)..."
           style={{
