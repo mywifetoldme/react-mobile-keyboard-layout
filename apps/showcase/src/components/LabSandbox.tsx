@@ -13,138 +13,117 @@ interface LabSandboxProps {
   onClose: () => void
 }
 
-const EVAL_TITLES: Record<EvaluationItem['id'], { en: string; ko: string }> = {
-  '1-1': { en: '1-1. Header Top-Lock on Keyboard Active', ko: '1-1. 키보드 활성화 시 상단 헤더 고정' },
-  '1-2': { en: '1-2. Single Scrollport on Keyboard Active', ko: '1-2. 키보드 활성화 시 단일 스크롤 유지' },
-  '1-3': { en: '1-3. Safe Area Inset Removal on Keyboard Active', ko: '1-3. 키보드 활성화 시 Safe Area Inset 제거' },
-  '1-4': { en: '1-4. Body Bottom Scroll Anchoring on Keyboard Active', ko: '1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링' },
-  '2-1': { en: '2-1. Focus Handover on Body Form Input', ko: '2-1. 본문 폼 입력 시 포커스 핸드오버' },
-  '3-1': { en: '3-1. Seamless Restoration on Focus Blur', ko: '3-1. 본문 포커스 해제 시 깜빡임 없는 복원' },
-}
-
 /* ==========================================================================
-   Shared UI Subcomponents
+   Shared Evaluation Badge & Section Components
    ========================================================================== */
 
-const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) => {
+const StatusBadge = ({ status, lang }: { status: EvaluationItem['status']; lang: Language }) => {
+  const isPass = status === 'pass'
+  const isFail = status === 'fail'
+  const text = isPass ? 'PASS' : isFail ? 'FAIL' : 'N/A'
+  const bg = isPass ? 'rgba(34, 197, 94, 0.15)' : isFail ? 'rgba(239, 68, 68, 0.15)' : 'rgba(113, 113, 122, 0.15)'
+  const border = isPass ? '#22c55e' : isFail ? '#ef4444' : '#52525b'
+  const color = isPass ? '#4ade80' : isFail ? '#f87171' : '#a1a1aa'
+  const icon = isPass ? '✅' : isFail ? '❌' : '⚪'
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {/* 1. Hypothesis Card */}
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: '62px',
+        height: '20px',
+        padding: '0 4px',
+        borderRadius: '9999px',
+        backgroundColor: bg,
+        border: `1px solid ${border}`,
+        color,
+        fontSize: '10px',
+        fontWeight: 700,
+        letterSpacing: '0.04em',
+        boxSizing: 'border-box',
+        flexShrink: 0,
+        lineHeight: 1,
+      }}
+      title={status === 'na' ? (lang === 'ko' ? '해당 단계 미도입/평가 대상 아님' : 'Not yet in scope') : undefined}
+    >
+      <span style={{ marginRight: '3px', fontSize: '9px' }}>{icon}</span>
+      {text}
+    </span>
+  )
+}
+
+const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) => {
+  const evalCriteria: Record<string, { ko: string; en: string }> = {
+    '1-1': { ko: '1-1. 키보드 활성화 시 상단 헤더 고정', en: '1-1. Header Pinned on Keyboard Open' },
+    '1-2': { ko: '1-2. 키보드 활성화 시 단일 스크롤 유지', en: '1-2. Single Unified Scroll Maintained' },
+    '1-3': { ko: '1-3. 키보드 활성화 시 Safe Area Inset 제거', en: '1-3. Safe Area Inset Removed on Open' },
+    '1-4': { ko: '1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링', en: '1-4. Body Bottom Scroll Anchoring' },
+    '2-1': { ko: '2-1. 본문 폼 입력 시 포커스 핸드오버', en: '2-1. Inline Form Focus Handover' },
+    '3-1': { ko: '3-1. 본문 포커스 해제 시 깜빡임 없는 복원', en: '3-1. Zero-Flicker Dismiss Restoration' },
+  }
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+      backgroundColor: '#111114',
+      borderRadius: '12px',
+      border: '1px solid #27272a',
+      padding: '12px',
+    }}>
       <div style={{
-        padding: '12px',
-        borderRadius: '12px',
-        backgroundColor: 'rgba(59, 130, 246, 0.08)',
-        border: '1px solid rgba(59, 130, 246, 0.3)',
         fontSize: '12px',
-        lineHeight: '1.4',
-        color: '#d4d4d8',
+        fontWeight: 700,
+        color: '#a1a1aa',
+        marginBottom: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
       }}>
-        <div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: '4px' }}>
-          🧪 {lang === 'ko' ? '실험 가설' : 'Hypothesis'}
-        </div>
-        <div>{lab.hypothesis[lang]}</div>
+        <span>📋 {lang === 'ko' ? '실험 검증 항목 & 실기기 관찰' : 'Evaluation Criteria & Device Findings'}</span>
+        <span style={{ fontSize: '11px', color: '#71717a' }}>6 Items</span>
       </div>
 
-      {/* 2. 6-Point Evaluation Checklist */}
-      <div style={{
-        padding: '14px',
-        borderRadius: '12px',
-        backgroundColor: '#18181b',
-        border: '1px solid #27272a',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-      }}>
-        <div style={{ fontSize: '13px', fontWeight: 700, color: '#f4f4f5', marginBottom: '2px' }}>
-          📊 {lang === 'ko' ? '6대 평가 항목 및 기대 결과' : '6 Evaluation Criteria & Expected Results'}
-        </div>
-
-        {lab.evaluations.map((evalItem) => {
-          const title = EVAL_TITLES[evalItem.id][lang]
-          const isPass = evalItem.status === 'pass'
-          const isFail = evalItem.status === 'fail'
-          const isNa = evalItem.status === 'na'
-
-          const badgeBg = isPass ? '#22c55e' : isFail ? '#ef4444' : '#3f3f46'
-          const badgeColor = isPass ? '#052e16' : '#ffffff'
-          const badgeText = isPass ? '✅ PASS' : isFail ? '❌ FAIL' : '⚪ N/A'
-
-          const cardBg = isPass ? 'rgba(34, 197, 94, 0.06)' : isFail ? 'rgba(239, 68, 68, 0.06)' : 'rgba(113, 113, 122, 0.06)'
-          const cardBorder = isPass ? 'rgba(34, 197, 94, 0.3)' : isFail ? 'rgba(239, 68, 68, 0.3)' : 'rgba(113, 113, 122, 0.2)'
-          const commentColor = isPass ? '#86efac' : isFail ? '#fca5a5' : '#a1a1aa'
-
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {lab.evaluations.map((item) => {
+          const meta = evalCriteria[item.id] || { ko: item.id, en: item.id }
           return (
             <div
-              key={evalItem.id}
+              key={item.id}
               style={{
-                padding: '8px 10px',
-                borderRadius: '8px',
-                backgroundColor: cardBg,
-                border: `1px solid ${cardBorder}`,
                 display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: '8px',
+                padding: '8px',
+                borderRadius: '8px',
+                backgroundColor: item.status === 'na' ? '#141418' : item.status === 'pass' ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)',
+                border: `1px solid ${item.status === 'na' ? '#27272a' : item.status === 'pass' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: isNa ? '#a1a1aa' : '#f4f4f5' }}>
-                  {title}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: 1, minWidth: 0 }}>
+                <span style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: item.status === 'na' ? '#71717a' : '#f4f4f5',
+                }}>
+                  {meta[lang]}
                 </span>
                 <span style={{
-                  width: '62px',
-                  height: '20px',
-                  borderRadius: '4px',
-                  backgroundColor: badgeBg,
-                  color: badgeColor,
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  whiteSpace: 'nowrap',
-                  flexShrink: 0,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  boxSizing: 'border-box',
+                  fontSize: '11px',
+                  color: item.status === 'na' ? '#52525b' : '#a1a1aa',
+                  lineHeight: '1.4',
                 }}>
-                  {badgeText}
+                  {item.comment[lang]}
                 </span>
               </div>
-              <div style={{ fontSize: '11px', color: commentColor, lineHeight: '1.3' }}>
-                {evalItem.comment[lang]}
-              </div>
+              <StatusBadge status={item.status} lang={lang} />
             </div>
           )
         })}
-      </div>
-
-      {/* 3. Key Finding & Next Decision */}
-      <div style={{
-        padding: '14px',
-        borderRadius: '12px',
-        backgroundColor: lab.status === 'winner' ? 'rgba(34, 197, 94, 0.1)' : '#18181b',
-        border: `1px solid ${lab.status === 'winner' ? '#22c55e' : '#3f3f46'}`,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        fontSize: '12px',
-        lineHeight: '1.4',
-      }}>
-        <div>
-          <strong style={{ color: lab.status === 'winner' ? '#4ade80' : '#60a5fa' }}>
-            💡 {lang === 'ko' ? '핵심 발견' : 'Key Finding'}:
-          </strong>{' '}
-          <span style={{ color: '#d4d4d8' }}>{lab.keyFinding[lang]}</span>
-        </div>
-
-        <div style={{
-          paddingTop: '6px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-        }}>
-          <strong style={{ color: lab.status === 'winner' ? '#22c55e' : '#fbbf24' }}>
-            ➡️ {lang === 'ko' ? '다음 결정' : 'Next Decision'}:
-          </strong>{' '}
-          <span style={{ color: '#f4f4f5' }}>{lab.nextDecision[lang]}</span>
-        </div>
       </div>
     </div>
   )
@@ -154,6 +133,7 @@ const LabHeader = ({ lab, lang, onClose, windowScrollY }: { lab: LabInfo; lang: 
   <header style={{
     height: '52px',
     paddingTop: 'env(safe-area-inset-top, 0px)',
+    boxSizing: 'content-box',
     backgroundColor: '#18181b',
     borderBottom: '1px solid #27272a',
     display: 'flex',
@@ -301,6 +281,8 @@ const LabFloatingInput = ({
       backgroundColor: '#18181b',
       borderTop: '1px solid #27272a',
       flexShrink: 0,
+      boxSizing: 'border-box',
+      touchAction: 'none',
       ...style,
     }}
   >
@@ -366,11 +348,9 @@ function Exp01ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: '100vh',
+      inset: 0,
+      width: '100%',
+      height: '100%',
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -440,11 +420,9 @@ function Exp01BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: '100vh',
+      inset: 0,
+      width: '100%',
+      height: '100%',
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -477,7 +455,7 @@ function Exp01BSandbox({ lab, lang, onClose }: LabSandboxProps) {
           bottom: 0,
           left: 0,
           right: 0,
-          padding: isKeyboardOpen ? '8px 16px 34px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
+          padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
         }}
       />
     </div>
@@ -517,11 +495,9 @@ function Exp01CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: '100vh',
+      inset: 0,
+      width: '100%',
+      height: '100%',
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -583,7 +559,6 @@ function Exp01DSandbox({ lab, lang, onClose }: LabSandboxProps) {
       top: 0,
       left: 0,
       right: 0,
-      bottom: 0,
       height: '100dvh',
       backgroundColor: '#09090b',
       color: '#f4f4f5',
@@ -624,7 +599,6 @@ function Exp01DSandbox({ lab, lang, onClose }: LabSandboxProps) {
 function Exp02ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [scrollY, setScrollY] = useState(0)
   const [vvHeight, setVvHeight] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : 0)
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
@@ -638,13 +612,17 @@ function Exp02ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const handleResize = () => {
-      setVvHeight(vv.height)
-      setIsKeyboardOpen(window.innerHeight - vv.height > 80)
+    const updateHeight = () => setVvHeight(vv.height)
+    updateHeight()
+    vv.addEventListener('resize', updateHeight)
+    window.addEventListener('resize', updateHeight)
+    return () => {
+      vv.removeEventListener('resize', updateHeight)
+      window.removeEventListener('resize', updateHeight)
     }
-    vv.addEventListener('resize', handleResize)
-    return () => vv.removeEventListener('resize', handleResize)
   }, [])
+
+  const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
     <div style={{
@@ -652,8 +630,8 @@ function Exp02ASandbox({ lab, lang, onClose }: LabSandboxProps) {
       top: 0,
       left: 0,
       right: 0,
-      height: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
-      maxHeight: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
+      height: dynamicH,
+      maxHeight: dynamicH,
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -693,10 +671,17 @@ function Exp02ASandbox({ lab, lang, onClose }: LabSandboxProps) {
 function Exp02BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [scrollY, setScrollY] = useState(0)
   const [vvHeight, setVvHeight] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : 0)
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+
+  const lockToTop = () => {
+    if (typeof window === 'undefined') return
+    window.scrollTo(0, 0)
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0
+    if (document.documentElement) document.documentElement.scrollTop = 0
+    if (document.body) document.body.scrollTop = 0
+  }
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -707,15 +692,31 @@ function Exp02BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const handleResize = () => {
+    const updateHeightAndLock = () => {
       setVvHeight(vv.height)
-      const open = window.innerHeight - vv.height > 80
-      setIsKeyboardOpen(open)
-      if (open) window.scrollTo(0, 0)
+      lockToTop()
     }
-    vv.addEventListener('resize', handleResize)
-    return () => vv.removeEventListener('resize', handleResize)
+    updateHeightAndLock()
+    vv.addEventListener('resize', updateHeightAndLock)
+    vv.addEventListener('scroll', lockToTop)
+    window.addEventListener('resize', updateHeightAndLock)
+    window.addEventListener('scroll', lockToTop)
+    return () => {
+      vv.removeEventListener('resize', updateHeightAndLock)
+      vv.removeEventListener('scroll', lockToTop)
+      window.removeEventListener('resize', updateHeightAndLock)
+      window.removeEventListener('scroll', lockToTop)
+    }
   }, [])
+
+  const handleFocus = () => {
+    lockToTop()
+    requestAnimationFrame(lockToTop)
+    setTimeout(lockToTop, 50)
+    setTimeout(lockToTop, 150)
+  }
+
+  const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
     <div style={{
@@ -723,8 +724,8 @@ function Exp02BSandbox({ lab, lang, onClose }: LabSandboxProps) {
       top: 0,
       left: 0,
       right: 0,
-      height: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
-      maxHeight: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
+      height: dynamicH,
+      maxHeight: dynamicH,
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -751,8 +752,8 @@ function Exp02BSandbox({ lab, lang, onClose }: LabSandboxProps) {
       <LabFloatingInput
         value={floatingVal}
         onChange={setFloatingVal}
-        onFocus={() => window.scrollTo(0, 0)}
-        placeholder="Top Anchor Lock (Header slides on resize)..."
+        onFocus={handleFocus}
+        placeholder="Top:0 Lock (336px space concealed)..."
       />
     </div>
   )
@@ -764,7 +765,8 @@ function Exp02BSandbox({ lab, lang, onClose }: LabSandboxProps) {
 
 function Exp02CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [scrollY, setScrollY] = useState(0)
-  const [vvOffsetTop, setVvOffsetTop] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetTop : 0)
+  const [vvHeight, setVvHeight] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : 0)
+  const [vvOffsetTop, setVvOffsetTop] = useState(0)
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
@@ -778,14 +780,24 @@ function Exp02CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const handleVv = () => setVvOffsetTop(vv.offsetTop)
-    vv.addEventListener('resize', handleVv)
-    vv.addEventListener('scroll', handleVv)
+    const handleSync = () => {
+      setVvHeight(vv.height)
+      setVvOffsetTop(vv.offsetTop)
+    }
+    handleSync()
+    vv.addEventListener('resize', handleSync)
+    vv.addEventListener('scroll', handleSync)
+    window.addEventListener('resize', handleSync)
+    window.addEventListener('scroll', handleSync)
     return () => {
-      vv.removeEventListener('resize', handleVv)
-      vv.removeEventListener('scroll', handleVv)
+      vv.removeEventListener('resize', handleSync)
+      vv.removeEventListener('scroll', handleSync)
+      window.removeEventListener('resize', handleSync)
+      window.removeEventListener('scroll', handleSync)
     }
   }, [])
+
+  const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
     <div style={{
@@ -793,9 +805,9 @@ function Exp02CSandbox({ lab, lang, onClose }: LabSandboxProps) {
       top: 0,
       left: 0,
       right: 0,
-      height: '100%',
+      height: dynamicH,
+      maxHeight: dynamicH,
       transform: `translateY(${vvOffsetTop}px)`,
-      transition: 'transform 0.05s linear',
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -835,10 +847,17 @@ function Exp02CSandbox({ lab, lang, onClose }: LabSandboxProps) {
 function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [scrollY, setScrollY] = useState(0)
   const [vvHeight, setVvHeight] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : 0)
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
+
+  const lockToTop = () => {
+    if (typeof window === 'undefined') return
+    window.scrollTo(0, 0)
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0
+    if (document.documentElement) document.documentElement.scrollTop = 0
+    if (document.body) document.body.scrollTop = 0
+  }
 
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
@@ -849,15 +868,46 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const handleResize = () => {
+    const updateHeightAndLock = () => {
       setVvHeight(vv.height)
-      const open = window.innerHeight - vv.height > 80
-      setIsKeyboardOpen(open)
-      if (open) window.scrollTo(0, 0)
+      lockToTop()
     }
-    vv.addEventListener('resize', handleResize)
-    return () => vv.removeEventListener('resize', handleResize)
+    updateHeightAndLock()
+    vv.addEventListener('resize', updateHeightAndLock)
+    vv.addEventListener('scroll', lockToTop)
+    window.addEventListener('resize', updateHeightAndLock)
+    window.addEventListener('scroll', lockToTop)
+    return () => {
+      vv.removeEventListener('resize', updateHeightAndLock)
+      vv.removeEventListener('scroll', lockToTop)
+      window.removeEventListener('resize', updateHeightAndLock)
+      window.removeEventListener('scroll', lockToTop)
+    }
   }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const preventOuterTouchMove = (e: TouchEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target && target.closest('.lab-body-scroll-area')) {
+        return
+      }
+      if (e.cancelable) {
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('touchmove', preventOuterTouchMove, { passive: false })
+    return () => window.removeEventListener('touchmove', preventOuterTouchMove)
+  }, [])
+
+  const handleFocus = () => {
+    lockToTop()
+    requestAnimationFrame(lockToTop)
+    setTimeout(lockToTop, 50)
+    setTimeout(lockToTop, 150)
+  }
+
+  const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
     <div style={{
@@ -865,8 +915,8 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
       top: 0,
       left: 0,
       right: 0,
-      height: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
-      maxHeight: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
+      height: dynamicH,
+      maxHeight: dynamicH,
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -876,15 +926,18 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
     }}>
       <LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />
 
-      <main style={{
-        flex: 1,
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        padding: '14px 16px 24px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '14px',
-      }}>
+      <main
+        className="lab-body-scroll-area"
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          padding: '14px 16px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+        }}
+      >
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
@@ -893,9 +946,8 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
       <LabFloatingInput
         value={floatingVal}
         onChange={setFloatingVal}
-        onFocus={() => window.scrollTo(0, 0)}
-        placeholder="touch-action: none shell lock..."
-        style={{ touchAction: 'none' }}
+        onFocus={handleFocus}
+        placeholder="EXP-02-D Zero-Jank Touch Lock (0px motionless)..."
       />
     </div>
   )
@@ -913,6 +965,14 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingVal, setFloatingVal] = useState('')
 
+  const lockToTop = () => {
+    if (typeof window === 'undefined') return
+    window.scrollTo(0, 0)
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0
+    if (document.documentElement) document.documentElement.scrollTop = 0
+    if (document.body) document.body.scrollTop = 0
+  }
+
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -922,15 +982,33 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const handleResize = () => {
+    const updateHeightAndLock = () => {
       setVvHeight(vv.height)
       const open = window.innerHeight - vv.height > 80
       setIsKeyboardOpen(open)
-      if (open) window.scrollTo(0, 0)
+      lockToTop()
     }
-    vv.addEventListener('resize', handleResize)
-    return () => vv.removeEventListener('resize', handleResize)
+    updateHeightAndLock()
+    vv.addEventListener('resize', updateHeightAndLock)
+    vv.addEventListener('scroll', lockToTop)
+    window.addEventListener('resize', updateHeightAndLock)
+    window.addEventListener('scroll', lockToTop)
+    return () => {
+      vv.removeEventListener('resize', updateHeightAndLock)
+      vv.removeEventListener('scroll', lockToTop)
+      window.removeEventListener('resize', updateHeightAndLock)
+      window.removeEventListener('scroll', lockToTop)
+    }
   }, [])
+
+  const handleFocus = () => {
+    lockToTop()
+    requestAnimationFrame(lockToTop)
+    setTimeout(lockToTop, 50)
+    setTimeout(lockToTop, 150)
+  }
+
+  const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
     <div style={{
@@ -938,8 +1016,8 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
       top: 0,
       left: 0,
       right: 0,
-      height: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
-      maxHeight: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
+      height: dynamicH,
+      maxHeight: dynamicH,
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -966,10 +1044,10 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
       <LabFloatingInput
         value={floatingVal}
         onChange={setFloatingVal}
-        onFocus={() => window.scrollTo(0, 0)}
+        onFocus={handleFocus}
         placeholder="Safe area drops to 8px (causes 34px scroll jump)..."
         style={{
-          padding: isKeyboardOpen ? '8px 16px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
+          padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
         }}
       />
     </div>
@@ -992,6 +1070,14 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const closedScrollTopRef = useRef(0)
   const closedHeightRef = useRef<number | null>(null)
 
+  const lockToTop = () => {
+    if (typeof window === 'undefined') return
+    window.scrollTo(0, 0)
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0
+    if (document.documentElement) document.documentElement.scrollTop = 0
+    if (document.body) document.body.scrollTop = 0
+  }
+
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -1001,11 +1087,11 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const handleResize = () => {
+    const updateHeightAndLock = () => {
       setVvHeight(vv.height)
       const open = window.innerHeight - vv.height > 80
       setIsKeyboardOpen(open)
-      if (open) window.scrollTo(0, 0)
+      lockToTop()
 
       if (bodyRef.current) {
         const el = bodyRef.current
@@ -1017,13 +1103,34 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
           const deltaH = closedHeightRef.current - el.clientHeight
           if (deltaH > 0) el.scrollTop = closedScrollTopRef.current + deltaH
         } else {
+          if (closedHeightRef.current !== null) {
+            el.scrollTop = closedScrollTopRef.current
+          }
           closedHeightRef.current = null
         }
       }
     }
-    vv.addEventListener('resize', handleResize)
-    return () => vv.removeEventListener('resize', handleResize)
+    updateHeightAndLock()
+    vv.addEventListener('resize', updateHeightAndLock)
+    vv.addEventListener('scroll', lockToTop)
+    window.addEventListener('resize', updateHeightAndLock)
+    window.addEventListener('scroll', lockToTop)
+    return () => {
+      vv.removeEventListener('resize', updateHeightAndLock)
+      vv.removeEventListener('scroll', lockToTop)
+      window.removeEventListener('resize', updateHeightAndLock)
+      window.removeEventListener('scroll', lockToTop)
+    }
   }, [])
+
+  const handleFocus = () => {
+    lockToTop()
+    requestAnimationFrame(lockToTop)
+    setTimeout(lockToTop, 50)
+    setTimeout(lockToTop, 150)
+  }
+
+  const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
     <div style={{
@@ -1031,8 +1138,8 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
       top: 0,
       left: 0,
       right: 0,
-      height: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
-      maxHeight: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
+      height: dynamicH,
+      maxHeight: dynamicH,
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -1062,10 +1169,10 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
       <LabFloatingInput
         value={floatingVal}
         onChange={setFloatingVal}
-        onFocus={() => window.scrollTo(0, 0)}
+        onFocus={handleFocus}
         placeholder="ResizeObserver delta-H scroll compensation..."
         style={{
-          padding: isKeyboardOpen ? '8px 16px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
+          padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
         }}
       />
     </div>
@@ -1089,6 +1196,14 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const closedScrollTopRef = useRef(0)
   const closedHeightRef = useRef<number | null>(null)
 
+  const lockToTop = () => {
+    if (typeof window === 'undefined') return
+    window.scrollTo(0, 0)
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0
+    if (document.documentElement) document.documentElement.scrollTop = 0
+    if (document.body) document.body.scrollTop = 0
+  }
+
   useEffect(() => {
     const handleScroll = () => setScrollY(window.scrollY)
     window.addEventListener('scroll', handleScroll, { passive: true })
@@ -1098,11 +1213,11 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const handleResize = () => {
+    const updateHeightAndLock = () => {
       setVvHeight(vv.height)
       const open = window.innerHeight - vv.height > 80
       setIsKeyboardOpen(open)
-      if (open) window.scrollTo(0, 0)
+      lockToTop()
 
       if (bodyRef.current) {
         const el = bodyRef.current
@@ -1114,13 +1229,34 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
           const deltaH = closedHeightRef.current - el.clientHeight
           if (deltaH > 0) el.scrollTop = closedScrollTopRef.current + deltaH
         } else {
+          if (closedHeightRef.current !== null) {
+            el.scrollTop = closedScrollTopRef.current
+          }
           closedHeightRef.current = null
         }
       }
     }
-    vv.addEventListener('resize', handleResize)
-    return () => vv.removeEventListener('resize', handleResize)
+    updateHeightAndLock()
+    vv.addEventListener('resize', updateHeightAndLock)
+    vv.addEventListener('scroll', lockToTop)
+    window.addEventListener('resize', updateHeightAndLock)
+    window.addEventListener('scroll', lockToTop)
+    return () => {
+      vv.removeEventListener('resize', updateHeightAndLock)
+      vv.removeEventListener('scroll', lockToTop)
+      window.removeEventListener('resize', updateHeightAndLock)
+      window.removeEventListener('scroll', lockToTop)
+    }
   }, [])
+
+  const handleFocus = () => {
+    lockToTop()
+    requestAnimationFrame(lockToTop)
+    setTimeout(lockToTop, 50)
+    setTimeout(lockToTop, 150)
+  }
+
+  const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
 
   return (
     <div style={{
@@ -1128,8 +1264,8 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
       top: 0,
       left: 0,
       right: 0,
-      height: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
-      maxHeight: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
+      height: dynamicH,
+      maxHeight: dynamicH,
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
@@ -1157,7 +1293,10 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
           setBodyVal={setBodyVal}
           dateVal={dateVal}
           setDateVal={setDateVal}
-          onBodyFocus={() => setIsSuppressed(true)}
+          onBodyFocus={() => {
+            setIsSuppressed(true)
+            handleFocus()
+          }}
         />
         <LabEvaluationSection lab={lab} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
@@ -1169,11 +1308,11 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
           onChange={setFloatingVal}
           onFocus={() => {
             setIsSuppressed(false)
-            window.scrollTo(0, 0)
+            handleFocus()
           }}
           placeholder="Focus Handover (0px collapse on body input focus)..."
           style={{
-            padding: isKeyboardOpen ? '8px 16px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
+            padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
           }}
         />
       )}
