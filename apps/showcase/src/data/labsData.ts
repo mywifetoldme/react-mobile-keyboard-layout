@@ -303,12 +303,12 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', status: 'na', comment: { en: 'FSM restoration not in scope (introduced in EXP-03-D)', ko: 'FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)' } },
     ],
     keyFinding: {
-      en: '0.0px Body Bottom Scroll Anchoring achieved! Reading text row stays 100% motionless on keyboard presentation and dismissal.',
-      ko: '동결 기준값(S0, H0)과 ΔH 단일 수식으로 키보드가 열려도 바디 하단 위치가 0.0px 오차로 완벽 고정되는 쾌거 달성!',
+      en: '0.0px Scroll Anchoring achieved on floating input! However, when tapping inline body form inputs, the bottom floating bar remains active and visible, covering body inputs and causing dual-input conflicts.',
+      ko: '쾌거 & 신규 결함 발견: 플로팅 인풋을 열고 닫을 때는 0.0px 바디 하단 스크롤 앵커링이 완벽하게 달성됨! 하지만 본문(인라인) 폼 인풋을 터치하여 키보드를 올렸을 때도 하단 플로팅 인풋이 사라지지 않고 여전히 활성화되어 있어 본문 입력창을 가리고 충돌하는 결함 발견.',
     },
     nextDecision: {
-      en: 'Implement body form input focus handover and floating suppression in EXP-03-C.',
-      ko: '본문 폼 인풋 터치 시 하단 플로팅 바가 0px로 숨겨지는 Focus Handover를 구현하는 EXP-03-C로 연계.',
+      en: 'Implement body form input focus handover and floating suppression (0px collapse) in EXP-03-C.',
+      ko: '본문 폼 인풋 터치 시 하단 플로팅 바가 0px로 즉시 숨겨지는 Focus Handover를 구현하는 EXP-03-C로 연계.',
     },
   },
   {

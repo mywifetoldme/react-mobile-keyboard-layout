@@ -366,40 +366,6 @@ const LabFormSection = ({
   </div>
 )
 
-const LabBenchmarkFeed = ({ lang }: { lang: Language }) => (
-  <div style={{
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
-    backgroundColor: '#111114',
-    borderRadius: '12px',
-    border: '1px solid #27272a',
-    padding: '12px',
-  }}>
-    <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa', marginBottom: '4px' }}>
-      📍 {lang === 'ko' ? '스크롤 앵커링 벤치마크 아이템' : 'Scroll Anchor Benchmark'}
-    </div>
-    {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-      <div
-        key={num}
-        style={{
-          padding: '8px 12px',
-          borderRadius: '8px',
-          backgroundColor: num === 5 ? 'rgba(59, 130, 246, 0.15)' : '#18181b',
-          border: `1px solid ${num === 5 ? '#3b82f6' : '#27272a'}`,
-          fontSize: '12px',
-          color: num === 5 ? '#93c5fd' : '#a1a1aa',
-          display: 'flex',
-          justifyContent: 'space-between',
-        }}
-      >
-        <span>Item #{num} {num === 5 ? '🎯 (Anchor Target)' : ''}</span>
-        <span style={{ fontSize: '11px', color: '#71717a' }}>Row {num * 40}px</span>
-      </div>
-    ))}
-  </div>
-)
-
 const LabFloatingInput = ({
   value,
   onChange,
@@ -1275,7 +1241,6 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
         gap: '14px',
       }}>
         <LabHeroSection lab={lab} lang={lang} />
-        <LabBenchmarkFeed lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
         <LabFindingDecisionSection lab={lab} lang={lang} />
@@ -1470,7 +1435,6 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
         }}
       >
         <LabHeroSection lab={lab} lang={lang} />
-        <LabBenchmarkFeed lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
         <LabFindingDecisionSection lab={lab} lang={lang} />
@@ -1666,7 +1630,6 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
         }}
       >
         <LabHeroSection lab={lab} lang={lang} />
-        <LabBenchmarkFeed lang={lang} />
         <LabFormSection
           lang={lang}
           bodyVal={bodyVal}
@@ -1779,7 +1742,6 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
     >
       <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <LabHeroSection lab={lab} lang={lang} />
-        <LabBenchmarkFeed lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
         <LabFindingDecisionSection lab={lab} lang={lang} />
