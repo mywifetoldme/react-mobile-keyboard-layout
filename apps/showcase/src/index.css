@@ -1,17 +1,35 @@
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body, #root {
-  position: fixed;
-  inset: 0;
-  width: 100%;
+html {
   height: 100%;
-  overflow: hidden;
-  background-color: #09090b;
+  background: #09090b;
+  color-scheme: dark;
+  overscroll-behavior: none;
+}
+
+body {
+  height: 100%;
+  min-height: 100vh;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  margin: 0;
+  background: #09090b;
   color: #f4f4f5;
+  color-scheme: dark;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+  position: relative;
 }

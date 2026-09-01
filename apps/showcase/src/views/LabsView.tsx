@@ -2,10 +2,16 @@ import { useState, type ReactNode } from 'react'
 import { SubpageLayout } from 'react-mobile-keyboard-layout'
 import { LABS_DATA, type LabInfo } from '../data/labsData'
 import { translations, type Language } from '../i18n'
+import { LabSandbox } from '../components/LabSandbox'
 
-export const LabsView = ({ lang, header }: { lang: Language; header?: ReactNode }) => {
+interface LabsViewProps {
+  lang: Language
+  header?: ReactNode
+}
+
+export const LabsView = ({ lang, header }: LabsViewProps) => {
   const t = translations[lang]
-  const [selectedLab, setSelectedLab] = useState<LabInfo>(LABS_DATA[LABS_DATA.length - 1])
+  const [activeLab, setActiveLab] = useState<LabInfo | null>(null)
 
   const getStatusBadge = (status: LabInfo['status']) => {
     switch (status) {
@@ -18,100 +24,80 @@ export const LabsView = ({ lang, header }: { lang: Language; header?: ReactNode 
     }
   }
 
+  // If a lab is opened, render its dedicated physics sandbox full-screen
+  if (activeLab) {
+    return (
+      <LabSandbox
+        lab={activeLab}
+        lang={lang}
+        onClose={() => setActiveLab(null)}
+      />
+    )
+  }
+
   return (
     <SubpageLayout header={header} title={t.labsArchiveTitle}>
-      <div style={{ padding: '16px 16px 32px' }}>
+      <div style={{ padding: '16px 16px 36px' }}>
         <p style={{ fontSize: '13px', color: '#a1a1aa', marginBottom: '16px', lineHeight: '1.5' }}>
           {t.labsArchiveSubtitle}
         </p>
 
-        {/* Selected Lab Spotlight */}
-        <div style={{
-          padding: '16px',
-          borderRadius: '14px',
-          backgroundColor: selectedLab.status === 'winner' ? 'rgba(34, 197, 94, 0.1)' : '#18181b',
-          border: `1px solid ${selectedLab.status === 'winner' ? '#22c55e' : '#3f3f46'}`,
-          marginBottom: '20px',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#f4f4f5' }}>
-              {selectedLab.title[lang]}
-            </h3>
-            {(() => {
-              const badge = getStatusBadge(selectedLab.status)
-              return (
-                <span style={{
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                  backgroundColor: badge.bg,
-                  color: badge.color,
-                  fontSize: '11px',
-                  fontWeight: 700,
-                }}>
-                  {badge.text}
-                </span>
-              )
-            })()}
-          </div>
-
-          <div style={{ fontSize: '13px', color: '#d4d4d8', marginBottom: '12px' }}>
-            <strong style={{ color: '#a1a1aa' }}>{t.hypothesisLabel}: </strong>
-            {selectedLab.description[lang]}
-          </div>
-
-          <div style={{
-            fontSize: '13px',
-            color: '#60a5fa',
-            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-            padding: '10px 12px',
-            borderRadius: '8px',
-          }}>
-            <strong>{t.keyFindingLabel}: </strong>
-            {selectedLab.keyFinding[lang]}
-          </div>
-        </div>
-
-        {/* Lab Grid */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {/* Labs List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {LABS_DATA.map((lab) => {
-            const isSelected = selectedLab.id === lab.id
             const badge = getStatusBadge(lab.status)
+            const isWinner = lab.status === 'winner'
+
             return (
-              <button
+              <div
                 key={lab.id}
-                type="button"
-                onClick={() => setSelectedLab(lab)}
+                onClick={() => setActiveLab(lab)}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  border: isSelected ? '1px solid #3b82f6' : '1px solid #27272a',
-                  backgroundColor: isSelected ? '#27272a' : '#18181b',
-                  color: '#f4f4f5',
-                  fontSize: '13px',
-                  textAlign: 'left',
+                  padding: '14px 16px',
+                  borderRadius: '12px',
+                  border: isWinner ? '1px solid #22c55e' : '1px solid #27272a',
+                  backgroundColor: isWinner ? 'rgba(34, 197, 94, 0.06)' : '#18181b',
                   cursor: 'pointer',
-                  transition: 'all 0.1s ease',
+                  transition: 'all 0.15s ease',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
                 }}
               >
-                <span style={{ fontWeight: isSelected ? 600 : 400 }}>
-                  {lab.title[lang]}
-                </span>
-                <span style={{
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  backgroundColor: badge.bg,
-                  color: badge.color,
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  flexShrink: 0,
-                  marginLeft: '8px',
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: 600, color: isWinner ? '#4ade80' : '#f4f4f5' }}>
+                    {lab.title[lang]}
+                  </h3>
+                  <span style={{
+                    padding: '2px 7px',
+                    borderRadius: '4px',
+                    backgroundColor: badge.bg,
+                    color: badge.color,
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    flexShrink: 0,
+                    marginLeft: '8px',
+                  }}>
+                    {badge.text}
+                  </span>
+                </div>
+
+                <p style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>
+                  {lab.hypothesis[lang]}
+                </p>
+
+                <div style={{
+                  fontSize: '12px',
+                  color: isWinner ? '#22c55e' : '#60a5fa',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  marginTop: '2px',
                 }}>
-                  {badge.text}
-                </span>
-              </button>
+                  {t.launchSandbox}
+                </div>
+              </div>
             )
           })}
         </div>

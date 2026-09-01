@@ -7,7 +7,7 @@ export const DocsView = ({ lang, header }: { lang: Language; header?: ReactNode 
   const [copied, setCopied] = useState(false)
 
   const handleCopy = () => {
-    navigator.clipboard.writeText('npm install react-mobile-keyboard-layout')
+    navigator.clipboard.writeText('npm i react-mobile-keyboard-layout')
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -24,27 +24,36 @@ export const DocsView = ({ lang, header }: { lang: Language; header?: ReactNode 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '12px 14px',
+            padding: '10px 12px',
             borderRadius: '10px',
             backgroundColor: '#18181b',
             border: '1px solid #3f3f46',
-            fontFamily: 'monospace',
-            fontSize: '13px',
-            color: '#60a5fa',
+            gap: '8px',
           }}>
-            <span>npm install react-mobile-keyboard-layout</span>
+            <code style={{
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              color: '#60a5fa',
+              whiteSpace: 'nowrap',
+              overflowX: 'auto',
+              flex: 1,
+            }}>
+              npm i react-mobile-keyboard-layout
+            </code>
             <button
               type="button"
               onClick={handleCopy}
               style={{
-                padding: '4px 10px',
+                padding: '6px 12px',
                 borderRadius: '6px',
                 border: 'none',
                 backgroundColor: copied ? '#22c55e' : '#27272a',
                 color: '#ffffff',
-                fontSize: '11px',
+                fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 transition: 'background-color 0.15s ease',
               }}
             >

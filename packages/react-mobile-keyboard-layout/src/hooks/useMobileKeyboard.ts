@@ -411,9 +411,11 @@ export const useMobileKeyboard = ({
     ? {
         height: `${vvHeight}px`,
         maxHeight: `${vvHeight}px`,
-        paddingBottom: isKeyboardOpen ? '0px' : undefined,
       }
-    : {}
+    : {
+        height: '100dvh',
+        maxHeight: '100dvh',
+      }
 
   return {
     containerStyle,
