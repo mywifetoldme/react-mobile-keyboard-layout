@@ -257,6 +257,7 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
       if (isExp02A && open) window.scrollTo(0, 0)
       if ((isExp02C || isExp03A || isExp03B || isExp03C) && open) startRafTopLock()
 
+      // EXP-03-C: 0.0px Coordinate Preservation Formula
       if (isExp03C && bodyRef.current) {
         const el = bodyRef.current
         if (open) {
@@ -285,7 +286,8 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
     startRafTopLock()
   }
 
-  const containerHeightStyle: CSSProperties = isExp01
+  // Root sandbox dimensions - fits inside visualViewport
+  const rootHeightStyle: CSSProperties = isExp01
     ? { height: '100vh' }
     : isExp01B
     ? { height: '100dvh' }
@@ -296,15 +298,19 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
   return (
     <div style={{
       position: 'fixed',
-      inset: 0,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: isKeyboardOpen && vvHeight > 0 && !isExp01 && !isExp01B ? undefined : 0,
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
+      ...rootHeightStyle,
     }}>
-      {/* Top Header */}
+      {/* Top Header - In EXP-03-C, header is NOT isolated, demonstrating slide-up artifact */}
       <header style={{
         height: '52px',
         paddingTop: 'env(safe-area-inset-top, 0px)',
@@ -381,146 +387,137 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
         </div>
       </div>
 
-      {/* Scrollable Container with Lab Physics */}
-      <div
+      {/* Scrollable Body */}
+      <main
+        ref={bodyRef}
         style={{
+          flex: 1,
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          padding: '14px',
           display: 'flex',
           flexDirection: 'column',
-          flex: 1,
-          overflow: 'hidden',
-          ...containerHeightStyle,
+          gap: '10px',
         }}
       >
-        <main
-          ref={bodyRef}
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            padding: '14px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-          }}
-        >
-          {/* Finding Box */}
-          <div style={{
-            padding: '10px 12px',
-            borderRadius: '10px',
-            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            fontSize: '12px',
-            color: '#d4d4d8',
-          }}>
-            <strong>{lab.title[lang]}</strong>
-            <div style={{ marginTop: '2px', color: '#93c5fd' }}>💡 {lab.keyFinding[lang]}</div>
-          </div>
+        {/* Finding Box */}
+        <div style={{
+          padding: '10px 12px',
+          borderRadius: '10px',
+          backgroundColor: 'rgba(59, 130, 246, 0.08)',
+          border: '1px solid rgba(59, 130, 246, 0.3)',
+          fontSize: '12px',
+          color: '#d4d4d8',
+        }}>
+          <strong>{lab.title[lang]}</strong>
+          <div style={{ marginTop: '2px', color: '#93c5fd' }}>💡 {lab.keyFinding[lang]}</div>
+        </div>
 
-          {/* Test Form Input */}
-          <div style={{
-            padding: '10px',
-            borderRadius: '10px',
-            backgroundColor: '#18181b',
-            border: '1px solid #27272a',
-          }}>
-            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'block', marginBottom: '4px' }}>
-              Inline Body Input
-            </label>
-            <input
-              type="text"
-              value={bodyInputVal}
-              onChange={(e) => setBodyInputVal(e.target.value)}
-              onFocus={handleBodyFocus}
-              placeholder="Tap here to test focus..."
-              style={{
-                width: '100%',
-                boxSizing: 'border-box',
-                minHeight: '38px',
-                padding: '6px 10px',
-                borderRadius: '8px',
-                border: '1px solid #3f3f46',
-                backgroundColor: '#09090b',
-                color: '#f4f4f5',
-                fontSize: '14px',
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          {/* Test rows */}
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                padding: '10px 12px',
-                borderRadius: '8px',
-                backgroundColor: i === 4 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                border: i === 4 ? '1px solid #3b82f6' : '1px solid #27272a',
-                fontSize: '12px',
-                color: i === 4 ? '#60a5fa' : '#d4d4d8',
-              }}
-            >
-              {i === 4 ? '🎯 [TARGET ROW #5] Check if this row jumps or stays pinned!' : `Row #${i + 1} — ${lab.id.toUpperCase()}`}
-            </div>
-          ))}
-        </main>
-
-        {!isSuppressed && (
-          <footer
+        {/* Test Form Input */}
+        <div style={{
+          padding: '10px',
+          borderRadius: '10px',
+          backgroundColor: '#18181b',
+          border: '1px solid #27272a',
+        }}>
+          <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'block', marginBottom: '4px' }}>
+            Inline Body Input (Tap to test FSM suppression)
+          </label>
+          <input
+            type="text"
+            value={bodyInputVal}
+            onChange={(e) => setBodyInputVal(e.target.value)}
+            onFocus={handleBodyFocus}
+            placeholder="Tap here to test focus..."
             style={{
-              padding: isExp01A && isKeyboardOpen ? '8px 16px 34px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
-              backgroundColor: '#18181b',
-              borderTop: '1px solid #27272a',
-              flexShrink: 0,
-              position: isExp01 ? 'fixed' : 'relative',
-              bottom: isExp01 ? 0 : undefined,
-              left: isExp01 ? 0 : undefined,
-              right: isExp01 ? 0 : undefined,
+              width: '100%',
+              boxSizing: 'border-box',
+              minHeight: '38px',
+              padding: '6px 10px',
+              borderRadius: '8px',
+              border: '1px solid #3f3f46',
+              backgroundColor: '#09090b',
+              color: '#f4f4f5',
+              fontSize: '14px',
+              outline: 'none',
+            }}
+          />
+        </div>
+
+        {/* Test rows */}
+        {Array.from({ length: 12 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: i === 4 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+              border: i === 4 ? '1px solid #3b82f6' : '1px solid #27272a',
+              fontSize: '12px',
+              color: i === 4 ? '#60a5fa' : '#d4d4d8',
             }}
           >
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#27272a',
-              borderRadius: '20px',
-              padding: '4px 6px 4px 12px',
-            }}>
-              <input
-                type="text"
-                value={floatingInputVal}
-                onChange={(e) => setFloatingInputVal(e.target.value)}
-                onFocus={handleFloatingFocus}
-                placeholder={isExp01 ? 'Naive fixed input (gets covered on iOS)...' : 'Test input...'}
-                style={{
-                  flex: 1,
-                  border: 'none',
-                  background: 'transparent',
-                  outline: 'none',
-                  color: '#f4f4f5',
-                  fontSize: '14px',
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setFloatingInputVal('')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '16px',
-                  border: 'none',
-                  backgroundColor: '#3b82f6',
-                  color: '#ffffff',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Send
-              </button>
-            </div>
-          </footer>
-        )}
-      </div>
+            {i === 4 ? '🎯 [TARGET ROW #5] Coordinate Math test row!' : `Row #${i + 1} — ${lab.id.toUpperCase()}`}
+          </div>
+        ))}
+      </main>
+
+      {/* Floating Input Bar */}
+      {!isSuppressed && (
+        <footer
+          style={{
+            padding: isExp01A && isKeyboardOpen ? '8px 16px 34px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
+            backgroundColor: '#18181b',
+            borderTop: '1px solid #27272a',
+            flexShrink: 0,
+            position: isExp01 ? 'fixed' : 'relative',
+            bottom: isExp01 ? 0 : undefined,
+            left: isExp01 ? 0 : undefined,
+            right: isExp01 ? 0 : undefined,
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#27272a',
+            borderRadius: '20px',
+            padding: '4px 6px 4px 12px',
+          }}>
+            <input
+              type="text"
+              value={floatingInputVal}
+              onChange={(e) => setFloatingInputVal(e.target.value)}
+              onFocus={handleFloatingFocus}
+              placeholder={isExp01 ? 'Naive fixed input (gets covered on iOS)...' : 'Test input...'}
+              style={{
+                flex: 1,
+                border: 'none',
+                background: 'transparent',
+                outline: 'none',
+                color: '#f4f4f5',
+                fontSize: '14px',
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setFloatingInputVal('')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '16px',
+                border: 'none',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Send
+            </button>
+          </div>
+        </footer>
+      )}
     </div>
   )
 }
