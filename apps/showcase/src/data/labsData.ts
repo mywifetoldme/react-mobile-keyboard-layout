@@ -3,12 +3,20 @@ export interface LocalizedString {
   ko: string
 }
 
+export interface EvaluationItem {
+  id: '1-1' | '1-2' | '1-3' | '1-4' | '2-1' | '3-1'
+  pass: boolean
+  comment: LocalizedString
+}
+
 export interface LabInfo {
   id: string
   status: 'failed' | 'progress' | 'winner'
   title: LocalizedString
-  description: LocalizedString
+  hypothesis: LocalizedString
+  evaluations: EvaluationItem[]
   keyFinding: LocalizedString
+  nextDecision: LocalizedString
 }
 
 export const LABS_DATA: LabInfo[] = [
@@ -16,192 +24,336 @@ export const LABS_DATA: LabInfo[] = [
     id: 'exp01',
     status: 'failed',
     title: {
-      en: 'EXP-01: Naive Fixed Bottom Bar',
-      ko: 'EXP-01: 단순 position: fixed 하단 바',
+      en: 'EXP-01: Baseline Standard Fixed',
+      ko: 'EXP-01: 순수 CSS position: fixed 기준점',
     },
-    description: {
-      en: 'Standard CSS position: fixed without keyboard awareness.',
-      ko: '키보드 처리가 전혀 없는 표준 CSS position: fixed 구조.',
+    hypothesis: {
+      en: 'Standard CSS position: fixed with safe-area padding can anchor the input at the bottom on iOS Safari.',
+      ko: '표준 CSS fixed와 safe-area-inset만으로 사파리에서 인풋이 바닥에 안정적으로 유지되는지 검증한다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: 'Header flies off-screen as Safari pushes window up', ko: '사파리가 화면 전체를 밀어올려 상단 헤더가 화면 밖으로 실종됨' } },
+      { id: '1-2', pass: true, comment: { en: 'Input is visible via Safari native window scroll pan', ko: '사파리가 화면 전체를 위로 밀어올려 인풋 자체는 화면에 노출됨' } },
+      { id: '1-3', pass: false, comment: { en: 'Bottom bar jitters and detaches on finger scroll', ko: '스크롤 시 인풋이 분리되어 화면 중간에서 덜컹거림' } },
+      { id: '1-4', pass: false, comment: { en: 'Reading position completely lost during window jump', ko: '화면이 위로 튕기며 보던 줄 위치가 완전히 소실됨' } },
+      { id: '2-1', pass: false, comment: { en: 'Floating bar overlaps and obscures body inputs', ko: '본문 인풋 입력 시 플로팅 바가 겹쳐서 본문을 가림' } },
+      { id: '3-1', pass: false, comment: { en: 'No restoration mechanism exists', ko: '포커스 해제 시 복원 메커니즘 부재' } },
+    ],
     keyFinding: {
-      en: 'Virtual keyboard covers the input completely on iOS Safari.',
-      ko: 'iOS 사파리에서 가상 키보드가 입력창을 완전히 가려버림.',
+      en: 'position: fixed binds to Layout Viewport, causing Safari to scroll the window and lose the top header.',
+      ko: 'position: fixed는 Layout Viewport에 고정되므로, 사파리가 화면을 밀어올려 헤더를 실종시키고 스크롤 시 덜컹거림.',
+    },
+    nextDecision: {
+      en: 'Abandon pure fixed positioning and investigate dynamic In-Flow Flexbox container resizing.',
+      ko: '순수 CSS fixed를 폐기하고 컨테이너 자체를 축소하는 In-Flow Flexbox 구조로의 패러다임 전환 결정.',
     },
   },
   {
     id: 'exp01_a',
     status: 'failed',
     title: {
-      en: 'EXP-01-A: visualViewport Resize',
-      ko: 'EXP-01-A: visualViewport 리사이즈 감지',
+      en: 'EXP-01-A: Dynamic Safe Area Inset',
+      ko: 'EXP-01-A: Safe Area Inset 동적 제거 시도',
     },
-    description: {
-      en: 'Listening to visualViewport.resize and setting container height.',
-      ko: 'visualViewport.resize를 감지하여 컨테이너 높이를 축소.',
+    hypothesis: {
+      en: 'Detecting keyboard open state and reducing safe-area-inset-bottom from 34px to 0px will eliminate bottom gap.',
+      ko: '키보드 오픈 시점의 34px 빈 공간을 제거하기 위해 Safe Area를 0px로 축소한다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: 'Header still flies off-screen on focus', ko: '포커스 시 여전히 헤더가 화면 밖으로 밀려남' } },
+      { id: '1-2', pass: true, comment: { en: 'Input visible via window scroll', ko: '사파리 창 밀림으로 인풋 노출' } },
+      { id: '1-3', pass: false, comment: { en: 'Detection mismatch leaves 34px gap intact', ko: '키보드 감지 불일치로 34px 갭 제거 실패' } },
+      { id: '1-4', pass: false, comment: { en: '100px reading line displacement occurs', ko: '100px 스크롤 급발진으로 보던 줄 튕김' } },
+      { id: '2-1', pass: false, comment: { en: 'No dual input suppression', ko: '본문 인풋 충돌 방지 미구현' } },
+      { id: '3-1', pass: false, comment: { en: 'No smooth restore', ko: '복원 제어 부재' } },
+    ],
     keyFinding: {
-      en: 'Causes 34px gap above home bar and sudden 100px reading line jump.',
-      ko: '하단 홈바 위 34px 빈 공간 발생 및 100px 스크롤 급발진 발생.',
+      en: 'window.innerHeight subtraction fails to detect keyboard transitions synchronously.',
+      ko: 'window.innerHeight 단순 뺄셈으로는 키보드 오픈 여부를 정확히 판별하지 못해 인셋 제거에 실패함.',
+    },
+    nextDecision: {
+      en: 'Transition to EXP-02 with Flexbox In-Flow architecture.',
+      ko: 'EXP-02로 연계하여 In-Flow Flexbox 기반 실험 착수.',
     },
   },
   {
     id: 'exp01_b',
     status: 'failed',
     title: {
-      en: 'EXP-01-B: Fixed 100dvh Unit',
-      ko: 'EXP-01-B: CSS 100dvh 단위 적용',
+      en: 'EXP-01-B: Document Scroll Lock',
+      ko: 'EXP-01-B: 포커스 시 scrollTo(0,0) 강제 락',
     },
-    description: {
-      en: 'Using modern CSS dynamic viewport unit 100dvh.',
-      ko: '최신 CSS 동적 뷰포트 단위 100dvh 적용.',
+    hypothesis: {
+      en: 'Forcing window.scrollTo(0,0) on focus will keep the top header firmly pinned at (0,0).',
+      ko: '인풋 포커스 시 스크롤을 즉시 (0,0)으로 잠그면 헤더가 화면 상단에 견고하게 고정될 것이다.',
     },
+    evaluations: [
+      { id: '1-1', pass: true, comment: { en: 'Header stays at (0,0) top position', ko: '헤더는 상단 (0,0)에 머무름' } },
+      { id: '1-2', pass: false, comment: { en: 'FATAL: Input drops to bottom and is 100% COVERED by keyboard', ko: '치명적 결함: 문서를 (0,0)으로 내리니 인풋이 키보드 뒤에 깔려 완전히 사라짐!' } },
+      { id: '1-3', pass: false, comment: { en: 'Input completely invisible', ko: '인풋 실종으로 여백 무의미' } },
+      { id: '1-4', pass: false, comment: { en: 'Scroll resets to 0, losing reading row', ko: '스크롤이 0으로 리셋되어 읽던 줄 소실' } },
+      { id: '2-1', pass: false, comment: { en: 'No suppression', ko: '충돌 방지 미구현' } },
+      { id: '3-1', pass: false, comment: { en: 'No restoration', ko: '복원 제어 부재' } },
+    ],
     keyFinding: {
-      en: 'dvh does not react synchronously during iOS keyboard transition animation.',
-      ko: 'iOS 키보드 애니메이션 중에는 dvh가 동기적으로 반응하지 않음.',
+      en: 'Proved the fundamental paradox of position: fixed: locking window at (0,0) traps input behind keyboard.',
+      ko: 'fixed 요소를 (0,0)에 묶으면 헤더는 지키지만 인풋이 키보드 아래 갇히는 position: fixed의 원천적 한계 증명.',
+    },
+    nextDecision: {
+      en: 'Discontinue fixed positioning and transition to In-Flow Flexbox with visualViewport height control.',
+      ko: 'fixed 시도를 중단하고 화면 컨테이너 자체를 Visual Viewport 크기로 가두는 In-Flow Flexbox로 전면 전환.',
     },
   },
   {
     id: 'exp02',
     status: 'failed',
     title: {
-      en: 'EXP-02: Body Scroll Lock',
-      ko: 'EXP-02: 바디 스크롤 락 시도',
+      en: 'EXP-02: Pure CSS 100dvh In-Flow',
+      ko: 'EXP-02: 순수 CSS 100dvh In-Flow 레이아웃',
     },
-    description: {
-      en: 'Setting overflow: hidden and fixed body positioning on focus.',
-      ko: '포커스 시 overflow: hidden 및 바디 고정 적용.',
+    hypothesis: {
+      en: 'CSS 100dvh + interactive-widget=resizes-content will auto-shrink container on iOS keyboard open with 0 lines of JS.',
+      ko: 'CSS 100dvh 단위와 interactive-widget 설정을 사용하면 JS 없이도 WebKit이 키보드 크기만큼 컨테이너를 스스로 줄여줄 것이다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: '100dvh ignores keyboard, causing window to pan', ko: '100dvh가 키보드를 무시하여 화면 전체가 밀려올라감' } },
+      { id: '1-2', pass: true, comment: { en: 'Input visible via native window pan', ko: '사파리 창 밀림으로 인풋 노출' } },
+      { id: '1-3', pass: false, comment: { en: 'Layout clipping on drag', ko: '드래그 시 레이아웃 잘림' } },
+      { id: '1-4', pass: false, comment: { en: 'Reading line position shifted', ko: '읽던 줄 위치 소실' } },
+      { id: '2-1', pass: false, comment: { en: 'No suppression', ko: '충돌 방지 미구현' } },
+      { id: '3-1', pass: false, comment: { en: 'No restoration', ko: '복원 제어 부재' } },
+    ],
     keyFinding: {
-      en: 'Severe layout clipping and scroll position reset to 0 upon blur.',
-      ko: '레이아웃 잘림 및 포커스 해제 시 스크롤이 강제로 0으로 리셋됨.',
+      en: 'iOS WebKit specification explicitly restricts dvh to browser URL bar collapse, ignoring virtual keyboard.',
+      ko: 'iOS 사파리 WebKit 사양상 100dvh는 주소창에만 반응하고 가상 키보드 팝업 시에는 전혀 줄어들지 않고 전체 높이 유지.',
+    },
+    nextDecision: {
+      en: 'Acknowledge CSS limits and bind window.visualViewport.height directly to Flex container in EXP-02-A.',
+      ko: '순수 CSS 한계를 인정하고 JS window.visualViewport.height를 부모 Flex 컨테이너에 직접 주입하는 EXP-02-A로 전환.',
     },
   },
   {
     id: 'exp02_a',
     status: 'failed',
     title: {
-      en: 'EXP-02-A: Programmatic Scroll Restoration',
-      ko: 'EXP-02-A: 프로그래밍 방식 스크롤 복원',
+      en: 'EXP-02-A: Dynamic visualViewport Binding',
+      ko: 'EXP-02-A: visualViewport.height 1:1 주입',
     },
-    description: {
-      en: 'Capturing scrollTop before focus and restoring it with requestAnimationFrame.',
-      ko: '포커스 전 scrollTop을 저장하고 rAF로 복원 시도.',
+    hypothesis: {
+      en: 'Injecting window.visualViewport.height directly into Flex container height will fit the layout to visible screen.',
+      ko: '실시간 측정하는 visualViewport.height를 Flex 컨테이너 높이로 주입하면 키보드 가시 영역에 정상 안착할 것이다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: 'WebKit initial scroll push creates 336px gap', ko: '초기 포커스 시 WebKit이 도화지를 밀어올려 336px 빈 공간 노출' } },
+      { id: '1-2', pass: true, comment: { en: 'In-Flow flex alignment proven on manual scroll', ko: '수동 스크롤 시 4단 정렬 완벽 검증 성공' } },
+      { id: '1-3', pass: false, comment: { en: '336px massive empty space before manual scroll', ko: '수동 정렬 전 336px 거대 빈 공간 노출' } },
+      { id: '1-4', pass: false, comment: { en: 'Reading line displaced by 336px', ko: '336px 오차로 읽던 줄 위치 소실' } },
+      { id: '2-1', pass: false, comment: { en: 'No suppression', ko: '충돌 방지 미구현' } },
+      { id: '3-1', pass: false, comment: { en: 'No restoration', ko: '복원 제어 부재' } },
+    ],
     keyFinding: {
-      en: 'Visible 1-frame jitter where content flashes before snapping back.',
-      ko: '1프레임 동안 화면이 튕겼다가 돌아오는 깜빡임 발생.',
+      en: 'Proved In-Flow Flexbox is the correct foundation! But WebKit focus scroll pushes container up by 336px.',
+      ko: 'In-Flow Flex 4단 정렬 뼈대 검증 성공! 단, 초기 포커스 시 WebKit이 도화지를 밀어올려 인풋 아래에 336px 빈 공간 노출.',
+    },
+    nextDecision: {
+      en: 'Test top: 0 anchor lock (EXP-02-B) vs transform offset tracking (EXP-02-C) to auto-eliminate the 336px gap.',
+      ko: '상단 top: 0 락(02-B)과 오프셋 추적(02-C)으로 336px 빈 공간을 자동 은폐하는 실험 착수.',
     },
   },
   {
     id: 'exp02_b',
     status: 'progress',
     title: {
-      en: 'EXP-02-B: Focus preventScroll Interception',
-      ko: 'EXP-02-B: preventScroll 포커스 가로채기',
+      en: 'EXP-02-B: Top Anchor & Scroll Lock',
+      ko: 'EXP-02-B: 상단 top: 0 고정 & 포커스 스크롤 락',
     },
-    description: {
-      en: 'Intercepting pointerdown to call element.focus({ preventScroll: true }).',
-      ko: 'pointerdown을 가로채 preventScroll: true로 포커스 선점.',
+    hypothesis: {
+      en: 'Pinning container top: 0 and neutralizing WebKit focus scroll with scrollTo(0,0) will auto-hide the 336px gap.',
+      ko: '컨테이너를 top: 0에 고정하고 루트 스크롤을 즉시 0으로 잠그면 아래쪽 336px 빈 공간이 키보드 밑으로 완벽히 가려질 것이다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: '1-frame visual jitter when rubbing input bar', ko: '인풋 바를 문지를 때 1프레임 미세 덜컹거림 발생' } },
+      { id: '1-2', pass: true, comment: { en: 'Input lands directly above keyboard with zero manual adjustment', ko: '수동 조작 없이 인풋이 키보드 바로 위에 즉시 안착' } },
+      { id: '1-3', pass: false, comment: { en: '34px safe area gap remains', ko: '34px 홈바 여백 잔존' } },
+      { id: '1-4', pass: false, comment: { en: 'Reading line still jumps', ko: '읽던 줄 점프 발생' } },
+      { id: '2-1', pass: false, comment: { en: 'No suppression', ko: '충돌 방지 미구현' } },
+      { id: '3-1', pass: false, comment: { en: 'No restoration', ko: '복원 제어 부재' } },
+    ],
     keyFinding: {
-      en: 'Successfully eliminates WebKit auto-scrollIntoView on touch.',
-      ko: '사파리 웹킷의 자동 scrollIntoView 화면 점프를 최초로 차단 성공.',
+      en: 'Milestone victory: Pinning container to top: 0 is the winning architecture! Minor 1-frame jitter on touch drag.',
+      ko: '도화지를 y=0에 묶어두는 02-B 방식이 최종 정답 아키텍처임이 증명됨. 단, 인풋 문지를 때 1프레임 미세 덜컹거림 발생.',
+    },
+    nextDecision: {
+      en: 'Apply touch-action: none on input shell in EXP-02-D to achieve 100% zero-jank motionless lock.',
+      ko: '인풋 쉘 자체에 touch-action: none을 걸어 1프레임 덜컹거림마저 박멸하는 EXP-02-D로 연계.',
     },
   },
   {
     id: 'exp02_c',
-    status: 'progress',
+    status: 'failed',
     title: {
-      en: 'EXP-02-C: Continuous 120Hz rAF Top-Lock',
-      ko: 'EXP-02-C: 연속 120Hz rAF 윈도우 탑락',
+      en: 'EXP-02-C: Transform translateY Offset Tracking',
+      ko: 'EXP-02-C: translateY(offsetTop) 실시간 추적',
     },
-    description: {
-      en: 'Clamping window.scrollY = 0 frame-by-frame during the 350ms keyboard slide.',
-      ko: '키보드가 올라오는 350ms 동안 매 프레임 window.scrollY = 0 고정.',
+    hypothesis: {
+      en: 'Tracking visualViewport.offsetTop with hardware-accelerated transform: translateY will eliminate visual jank.',
+      ko: '스크롤을 막지 않고 오프셋을 읽어와 translateY로 컨테이너를 가시 영역에 1:1 따라가게 만든다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: 'Severe strobe flickering due to 8ms JS vs Compositor latency', ko: '120Hz 화면 vs 60Hz JS 시차로 바닥 빈 공간이 번쩍이는 스트로브 결함' } },
+      { id: '1-2', pass: true, comment: { en: 'Input tracks offset after delay', ko: '지연 후 인풋 추적' } },
+      { id: '1-3', pass: false, comment: { en: 'Background flashes during drag', ko: '드래그 시 배경 번쩍임' } },
+      { id: '1-4', pass: false, comment: { en: 'Reading line jitter', ko: '읽던 줄 흔들림' } },
+      { id: '2-1', pass: false, comment: { en: 'No suppression', ko: '충돌 방지 미구현' } },
+      { id: '3-1', pass: false, comment: { en: 'No restoration', ko: '복원 제어 부재' } },
+    ],
     keyFinding: {
-      en: 'Window scroll remains locked at 0.0px with zero background rubberbanding.',
-      ko: '윈도우 스크롤이 0.0px에 완벽 고정되며 배경 밀림 완전 박멸.',
+      en: 'DISQUALIFIED: Compositor thread (120Hz) moves ahead of JS visualViewport.scroll (60Hz), creating strobe gaps.',
+      ko: '탈락: 120Hz 렌더링 스레드와 60Hz JS 이벤트 간 8ms 물리적 시차로 인해 바닥이 번쩍이는 스트로브 결함 발생.',
+    },
+    nextDecision: {
+      en: 'Permanently abandon offset tracking and commit 100% to pre-emptive top: 0 lock (02-B / 02-D).',
+      ko: '오프셋 따라가기 방식을 영구 폐기하고, 도화지 자체를 미리 묶어두는 사전 차단(02-B / 02-D)을 최종 방향으로 확정.',
     },
   },
   {
     id: 'exp02_d',
     status: 'progress',
     title: {
-      en: 'EXP-02-D: Dynamic Delta-H Tracking',
-      ko: 'EXP-02-D: 동적 Delta-H 높이 추적',
+      en: 'EXP-02-D: Zero-Jank Input Shell Touch Lock',
+      ko: 'EXP-02-D: 인풋 쉘 touch-action: none 완전 고정',
     },
-    description: {
-      en: 'Tracking container resize delta with ResizeObserver.',
-      ko: 'ResizeObserver로 컨테이너 크기 변화량(Delta-H) 실시간 추적.',
+    hypothesis: {
+      en: 'Adding touch-action: none and non-passive touch prevention on input shell will eliminate the 1-frame jitter.',
+      ko: '인풋 바 영역에 touch-action: none을 적용하여 인풋 바를 문질러도 브라우저가 바깥 스크롤을 0.001초도 시작하지 못하게 차단한다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: 'Header still slides inside resizing container', ko: '헤더가 리사이징 컨테이너 안에 있어 슬라이드 발생' } },
+      { id: '1-2', pass: true, comment: { en: '0-pixel motionless lock achieved when rubbing input shell', ko: '인풋 바를 문질러도 1프레임 흔들림 없는 0픽셀 완전 고정 달성' } },
+      { id: '1-3', pass: false, comment: { en: '34px safe area gap remains', ko: '34px 홈바 여백 잔존' } },
+      { id: '1-4', pass: false, comment: { en: 'Reading line shifts on resize', ko: '컨테이너 축소 시 읽던 줄 이동' } },
+      { id: '2-1', pass: false, comment: { en: 'No suppression', ko: '충돌 방지 미구현' } },
+      { id: '3-1', pass: false, comment: { en: 'No restoration', ko: '복원 제어 부재' } },
+    ],
     keyFinding: {
-      en: 'Provided the foundation for mathematical coordinate compensation.',
-      ko: '수학적 좌표 보정 수식의 핵심 기틀 마련.',
+      en: 'Zero-jank architecture complete: Input shell is 100% motionless even during aggressive finger dragging.',
+      ko: '인풋 바를 아무리 세게 문질러도 1프레임 흔들림 없는 0픽셀 완전 고정 아키텍처 완성.',
+    },
+    nextDecision: {
+      en: 'Move to EXP-03-A to eliminate the 34px safe area gap and snap input directly above keyboard.',
+      ko: 'EXP-03-A로 연계하여 34px Safe Area 여백을 0px로 축소하고 키보드 초밀착 구현 착수.',
     },
   },
   {
     id: 'exp03_a',
     status: 'progress',
     title: {
-      en: 'EXP-03-A: Dual Input Conflict Resolution',
-      ko: 'EXP-03-A: 복수 인풋 충돌 제어',
+      en: 'EXP-03-A: Zero-Gap Inset & HUD Relocation',
+      ko: 'EXP-03-A: Safe Area 0px 축소 & 8px 초밀착',
     },
-    description: {
-      en: 'Managing conflicts between body form inputs and bottom floating input.',
-      ko: '본문 폼 인풋과 하단 플로팅 인풋 간의 충돌 제어.',
+    hypothesis: {
+      en: 'Relocating HUD to body and collapsing safe-area padding to 8px when keyboard opens will achieve compact snap.',
+      ko: '키보드 오픈 시점에는 홈 바 여백(34px)을 즉시 0px로 축소하여 키보드 윗선에 8px 마진으로 초밀착시킨다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: 'Header slides during container height contraction', ko: '컨테이너 축소 시 헤더 슬라이드 잔존' } },
+      { id: '1-2', pass: true, comment: { en: 'Input perfectly visible above keyboard', ko: '키보드 위 인풋 온전한 노출' } },
+      { id: '1-3', pass: true, comment: { en: '34px gap eliminated; snaps with 8px compact margin', ko: '34px 빈 공간 완전 해소 & 8px 마진으로 컴팩트 초밀착 성공' } },
+      { id: '1-4', pass: false, comment: { en: '34px height delta causes 34px reading line shift', ko: '34px 인셋 축소로 인해 보던 글자 줄(#5)이 위로 34px 튀어 올라감' } },
+      { id: '2-1', pass: false, comment: { en: 'No dual input suppression', ko: '충돌 방지 미구현' } },
+      { id: '3-1', pass: false, comment: { en: 'No restoration', ko: '복원 제어 부재' } },
+    ],
     keyFinding: {
-      en: 'Floating bar safely suppresses when inline body input is focused.',
-      ko: '본문 폼 입력 시 플로팅 바가 겹치지 않고 자연스럽게 숨겨짐.',
+      en: 'Compact 8px snap verified! But shrinking safe area by 34px shifts body scroll by exactly 34px.',
+      ko: '키보드 위 34px 빈 공간을 완전 해소하고 8px 마진으로 컴팩트 초밀착 성공. 단, 보던 줄(#5)이 34px 튀는 오차 확인.',
+    },
+    nextDecision: {
+      en: 'Introduce ResizeObserver delta-H scroll compensation in EXP-03-B to achieve 0.0px scroll preservation.',
+      ko: '본문 ResizeObserver 기반 ΔH 실시간 1:1 스크롤 보정 수식을 도입하는 EXP-03-B로 연계.',
     },
   },
   {
     id: 'exp03_b',
     status: 'progress',
     title: {
-      en: 'EXP-03-B: 3-State Focus Handover FSM',
-      ko: 'EXP-03-B: 3-상태 포커스 핸드오버 FSM',
+      en: 'EXP-03-B: Body ResizeObserver Scroll Anchoring',
+      ko: 'EXP-03-B: ResizeObserver 0.0px 정밀 스크롤 앵커링',
     },
-    description: {
-      en: 'Finite State Machine: activeInputType = none | floating | body.',
-      ko: '유한 상태 머신으로 인풋 간 포커스 이동 시 깜빡임 차단.',
+    hypothesis: {
+      en: 'Freezing baseline (S0, H0) and compensating scrollTop by exact body contraction (delta-H) will achieve 0.0px anchor.',
+      ko: '닫혀 있을 때의 기준값(S0, H0)을 동결하고, 본문의 실제 축소량(ΔH)만큼만 스크롤하고 닫힐 때 S0로 1:1 복원한다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: 'Header slides inside resizing container', ko: '헤더가 리사이징 컨테이너 안에 있어 슬라이드 잔존' } },
+      { id: '1-2', pass: true, comment: { en: 'Input visible above keyboard', ko: '키보드 위 인풋 온전한 노출' } },
+      { id: '1-3', pass: true, comment: { en: '8px bottom snap preserved', ko: '8px 하단 초밀착 유지' } },
+      { id: '1-4', pass: true, comment: { en: 'Target row #5 anchored with 0.0px visual drift!', ko: '보던 줄(#5)이 0.0px 오차로 완벽 고정, 닫힘 시 1:1 완벽 원복 달성!' } },
+      { id: '2-1', pass: false, comment: { en: 'No body input focus handover', ko: '본문 폼 입력 충돌 방지 미구현' } },
+      { id: '3-1', pass: false, comment: { en: 'No restoration', ko: '복원 제어 부재' } },
+    ],
     keyFinding: {
-      en: 'Completely eliminates transition flicker when switching inputs.',
-      ko: '인풋 간 포커스 이동 시 닫힘 깜빡임 완전 제거.',
+      en: '0.0px reading line freeze achieved! Target text row stays 100% motionless on keyboard presentation and dismissal.',
+      ko: '동결 기준값(S0, H0)과 ΔH 단일 수식으로 키보드가 열려도 보던 줄(#5)이 0.0px 오차로 완벽 고정되는 쾌거 달성!',
+    },
+    nextDecision: {
+      en: 'Implement body form input focus handover and floating suppression in EXP-03-C.',
+      ko: '본문 폼 인풋 터치 시 하단 플로팅 바가 0px로 숨겨지는 Focus Handover를 구현하는 EXP-03-C로 연계.',
     },
   },
   {
     id: 'exp03_c',
     status: 'progress',
     title: {
-      en: 'EXP-03-C: Coordinate Preservation Formula',
-      ko: 'EXP-03-C: 0.0px 좌표 보정 수식 완성',
+      en: 'EXP-03-C: Inline Focus Handover & Floating Suppression',
+      ko: 'EXP-03-C: 본문 인풋 포커스 핸드오버 & 0px 숨김',
     },
-    description: {
-      en: 'Mathematical compensation: S_new = S_0 + (H_closed - H_current).',
-      ko: '기하학 보정 수식 S_new = S_0 + (H_closed - H_curr) 도출.',
+    hypothesis: {
+      en: 'Suppressing floating input to 0px when body inline form input is focused will avoid viewport conflicts.',
+      ko: '본문 폼 인풋을 누르면 플로팅 바를 0px로 접어 본문 입력창을 확보하고, 블러 시 복원한다.',
     },
+    evaluations: [
+      { id: '1-1', pass: false, comment: { en: 'Header slide artifact remains inside resizing container', ko: '헤더가 리사이징 컨테이너 안에 있어 키보드 오픈 시 솟아오름' } },
+      { id: '1-2', pass: true, comment: { en: 'Floating input visible when active', ko: '플로팅 인풋 정상 노출' } },
+      { id: '1-3', pass: true, comment: { en: '8px snap preserved', ko: '8px 밀착 유지' } },
+      { id: '1-4', pass: true, comment: { en: '0.0px reading anchor preserved', ko: '0.0px 읽던 줄 보존 유지' } },
+      { id: '2-1', pass: true, comment: { en: 'Floating bar collapses to 0px when typing in body form', ko: '본문 폼 입력 시 플로팅 바가 0px로 즉시 접혀 본문 입력창 완벽 확보' } },
+      { id: '3-1', pass: false, comment: { en: '1-frame flicker on keyboard dismiss after body input blur', ko: '본문 인풋 닫힐 때 1프레임 깜빡임(Flicker) 결함 잔존' } },
+    ],
     keyFinding: {
-      en: 'Reading line stays 100% frozen in place with 0.0px error on keyboard popup.',
-      ko: '키보드가 열려도 보던 줄이 0.0px 오차 없이 완벽히 화면에 고정.',
+      en: 'Dual input conflict solved! But header slide artifact and dismiss flicker remain.',
+      ko: '본문 폼 입력 시 플로팅 바 0px 은폐 성공! 단, 헤더 솟아오름 현상과 닫힐 때 깜빡임 잔존 확인.',
+    },
+    nextDecision: {
+      en: 'Physically isolate header outside resizing container and implement 3-state FSM in EXP-03-D.',
+      ko: '헤더를 뷰포트 수축 컨테이너 밖으로 완전히 물리적 격리하고 3-상태 FSM을 도입하는 EXP-03-D (Winner)로 연계.',
     },
   },
   {
     id: 'exp03_d',
     status: 'winner',
     title: {
-      en: 'EXP-03-D: Isolated Static Header & Zero-Shift Master',
-      ko: 'EXP-03-D: 독립 헤더 격리 & Zero-Shift 완성형 (Winner)',
+      en: 'EXP-03-D: Isolated Fixed Header & Zero-Jerk Top Anchor (WINNER ★)',
+      ko: 'EXP-03-D: 상단 헤더 물리적 격리 & Zero-Shift 완성형 (WINNER ★)',
     },
-    description: {
-      en: 'Decoupled physical static header outside resizing viewport + smart bottom sync.',
-      ko: '리사이징 컨테이너 밖으로 헤더를 물리적 격리 + 스마트 바닥 동기화.',
+    hypothesis: {
+      en: 'Decoupling header outside visualViewport container + preventScroll + 350ms rAF lock + 3-state FSM achieves Native App Parity.',
+      ko: '헤더를 수축 컨테이너 바깥 최상단에 물리적으로 격리 고정하고, preventScroll과 350ms rAF 락, 3-상태 FSM을 결합하면 완벽한 0.0px 헤더 고정과 네이티브 앱 동등 수준을 달성할 수 있다.',
     },
+    evaluations: [
+      { id: '1-1', pass: true, comment: { en: 'Header physically isolated; 0.0px motionless top-lock achieved!', ko: '헤더 물리 격리 + 350ms rAF 락으로 상단 헤더 0.0px 완전 고정 달성!' } },
+      { id: '1-2', pass: true, comment: { en: 'Floating bar fully visible above keyboard with 0-shift', ko: '키보드 위로 인풋 창 100% 온전한 노출' } },
+      { id: '1-3', pass: true, comment: { en: 'Safe area removed on open; snaps with compact margin', ko: '34px 갭 제거 + 12px 최적 여백 초밀착' } },
+      { id: '1-4', pass: true, comment: { en: 'Target row #5 anchored with 0.0px visual drift', ko: '동결 기준값 기반 0.0px 읽던 줄 완벽 고정' } },
+      { id: '2-1', pass: true, comment: { en: 'Floating bar suppresses to 0px seamlessly during body form input', ko: '본문 폼 입력 시 플로팅 바 0px 자동 은폐' } },
+      { id: '3-1', pass: true, comment: { en: '3-state FSM eliminates dismiss flicker 100%', ko: '3-상태 FSM 도입으로 포커스 해제 시 깜빡임 완전 박멸!' } },
+    ],
     keyFinding: {
-      en: 'Native App Parity achieved! 0.0px header jitter, 8px snap, 0.0px reading anchor.',
-      ko: '네이티브 앱 동등 수준 달성! 헤더 흔들림 0.0px, 8px 초밀착, 0.0px 앵커링.',
+      en: 'Native App Parity achieved! 0.0px header lock, 0.0px reading anchor, compact snap, and zero flicker across all iOS devices.',
+      ko: '상단 헤더 0.0px 완전 고정 + 읽던 줄 0.0px 보존 + 12px 초밀착 + FSM 깜빡임 완전 박멸로 네이티브 앱 동등 수준 달성!',
+    },
+    nextDecision: {
+      en: 'Adopted as the core production engine of react-mobile-keyboard-layout library!',
+      ko: 'react-mobile-keyboard-layout 라이브러리의 공식 정품 프로덕션 엔진으로 채택 및 최종 배포!',
     },
   },
 ]

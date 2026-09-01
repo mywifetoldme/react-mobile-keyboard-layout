@@ -83,7 +83,7 @@ export const LabsView = ({ lang, header }: LabsViewProps) => {
                 </div>
 
                 <p style={{ fontSize: '12px', color: '#a1a1aa', lineHeight: '1.4' }}>
-                  {lab.description[lang]}
+                  {lab.hypothesis[lang]}
                 </p>
 
                 <div style={{

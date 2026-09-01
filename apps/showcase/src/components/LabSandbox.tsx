@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react'
-import type { LabInfo } from '../data/labsData'
+import type { LabInfo, EvaluationItem } from '../data/labsData'
 import type { Language } from '../i18n'
 import {
   SubpageLayout,
@@ -13,15 +13,137 @@ interface LabSandboxProps {
   onClose: () => void
 }
 
+const EVAL_TITLES: Record<EvaluationItem['id'], { en: string; ko: string }> = {
+  '1-1': { en: '1-1. Header 0.0px Top-Lock', ko: '1-1. 상단 헤더 0.0px 고정' },
+  '1-2': { en: '1-2. Floating Input Visibility', ko: '1-2. 플로팅 인풋 키보드 위 노출' },
+  '1-3': { en: '1-3. Bottom Inset Gap Snap', ko: '1-3. 하단 여백 12px 초밀착' },
+  '1-4': { en: '1-4. 0.0px Reading Scroll Anchor', ko: '1-4. 본문 읽기 스크롤 0.0px 보존' },
+  '2-1': { en: '2-1. Body Focus Floating Suppression', ko: '2-1. 본문 인풋 입력 시 플로팅 숨김' },
+  '3-1': { en: '3-1. Seamless Focus Dismiss Restore', ko: '3-1. 본문 포커스 해제 시 즉시 복원' },
+}
+
+/* ==========================================================================
+   Main Sandbox Dispatcher
+   ========================================================================== */
+
 export const LabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
   const isWinner = lab.id === 'exp03_d'
 
-  // If this is the WINNER lab (EXP-03-D), run the authentic production library engine!
   if (isWinner) {
     return <WinnerLabSandbox lab={lab} lang={lang} onClose={onClose} />
   }
 
   return <SimulatedLabSandbox lab={lab} lang={lang} onClose={onClose} />
+}
+
+/* ==========================================================================
+   Shared Evaluation Checklist & Decision Component
+   ========================================================================== */
+
+const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) => {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {/* 1. Hypothesis Card */}
+      <div style={{
+        padding: '12px',
+        borderRadius: '12px',
+        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+        border: '1px solid rgba(59, 130, 246, 0.3)',
+        fontSize: '12px',
+        lineHeight: '1.4',
+        color: '#d4d4d8',
+      }}>
+        <div style={{ fontWeight: 700, color: '#60a5fa', marginBottom: '4px' }}>
+          🧪 {lang === 'ko' ? '실험 가설' : 'Hypothesis'}
+        </div>
+        <div>{lab.hypothesis[lang]}</div>
+      </div>
+
+      {/* 2. 6-Point Evaluation Checklist */}
+      <div style={{
+        padding: '14px',
+        borderRadius: '12px',
+        backgroundColor: '#18181b',
+        border: '1px solid #27272a',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+      }}>
+        <div style={{ fontSize: '13px', fontWeight: 700, color: '#f4f4f5', marginBottom: '2px' }}>
+          📊 {lang === 'ko' ? '6대 평가 항목 및 기대 결과' : '6 Evaluation Criteria & Expected Results'}
+        </div>
+
+        {lab.evaluations.map((evalItem) => {
+          const title = EVAL_TITLES[evalItem.id][lang]
+          const isPass = evalItem.pass
+
+          return (
+            <div
+              key={evalItem.id}
+              style={{
+                padding: '8px 10px',
+                borderRadius: '8px',
+                backgroundColor: isPass ? 'rgba(34, 197, 94, 0.06)' : 'rgba(239, 68, 68, 0.06)',
+                border: `1px solid ${isPass ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#f4f4f5' }}>
+                  {title}
+                </span>
+                <span style={{
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  backgroundColor: isPass ? '#22c55e' : '#ef4444',
+                  color: isPass ? '#052e16' : '#ffffff',
+                  fontSize: '10px',
+                  fontWeight: 700,
+                }}>
+                  {isPass ? (lang === 'ko' ? '✅ PASS (성공 기대)' : '✅ PASS') : (lang === 'ko' ? '❌ FAIL (결함 발생)' : '❌ FAIL')}
+                </span>
+              </div>
+              <div style={{ fontSize: '11px', color: isPass ? '#86efac' : '#fca5a5', lineHeight: '1.3' }}>
+                {evalItem.comment[lang]}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* 3. Key Finding & Next Decision */}
+      <div style={{
+        padding: '14px',
+        borderRadius: '12px',
+        backgroundColor: lab.status === 'winner' ? 'rgba(34, 197, 94, 0.1)' : '#18181b',
+        border: `1px solid ${lab.status === 'winner' ? '#22c55e' : '#3f3f46'}`,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+        fontSize: '12px',
+        lineHeight: '1.4',
+      }}>
+        <div>
+          <strong style={{ color: lab.status === 'winner' ? '#4ade80' : '#60a5fa' }}>
+            💡 {lang === 'ko' ? '핵심 발견' : 'Key Finding'}:
+          </strong>{' '}
+          <span style={{ color: '#d4d4d8' }}>{lab.keyFinding[lang]}</span>
+        </div>
+
+        <div style={{
+          paddingTop: '6px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        }}>
+          <strong style={{ color: lab.status === 'winner' ? '#22c55e' : '#fbbf24' }}>
+            ➡️ {lang === 'ko' ? '다음 결정' : 'Next Decision'}:
+          </strong>{' '}
+          <span style={{ color: '#f4f4f5' }}>{lab.nextDecision[lang]}</span>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 /* ==========================================================================
@@ -33,6 +155,7 @@ const WinnerLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
   const engine = useMobileKeyboard({ bodyRef })
   const [floatingVal, setFloatingVal] = useState('')
   const [bodyVal, setBodyVal] = useState('')
+  const [dateVal, setDateVal] = useState('2026-09-01')
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300 }}>
@@ -96,103 +219,104 @@ const WinnerLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
           />
         }
       >
-        <div style={{ padding: '0 16px 24px' }}>
-          {/* Real-time Diagnostics HUD */}
+        <div style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Interactive Form Controls */}
           <div style={{
-            margin: '12px 0',
-            padding: '10px 14px',
-            borderRadius: '10px',
+            marginTop: '12px',
+            padding: '12px',
+            borderRadius: '12px',
             backgroundColor: '#18181b',
             border: '1px solid #27272a',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            fontSize: '11px',
-            fontFamily: 'monospace',
+            flexDirection: 'column',
+            gap: '10px',
           }}>
-            <div>
-              <span style={{ color: '#a1a1aa' }}>Top-Lock: </span>
-              <span style={{ color: '#4ade80', fontWeight: 700 }}>0.0px ✓</span>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>
+              🎮 {lang === 'ko' ? '실기기 폼 컨트롤 테스트' : 'Form Controls'}
             </div>
+
             <div>
-              <span style={{ color: '#a1a1aa' }}>Keyboard: </span>
-              <span style={{ color: engine.isKeyboardOpen ? '#4ade80' : '#a1a1aa', fontWeight: 700 }}>
-                {engine.isKeyboardOpen ? 'OPEN' : 'CLOSED'}
-              </span>
-            </div>
-            <div>
-              <span style={{ color: '#a1a1aa' }}>FSM: </span>
-              <span style={{ color: engine.isFloatingSuppressed ? '#fbbf24' : '#60a5fa', fontWeight: 700 }}>
-                {engine.isFloatingSuppressed ? 'SUPPRESSED' : 'ACTIVE'}
-              </span>
-            </div>
-          </div>
-
-          {/* Finding Banner */}
-          <div style={{
-            padding: '12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-            border: '1px solid #22c55e',
-            marginBottom: '16px',
-            fontSize: '12px',
-            lineHeight: '1.4',
-            color: '#d4d4d8',
-          }}>
-            <strong style={{ color: '#4ade80' }}>{lab.title[lang]}</strong>
-            <div style={{ marginTop: '4px' }}>{lab.description[lang]}</div>
-            <div style={{ marginTop: '4px', color: '#86efac' }}>💡 {lab.keyFinding[lang]}</div>
-          </div>
-
-          {/* Test Form Input */}
-          <div style={{
-            padding: '12px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(255, 255, 255, 0.03)',
-            border: '1px solid #27272a',
-            marginBottom: '16px',
-          }}>
-            <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'block', marginBottom: '4px' }}>
-              Inline Body Form Input (Test Focus Handover)
-            </label>
-            <input
-              type="text"
-              value={bodyVal}
-              onChange={(e) => setBodyVal(e.target.value)}
-              placeholder="Tap here to test focus handover..."
-              style={{
-                width: '100%',
-                boxSizing: 'border-box',
-                minHeight: '42px',
-                padding: '8px 12px',
-                borderRadius: '8px',
-                border: '1px solid #3f3f46',
-                backgroundColor: '#18181b',
-                color: '#f4f4f5',
-                fontSize: '14px',
-                outline: 'none',
-              }}
-            />
-          </div>
-
-          {/* Reading Target Rows */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div
-                key={i}
+              <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
+                {lang === 'ko' ? '본문 텍스트 인풋 (터치 시 플로팅 바 0px 자동 숨김)' : 'Body Text Input'}
+              </label>
+              <input
+                type="text"
+                value={bodyVal}
+                onChange={(e) => setBodyVal(e.target.value)}
+                placeholder={lang === 'ko' ? '터치하여 Focus Handover 테스트...' : 'Tap here to test focus handover...'}
                 style={{
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  backgroundColor: i === 4 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                  border: i === 4 ? '1px solid #3b82f6' : '1px solid #27272a',
-                  fontSize: '13px',
-                  color: i === 4 ? '#60a5fa' : '#e4e4e7',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: '42px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #3f3f46',
+                  backgroundColor: '#09090b',
+                  color: '#f4f4f5',
+                  fontSize: '14px',
+                  outline: 'none',
                 }}
-              >
-                {i === 4 ? '🎯 [TARGET ROW #5] Notice: 0.0px reading line freeze when keyboard opens!' : `Item #${i + 1} — Zero-shift feed row`}
-              </div>
-            ))}
+              />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
+                {lang === 'ko' ? '네이티브 날짜 피커' : 'Native Date Picker'}
+              </label>
+              <input
+                type="date"
+                value={dateVal}
+                onChange={(e) => setDateVal(e.target.value)}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: '42px',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid #3f3f46',
+                  backgroundColor: '#09090b',
+                  color: '#f4f4f5',
+                  fontSize: '14px',
+                  outline: 'none',
+                  WebkitAppearance: 'none',
+                }}
+              />
+            </div>
           </div>
+
+          {/* Evaluations & Next Decisions */}
+          <LabEvaluationSection lab={lab} lang={lang} />
+
+          {/* Reading Target Row */}
+          <div style={{
+            padding: '14px',
+            borderRadius: '10px',
+            backgroundColor: 'rgba(59, 130, 246, 0.15)',
+            border: '1px solid #3b82f6',
+            fontSize: '13px',
+            color: '#60a5fa',
+            fontWeight: 600,
+            lineHeight: '1.4',
+          }}>
+            🎯 {lang === 'ko' ? '[TARGET ROW #5] 키보드가 열릴 때 이 박스의 위치가 0.0px로 그대로 고정되는지 확인하세요!' : '[TARGET ROW #5] Check 0.0px reading line freeze when keyboard opens!'}
+          </div>
+
+          {/* Extra test rows */}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                padding: '12px 14px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid #27272a',
+                fontSize: '12px',
+                color: '#d4d4d8',
+              }}
+            >
+              Item #{i + 6} — Zero-shift feed row
+            </div>
+          ))}
         </div>
       </SubpageLayout>
     </div>
@@ -207,6 +331,7 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
   const [windowScrollY, setWindowScrollY] = useState(0)
   const [vvHeight, setVvHeight] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : 0)
   const [bodyInputVal, setBodyInputVal] = useState('')
+  const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingInputVal, setFloatingInputVal] = useState('')
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
   const [isSuppressed, setIsSuppressed] = useState(false)
@@ -286,7 +411,7 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
     startRafTopLock()
   }
 
-  // Root sandbox dimensions - fits inside visualViewport
+  // Root sandbox dimensions
   const rootHeightStyle: CSSProperties = isExp01
     ? { height: '100vh' }
     : isExp01B
@@ -310,7 +435,7 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
       overflow: 'hidden',
       ...rootHeightStyle,
     }}>
-      {/* Top Header - In EXP-03-C, header is NOT isolated, demonstrating slide-up artifact */}
+      {/* Top Header */}
       <header style={{
         height: '52px',
         paddingTop: 'env(safe-area-inset-top, 0px)',
@@ -341,8 +466,13 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
           {lang === 'ko' ? '← 나가기' : '← Back'}
         </button>
 
-        <div style={{ fontSize: '13px', fontWeight: 700, color: '#60a5fa' }}>
-          {lab.id.toUpperCase().replace('_', '-')}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', fontFamily: 'monospace', color: windowScrollY === 0 ? '#4ade80' : '#f87171', fontWeight: 700 }}>
+            scrollY: {windowScrollY.toFixed(0)}px {windowScrollY === 0 ? '✓' : '⚠️'}
+          </span>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#60a5fa' }}>
+            {lab.id.toUpperCase().replace('_', '-')}
+          </div>
         </div>
 
         <span style={{
@@ -357,36 +487,6 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
         </span>
       </header>
 
-      {/* Physics HUD */}
-      <div style={{
-        padding: '6px 12px',
-        backgroundColor: '#121214',
-        borderBottom: '1px solid #27272a',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        fontSize: '11px',
-        fontFamily: 'monospace',
-        flexShrink: 0,
-      }}>
-        <div>
-          <span style={{ color: '#a1a1aa' }}>scrollY: </span>
-          <span style={{ fontWeight: 700, color: windowScrollY === 0 ? '#4ade80' : '#f87171' }}>
-            {windowScrollY.toFixed(0)}px {windowScrollY === 0 ? '✓' : '⚠️ DRIFT'}
-          </span>
-        </div>
-        <div>
-          <span style={{ color: '#a1a1aa' }}>vv.h: </span>
-          <span style={{ fontWeight: 700, color: '#60a5fa' }}>{vvHeight.toFixed(0)}px</span>
-        </div>
-        <div>
-          <span style={{ color: '#a1a1aa' }}>Key: </span>
-          <span style={{ fontWeight: 700, color: isKeyboardOpen ? '#4ade80' : '#a1a1aa' }}>
-            {isKeyboardOpen ? 'OPEN' : 'CLOSED'}
-          </span>
-        </div>
-      </div>
-
       {/* Scrollable Body */}
       <main
         ref={bodyRef}
@@ -394,72 +494,91 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
           flex: 1,
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
-          padding: '14px',
+          padding: '14px 16px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '14px',
+        }}
+      >
+        {/* Interactive Form Controls */}
+        <div style={{
+          padding: '12px',
+          borderRadius: '12px',
+          backgroundColor: '#18181b',
+          border: '1px solid #27272a',
           display: 'flex',
           flexDirection: 'column',
           gap: '10px',
-        }}
-      >
-        {/* Finding Box */}
-        <div style={{
-          padding: '10px 12px',
-          borderRadius: '10px',
-          backgroundColor: 'rgba(59, 130, 246, 0.08)',
-          border: '1px solid rgba(59, 130, 246, 0.3)',
-          fontSize: '12px',
-          color: '#d4d4d8',
         }}>
-          <strong>{lab.title[lang]}</strong>
-          <div style={{ marginTop: '2px', color: '#93c5fd' }}>💡 {lab.keyFinding[lang]}</div>
-        </div>
-
-        {/* Test Form Input */}
-        <div style={{
-          padding: '10px',
-          borderRadius: '10px',
-          backgroundColor: '#18181b',
-          border: '1px solid #27272a',
-        }}>
-          <label style={{ fontSize: '11px', color: '#a1a1aa', display: 'block', marginBottom: '4px' }}>
-            Inline Body Input (Tap to test FSM suppression)
-          </label>
-          <input
-            type="text"
-            value={bodyInputVal}
-            onChange={(e) => setBodyInputVal(e.target.value)}
-            onFocus={handleBodyFocus}
-            placeholder="Tap here to test focus..."
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              minHeight: '38px',
-              padding: '6px 10px',
-              borderRadius: '8px',
-              border: '1px solid #3f3f46',
-              backgroundColor: '#09090b',
-              color: '#f4f4f5',
-              fontSize: '14px',
-              outline: 'none',
-            }}
-          />
-        </div>
-
-        {/* Test rows */}
-        {Array.from({ length: 12 }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              padding: '10px 12px',
-              borderRadius: '8px',
-              backgroundColor: i === 4 ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-              border: i === 4 ? '1px solid #3b82f6' : '1px solid #27272a',
-              fontSize: '12px',
-              color: i === 4 ? '#60a5fa' : '#d4d4d8',
-            }}
-          >
-            {i === 4 ? '🎯 [TARGET ROW #5] Coordinate Math test row!' : `Row #${i + 1} — ${lab.id.toUpperCase()}`}
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>
+            🎮 {lang === 'ko' ? '실기기 폼 컨트롤 테스트' : 'Form Controls'}
           </div>
-        ))}
+
+          <div>
+            <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
+              {lang === 'ko' ? '본문 텍스트 인풋' : 'Body Text Input'}
+            </label>
+            <input
+              type="text"
+              value={bodyInputVal}
+              onChange={(e) => setBodyInputVal(e.target.value)}
+              onFocus={handleBodyFocus}
+              placeholder={lang === 'ko' ? '터치하여 본문 인풋 테스트...' : 'Tap to test body focus...'}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                minHeight: '40px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #3f3f46',
+                backgroundColor: '#09090b',
+                color: '#f4f4f5',
+                fontSize: '14px',
+                outline: 'none',
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
+              {lang === 'ko' ? '네이티브 날짜 피커' : 'Native Date Picker'}
+            </label>
+            <input
+              type="date"
+              value={dateVal}
+              onChange={(e) => setDateVal(e.target.value)}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                minHeight: '40px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                border: '1px solid #3f3f46',
+                backgroundColor: '#09090b',
+                color: '#f4f4f5',
+                fontSize: '14px',
+                outline: 'none',
+                WebkitAppearance: 'none',
+              }}
+            />
+          </div>
+        </div>
+
+        {/* Evaluations & Next Decisions */}
+        <LabEvaluationSection lab={lab} lang={lang} />
+
+        {/* Reading Target Row */}
+        <div style={{
+          padding: '12px 14px',
+          borderRadius: '10px',
+          backgroundColor: 'rgba(59, 130, 246, 0.15)',
+          border: '1px solid #3b82f6',
+          fontSize: '12px',
+          color: '#60a5fa',
+          fontWeight: 600,
+        }}>
+          🎯 {lang === 'ko' ? '[TARGET ROW #5] 키보드를 열 때 이 줄이 고정되는지 확인하세요!' : '[TARGET ROW #5] Check scroll anchor on keyboard open!'}
+        </div>
       </main>
 
       {/* Floating Input Bar */}
