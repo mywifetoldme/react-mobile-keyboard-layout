@@ -40,8 +40,8 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', pass: true, comment: { en: 'Native browser dismiss restores layout smoothly', ko: '조작한 JS가 없으므로 사파리 기본 동작으로 매끄럽게 복원됨' } },
     ],
     keyFinding: {
-      en: 'position: fixed creates dual-scrollport fighting, loses the top header, and leaves an unnecessary 34px Safe Area gap above keyboard.',
-      ko: 'position: fixed는 이중 스크롤 충돌, 상단 헤더 실종, 키보드 위 34px Safe Area 공백을 유발함을 실증.',
+      en: 'position: fixed creates dual-scrollport fighting, loses the top header, and leaves an unnecessary 34px Safe Area Inset gap above keyboard.',
+      ko: 'position: fixed는 이중 스크롤 충돌, 상단 헤더 실종, 키보드 위 34px Safe Area Inset 공백을 유발함을 실증.',
     },
     nextDecision: {
       en: 'Branch into two investigative paths: (1) Find a way to remove Safe Area gap (EXP-01-A), and (2) Try locking the top header (EXP-01-B).',
@@ -119,7 +119,7 @@ export const LABS_DATA: LabInfo[] = [
       { id: '1-1', pass: false, comment: { en: '100dvh ignores keyboard, causing window to pan', ko: '100dvh가 키보드를 무시하여 화면 전체가 밀려올라감' } },
       { id: '1-2', pass: false, comment: { en: 'Dual-scroll occurs when scrolling on input area', ko: '인풋 영역 스크롤 시 이중 스크롤 발생' } },
       { id: '1-3', pass: false, comment: { en: 'Layout clipping on drag', ko: '드래그 시 레이아웃 잘림' } },
-      { id: '1-4', pass: true, comment: { en: 'Body bottom preserved via window shift', ko: '창 밀림으로 바디 하단 위치 자체는 보존됨' } },
+      { id: '1-4', pass: true, comment: { en: 'Body bottom preserved via window shift', ko: '사파리 창 밀림으로 바디 하단 위치 자연 보존' } },
       { id: '2-1', pass: true, comment: { en: 'Body forms unobstructed', ko: '본문 폼 입력 간섭 없음' } },
       { id: '3-1', pass: true, comment: { en: 'Native restore works', ko: '사파리 기본 복원 작동' } },
     ],
@@ -174,7 +174,7 @@ export const LABS_DATA: LabInfo[] = [
     evaluations: [
       { id: '1-1', pass: false, comment: { en: '1-frame visual jitter when rubbing input bar', ko: '인풋 바를 문지를 때 1프레임 미세 덜컹거림 발생' } },
       { id: '1-2', pass: true, comment: { en: 'Single unified scroll lands directly above keyboard', ko: '단일 스크롤로 매끄럽게 통합 유지' } },
-      { id: '1-3', pass: false, comment: { en: '34px Safe Area Inset gap remains', ko: '키보드 활성화 시 34px Safe Area Inset 여백 잔존' } },
+      { id: '1-3', pass: false, comment: { en: '34px Safe Area Inset gap remains', ko: '키보드 활성화 시 34px Safe Area Inset 공백 미제거' } },
       { id: '1-4', pass: false, comment: { en: 'Reading line still jumps', ko: '바디 하단 앵커링 점프 발생' } },
       { id: '2-1', pass: true, comment: { en: 'Body forms unobstructed', ko: '본문 폼 입력 간섭 없음' } },
       { id: '3-1', pass: true, comment: { en: 'Restore works', ko: '복원 작동' } },
@@ -230,7 +230,7 @@ export const LABS_DATA: LabInfo[] = [
     evaluations: [
       { id: '1-1', pass: false, comment: { en: 'Header still slides inside resizing container', ko: '헤더가 리사이징 컨테이너 안에 있어 슬라이드 발생' } },
       { id: '1-2', pass: true, comment: { en: '0-pixel motionless lock achieved when rubbing input shell', ko: '단일 스크롤로 매끄럽게 통합 유지' } },
-      { id: '1-3', pass: false, comment: { en: '34px Safe Area Inset gap remains', ko: '키보드 활성화 시 34px Safe Area Inset 여백 잔존' } },
+      { id: '1-3', pass: false, comment: { en: '34px Safe Area Inset gap remains', ko: '키보드 활성화 시 34px Safe Area Inset 공백 미제거' } },
       { id: '1-4', pass: false, comment: { en: 'Reading line shifts on resize', ko: '컨테이너 축소 시 바디 하단 앵커링 이동' } },
       { id: '2-1', pass: true, comment: { en: 'Body forms unobstructed', ko: '본문 폼 입력 간섭 없음' } },
       { id: '3-1', pass: true, comment: { en: 'Restore works', ko: '복원 작동' } },
