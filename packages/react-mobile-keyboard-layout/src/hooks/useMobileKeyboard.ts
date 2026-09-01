@@ -81,7 +81,9 @@ const subscribeVisualViewport = (
   const handleUpdate = () => {
     const currentH = vv.height
     const screenH = window.innerHeight || currentH
-    const isOpen = screenH - currentH > threshold && isTouchDevice()
+    const activeEl = typeof document !== 'undefined' ? document.activeElement : null
+    const hasActiveTextInput = isKeyboardTextInput(activeEl)
+    const isOpen = hasActiveTextInput && screenH - currentH > threshold && isTouchDevice()
     onUpdate(currentH, isOpen)
   }
 
@@ -184,12 +186,12 @@ const bindGlobalFocusOutListener = (onResetFocus: () => void) => {
 
   const handleGlobalFocusOut = (e: FocusEvent) => {
     if (isKeyboardTextInput(e.target)) {
-      setTimeout(() => {
+      queueMicrotask(() => {
         const active = document.activeElement
-        if (!active || active === document.body) {
+        if (!active || active === document.body || !isKeyboardTextInput(active)) {
           onResetFocus()
         }
-      }, 50)
+      })
     }
   }
 
@@ -236,6 +238,7 @@ export const useMobileKeyboard = ({
   })
   const [isKeyboardOpen, setIsKeyboardOpen] = useState<boolean>(false)
   const [activeInputType, setActiveInputType] = useState<ActiveInputType>('none')
+  const activeInputTypeRef = useRef<ActiveInputType>('none')
   const [isBodyInputFocused, setIsBodyInputFocused] = useState<boolean>(false)
 
   // Frozen baseline coordinates
@@ -339,17 +342,31 @@ export const useMobileKeyboard = ({
       ? bindBodyFocusListeners(
           el,
           () => {
+            activeInputTypeRef.current = 'body'
             setActiveInputType('body')
             setIsBodyInputFocused(true)
             startContinuousLockLoop()
           },
-          () => startContinuousLockLoop(),
+          () => {
+            startContinuousLockLoop()
+          },
         )
       : () => {}
 
     const cleanupGlobal = bindGlobalFocusOutListener(() => {
+      const wasFloating = activeInputTypeRef.current === 'floating'
+      activeInputTypeRef.current = 'none'
       setActiveInputType('none')
       setIsBodyInputFocused(false)
+      if (isKeyboardActiveRef.current) {
+        isKeyboardActiveRef.current = false
+        setVvHeight(null)
+        setIsKeyboardOpen(false)
+        startContinuousLockLoop()
+        if (wasFloating && bodyRef?.current) {
+          bodyRef.current.scrollTop = closedScrollTopRef.current
+        }
+      }
     })
 
     return () => {
@@ -365,6 +382,7 @@ export const useMobileKeyboard = ({
 
   // Floating input handlers
   const handleFloatingFocus = useCallback(() => {
+    activeInputTypeRef.current = 'floating'
     setActiveInputType('floating')
     setIsBodyInputFocused(false)
     startContinuousLockLoop()
@@ -407,7 +425,7 @@ export const useMobileKeyboard = ({
   const isFloatingSuppressed =
     activeInputType === 'body' && (isBodyInputFocused || isKeyboardOpen)
 
-  const containerStyle: CSSProperties = vvHeight
+  const containerStyle: CSSProperties = vvHeight && isKeyboardOpen
     ? {
         height: `${vvHeight}px`,
         maxHeight: `${vvHeight}px`,

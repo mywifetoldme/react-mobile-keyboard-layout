@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, type CSSProperties, type RefObject } from 'react'
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type RefObject } from 'react'
 import type { LabInfo, EvaluationItem } from '../data/labsData'
 import type { Language } from '../i18n'
 import {
   SubpageLayout,
   FloatingInput,
   useMobileKeyboard,
+  isKeyboardTextInput,
 } from 'react-mobile-keyboard-layout'
 
 interface LabSandboxProps {
@@ -1690,7 +1691,7 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
 }
 
 /* ==========================================================================
-   12. EXP-03-D: FINAL (Production Library Architecture)
+   12. EXP-03-D: Isolated Fixed Header & 3-State FSM
    ========================================================================== */
 
 function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
@@ -1698,7 +1699,220 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [messages, setMessages] = useState<string[]>([])
+  const [isBodyInputFocused, setIsBodyInputFocused] = useState(false)
+  const [vvHeight, setVvHeight] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : 0)
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false)
+
   const bodyRef = useRef<HTMLDivElement | null>(null)
+  const inlineInputRef = useRef<HTMLInputElement | null>(null)
+  const closedScrollTopRef = useRef<number>(0)
+  const closedBodyHeightRef = useRef<number | null>(null)
+  const isKeyboardActiveRef = useRef<boolean>(false)
+
+  const lockToTop = useCallback(() => {
+    if (typeof window === 'undefined') return
+    window.scrollTo(0, 0)
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0
+    if (document.documentElement) document.documentElement.scrollTop = 0
+    if (document.body) document.body.scrollTop = 0
+  }, [])
+
+  // Passive visualViewport subscription (EXP-03-D)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const updateHeightAndLock = () => {
+      setVvHeight(vv.height)
+      const open = window.innerHeight - vv.height > 80
+      setIsKeyboardOpen(open)
+      lockToTop()
+    }
+    updateHeightAndLock()
+    vv.addEventListener('resize', updateHeightAndLock)
+    vv.addEventListener('scroll', lockToTop)
+    window.addEventListener('resize', updateHeightAndLock)
+    window.addEventListener('scroll', lockToTop)
+    return () => {
+      vv.removeEventListener('resize', updateHeightAndLock)
+      vv.removeEventListener('scroll', lockToTop)
+      window.removeEventListener('resize', updateHeightAndLock)
+      window.removeEventListener('scroll', lockToTop)
+    }
+  }, [lockToTop])
+
+  // Coordinate estimation via ResizeObserver
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+
+    const handleScroll = () => {
+      if (!isKeyboardActiveRef.current) {
+        closedScrollTopRef.current = el.scrollTop
+        closedBodyHeightRef.current = el.clientHeight
+      }
+    }
+    el.addEventListener('scroll', handleScroll, { passive: true })
+
+    const ro = new ResizeObserver(() => {
+      const currHeight = el.clientHeight
+      if (!isKeyboardActiveRef.current) {
+        closedBodyHeightRef.current = currHeight
+        closedScrollTopRef.current = el.scrollTop
+      } else if (!isBodyInputFocused && closedBodyHeightRef.current !== null) {
+        const deltaH = Math.max(0, closedBodyHeightRef.current - currHeight)
+        if (deltaH > 0) {
+          el.scrollTop = Math.round(closedScrollTopRef.current + deltaH)
+        }
+      }
+    })
+    ro.observe(el)
+
+    return () => {
+      el.removeEventListener('scroll', handleScroll)
+      ro.disconnect()
+    }
+  }, [isBodyInputFocused])
+
+  // Sync open/close transitions
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+    if (isKeyboardOpen) {
+      if (!isKeyboardActiveRef.current) {
+        isKeyboardActiveRef.current = true
+        closedScrollTopRef.current = el.scrollTop
+        closedBodyHeightRef.current = el.clientHeight
+      }
+    } else {
+      if (isKeyboardActiveRef.current) {
+        isKeyboardActiveRef.current = false
+        if (!isBodyInputFocused) {
+          el.scrollTop = closedScrollTopRef.current
+        }
+      }
+    }
+  }, [isKeyboardOpen, isBodyInputFocused])
+
+  const handleFloatingFocus = () => {
+    setIsBodyInputFocused(false)
+    if (bodyRef.current && !isKeyboardActiveRef.current) {
+      isKeyboardActiveRef.current = true
+      closedScrollTopRef.current = bodyRef.current.scrollTop
+      closedBodyHeightRef.current = bodyRef.current.clientHeight
+    }
+    lockToTop()
+    requestAnimationFrame(lockToTop)
+  }
+
+  const handleBodyInputFocus = () => {
+    setIsBodyInputFocused(true)
+    lockToTop()
+  }
+
+  const handleBodyInputBlur = () => {
+    // 50ms asynchronous focus reset reproduces mid-screen floating pop in EXP-03-D
+    setTimeout(() => {
+      setIsBodyInputFocused(false)
+    }, 50)
+  }
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
+  const dynamicH = vvHeight > 0 ? `${vvHeight}px` : '100dvh'
+
+  const mockEngine = {
+    containerStyle: {
+      height: dynamicH,
+      maxHeight: dynamicH,
+    },
+    isKeyboardOpen,
+    isFloatingSuppressed: isBodyInputFocused,
+    floatingProps: {
+      onFocus: handleFloatingFocus,
+      onBlur: () => lockToTop(),
+      onPointerDown: () => lockToTop(),
+    },
+    bodyProps: {
+      onPointerDown: (e: React.PointerEvent<HTMLElement> | PointerEvent) => {
+        const target = e.target as HTMLElement | null
+        if (target && isKeyboardTextInput(target)) {
+          e.stopPropagation()
+          lockToTop()
+          target.focus({ preventScroll: true })
+        }
+      },
+    },
+    scrollToBottom: () => {},
+  }
+
+  const [scrollY, setScrollY] = useState(0)
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  return (
+    <SubpageLayout
+      keyboardEngine={mockEngine}
+      bodyRef={bodyRef}
+      style={{ zIndex: 300 }}
+      header={<LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />}
+      footer={
+        <FloatingInput
+          value={floatingVal}
+          onChange={setFloatingVal}
+          onSubmit={handleSubmit}
+          placeholder={lang === 'ko' ? 'EXP-03-D: 본문 인풋 블러 시 팝 관찰...' : 'EXP-03-D: Notice pop on body blur...'}
+          {...mockEngine.floatingProps}
+          isSuppressed={mockEngine.isFloatingSuppressed}
+          isKeyboardOpen={mockEngine.isKeyboardOpen}
+        />
+      }
+    >
+      <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <LabHeroSection lab={lab} lang={lang} />
+        <LabFormSection
+          lang={lang}
+          bodyVal={bodyVal}
+          setBodyVal={setBodyVal}
+          dateVal={dateVal}
+          setDateVal={setDateVal}
+          bodyInputRef={inlineInputRef}
+          onBodyFocus={handleBodyInputFocus}
+          onBodyBlur={handleBodyInputBlur}
+        />
+        <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
+        <div style={{ height: '40px', flexShrink: 0 }} />
+      </div>
+    </SubpageLayout>
+  )
+}
+
+/* ==========================================================================
+   13. EXP-03-E: FINAL (Atomic Viewport Restoration & Dismiss Sync)
+   ========================================================================== */
+
+function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
+  const [floatingVal, setFloatingVal] = useState('')
+  const [bodyVal, setBodyVal] = useState('')
+  const [dateVal, setDateVal] = useState('2026-09-01')
+  const [messages, setMessages] = useState<string[]>([])
+  const [scrollY, setScrollY] = useState(0)
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const engine = useMobileKeyboard({
     bodyRef,
@@ -1715,41 +1929,7 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
       keyboardEngine={engine}
       bodyRef={bodyRef}
       style={{ zIndex: 300 }}
-      headerLeft={
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            padding: '6px 12px',
-            borderRadius: '8px',
-            border: '1px solid #3f3f46',
-            backgroundColor: '#27272a',
-            color: '#f4f4f5',
-            fontSize: '12px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          {lang === 'ko' ? '← 나가기' : '← Back'}
-        </button>
-      }
-      title={
-        <div style={{ fontSize: '13px', fontWeight: 700, color: '#4ade80' }}>
-          {lang === 'ko' ? 'EXP-03-D (최종 아키텍처)' : 'EXP-03-D (Final Architecture)'}
-        </div>
-      }
-      headerRight={
-        <span style={{
-          padding: '3px 8px',
-          borderRadius: '6px',
-          backgroundColor: '#22c55e',
-          color: '#052e16',
-          fontSize: '11px',
-          fontWeight: 700,
-        }}>
-          FINAL
-        </span>
-      }
+      header={<LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />}
       footer={
         <FloatingInput
           value={floatingVal}
@@ -1803,7 +1983,9 @@ export const LabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
     case 'exp03_c':
       return <Exp03CSandbox lab={lab} lang={lang} onClose={onClose} />
     case 'exp03_d':
-    default:
       return <Exp03DSandbox lab={lab} lang={lang} onClose={onClose} />
+    case 'exp03_e':
+    default:
+      return <Exp03ESandbox lab={lab} lang={lang} onClose={onClose} />
   }
 }

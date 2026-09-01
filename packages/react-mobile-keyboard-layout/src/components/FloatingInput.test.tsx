@@ -44,7 +44,7 @@ describe('FloatingInput', () => {
     expect(handleSubmit).toHaveBeenCalledTimes(1)
   })
 
-  it('does not render when isSuppressed is true', () => {
+  it('hides with display: none when isSuppressed is true', () => {
     const { container } = render(
       <FloatingInput
         value="Hidden"
@@ -54,7 +54,7 @@ describe('FloatingInput', () => {
       />
     )
 
-    expect(container.firstChild).toBeNull()
+    expect((container.firstChild as HTMLElement).style.display).toBe('none')
   })
 
   it('forwards slot props to textarea and send button', () => {
