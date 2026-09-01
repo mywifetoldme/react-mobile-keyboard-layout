@@ -1253,7 +1253,7 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
         onChange={setFloatingVal}
         onFocus={handleFocus}
         onSubmit={handleSubmit}
-        placeholder="Safe area drops to 8px (causes 34px scroll jump)..."
+        placeholder="Safe area drops to 8px (bottom reading line buried by ΔH)..."
         style={{
           touchAction: 'none',
           padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',

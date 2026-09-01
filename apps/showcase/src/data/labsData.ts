@@ -263,24 +263,24 @@ export const LABS_DATA: LabInfo[] = [
       ko: 'EXP-03-A: Safe Area Inset 0px 축소 & 8px 초밀착',
     },
     hypothesis: {
-      en: 'Relocating HUD to body and collapsing safe-area padding to 8px when keyboard opens will achieve compact snap.',
+      en: 'Collapsing safe-area padding to 8px when keyboard opens will achieve compact snap above keyboard.',
       ko: '키보드 오픈 시점에는 Safe Area Inset(34px)을 즉시 0px로 축소하여 키보드 윗선에 8px 마진으로 초밀착시킨다.',
     },
     evaluations: [
       { id: '1-1', status: 'pass', comment: { en: 'Header firmly pinned to top', ko: '상단 헤더 고정 성공' } },
       { id: '1-2', status: 'pass', comment: { en: 'Input perfectly visible with unified scroll', ko: '단일 스크롤로 매끄럽게 통합 유지' } },
       { id: '1-3', status: 'pass', comment: { en: '34px Safe Area Inset eliminated; snaps with 8px compact margin', ko: '키보드 활성화 시 Safe Area Inset 완전 제거 및 8px 초밀착 성공' } },
-      { id: '1-4', status: 'fail', comment: { en: '34px height delta causes 34px reading anchor shift', ko: '34px 인셋 축소로 인해 바디 하단 앵커링이 위로 34px 튀어 올라감' } },
+      { id: '1-4', status: 'fail', comment: { en: 'Body shrinks by ΔH (~300px+), burying bottom reading position behind keyboard', ko: '플렉스박스 바디 축소량(ΔH ≈ 300px+)만큼 하단 읽기 위치가 키보드 뒤로 가려져 앵커링 붕괴' } },
       { id: '2-1', status: 'na', comment: { en: 'Focus handover not in scope (introduced in EXP-03-C)', ko: '포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)' } },
       { id: '3-1', status: 'na', comment: { en: 'FSM restoration not in scope (introduced in EXP-03-D)', ko: 'FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)' } },
     ],
     keyFinding: {
-      en: 'Compact 8px snap verified! But shrinking Safe Area by 34px shifts body scroll by exactly 34px.',
-      ko: '키보드 활성화 시 Safe Area Inset 제거로 8px 초밀착 성공. 단, 바디 하단 앵커링이 34px 튀는 오차 확인.',
+      en: '8px compact snap achieved! But with Flexbox top fixed, container height contraction (ΔH) swallows the bottom reading line entirely behind the keyboard.',
+      ko: 'Safe Area Inset을 0px로 축소하여 키보드 위 8px 초밀착은 성공. 하지만 플렉스박스 상단이 고정된 상태에서 컨테이너 높이가 줄어들며, 바디 하단 읽기 라인이 축소량(ΔH)만큼 키보드 뒤로 통째로 가려지는 앵커링 붕괴 발견.',
     },
     nextDecision: {
-      en: 'Introduce ResizeObserver delta-H scroll compensation in EXP-03-B to achieve 0.0px Body Bottom Scroll Anchoring.',
-      ko: '본문 ResizeObserver 기반 ΔH 실시간 1:1 스크롤 보정 수식을 도입하는 EXP-03-B로 연계.',
+      en: 'Develop real-time ResizeObserver scroll compensation formula (scrollTop = S0 + ΔH) in EXP-03-B to keep the bottom reading line perfectly anchored.',
+      ko: '컨테이너 축소량(ΔH)을 ResizeObserver로 실시간 측정하여 scrollTop에 즉시 더해주는(S0 + ΔH) 스크롤 보정 수식을 개발하는 EXP-03-B로 연계.',
     },
   },
   {
@@ -291,8 +291,8 @@ export const LABS_DATA: LabInfo[] = [
       ko: 'EXP-03-B: ResizeObserver 바디 하단 스크롤 앵커링',
     },
     hypothesis: {
-      en: 'Freezing baseline (S0, H0) and compensating scroll offset by exact body contraction (delta-H) will achieve 0.0px Scroll Anchoring.',
-      ko: '닫혀 있을 때의 기준값(S0, H0)을 동결하고, 본문의 실제 축소량(ΔH)만큼만 스크롤을 보정하고 닫힐 때 S0로 1:1 복원한다.',
+      en: 'Freezing baseline (S0, H0) and compensating scrollTop by exact body contraction (scrollTop = S0 + ΔH) will anchor the bottom reading line with 0.0px drift.',
+      ko: '닫혀 있을 때의 기준값(S0, H0)을 동결하고, 본문이 줄어든 실제 축소량(ΔH = H0 - H)만큼 scrollTop에 더해주면 바디 하단 읽기 라인이 0.0px 오차로 완벽 고정될 것이다.',
     },
     evaluations: [
       { id: '1-1', status: 'pass', comment: { en: 'Header firmly pinned to top', ko: '상단 헤더 고정 성공' } },
