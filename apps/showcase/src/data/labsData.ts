@@ -20,12 +20,15 @@ export interface LabInfo {
 }
 
 export const LABS_DATA: LabInfo[] = [
+  /* ==========================================================================
+     PHASE 1: Pure CSS Limits (순수 CSS의 한계 검증)
+     ========================================================================== */
   {
-    id: 'exp01',
+    id: 'exp01_a',
     status: 'failed',
     title: {
-      en: 'EXP-01: Baseline Standard Fixed',
-      ko: 'EXP-01: 순수 CSS position: fixed 기준점',
+      en: 'EXP-01-A: Baseline Standard Fixed',
+      ko: 'EXP-01-A: 순수 CSS position: fixed 기준점',
     },
     hypothesis: {
       en: 'Standard CSS position: fixed with safe-area padding can anchor the input at the bottom on iOS Safari.',
@@ -40,20 +43,20 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', status: 'na', comment: { en: 'FSM restoration not in scope (introduced in EXP-03-D)', ko: 'FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)' } },
     ],
     keyFinding: {
-      en: 'position: fixed creates dual-scrollport fighting, loses the top header, and leaves an unnecessary 34px Safe Area gap above keyboard.',
+      en: 'position: fixed creates dual-scrollport fighting, loses the top header, and leaves an unnecessary 34px Safe Area Inset gap above keyboard.',
       ko: 'position: fixed는 이중 스크롤 충돌, 상단 헤더 실종, 키보드 위 34px Safe Area Inset 공백을 유발함을 실증.',
     },
     nextDecision: {
-      en: 'Branch into two investigative paths: (1) Find a way to remove Safe Area gap (EXP-01-A), and (2) Try locking the top header (EXP-01-B).',
-      ko: '두 갈래 방향으로 분기: (1) 키보드 활성화 시 Safe Area Inset 제거 탐색(EXP-01-A) 및 (2) 상단 헤더 고정 시도(EXP-01-B)로 연계 결정.',
+      en: 'Branch into EXP-01-B to try removing the 34px Safe Area Inset gap while keeping position: fixed.',
+      ko: 'fixed를 유지한 채 키보드 위 34px Safe Area Inset 공백을 동적으로 제거해보는 EXP-01-B로 연계.',
     },
   },
   {
-    id: 'exp01_a',
+    id: 'exp01_b',
     status: 'failed',
     title: {
-      en: 'EXP-01-A: Dynamic Safe Area Inset',
-      ko: 'EXP-01-A: Safe Area Inset 동적 제거 시도 (밀착 시도)',
+      en: 'EXP-01-B: Dynamic Safe Area Inset',
+      ko: 'EXP-01-B: Safe Area Inset 동적 제거 시도 (밀착 시도)',
     },
     hypothesis: {
       en: 'Detecting keyboard open via visualViewport.height < window.innerHeight - 80 and reducing safe-area-inset-bottom from 34px to 0px will snap input to keyboard.',
@@ -62,7 +65,7 @@ export const LABS_DATA: LabInfo[] = [
     evaluations: [
       { id: '1-1', status: 'fail', comment: { en: 'Header pushed off-screen as Safari pans window up', ko: '사파리가 외부 창을 밀어올려 상단 헤더가 화면 위로 밀려 사라짐' } },
       { id: '1-2', status: 'fail', comment: { en: 'Dual-scroll occurs when scrolling on input area', ko: '인풋 영역 스크롤 시 이중 스크롤 발생' } },
-      { id: '1-3', status: 'fail', comment: { en: 'Despite visualViewport.height detection attempt, 34px Safe Area Inset padding remains (identical to EXP-01)', ko: '키보드 감지(visualViewport.height < window.innerHeight - 80) 시도에도 불구하고 34px Safe Area Inset이 제거되지 않고 유지됨 (EXP-01과 동일)' } },
+      { id: '1-3', status: 'fail', comment: { en: 'Despite visualViewport.height detection attempt, 34px Safe Area Inset padding remains (identical to EXP-01-A)', ko: '키보드 감지(visualViewport.height < window.innerHeight - 80) 시도에도 불구하고 34px Safe Area Inset이 제거되지 않고 유지됨 (EXP-01-A와 동일)' } },
       { id: '1-4', status: 'pass', comment: { en: 'Safari pans window up, naturally keeping body bottom above input', ko: '사파리가 창을 올려 바디 하단 위치가 인풋 위에 자연 보존됨' } },
       { id: '2-1', status: 'na', comment: { en: 'Focus handover not in scope (introduced in EXP-03-C)', ko: '포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)' } },
       { id: '3-1', status: 'na', comment: { en: 'FSM restoration not in scope (introduced in EXP-03-D)', ko: 'FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)' } },
@@ -72,16 +75,16 @@ export const LABS_DATA: LabInfo[] = [
       ko: '순수 position: fixed 구조에서는 visualViewport.height < window.innerHeight - 80 감지 및 패딩 조작으로도 키보드 위 34px 공백이 제거되지 않음을 실증.',
     },
     nextDecision: {
-      en: 'Synthesize findings with EXP-01-B to determine if position: fixed can be salvaged or must be abandoned.',
-      ko: 'EXP-01-B(헤더 고정 시도) 결과와 종합하여 position: fixed 유지 가능 여부 최종 판단.',
+      en: 'Branch into EXP-01-C to test locking the top header at (0,0) on focus.',
+      ko: 'fixed 상태에서 헤더라도 화면 상단에 고정해보기 위해 포커스 시 scrollTo(0,0)을 거는 EXP-01-C로 연계.',
     },
   },
   {
-    id: 'exp01_b',
+    id: 'exp01_c',
     status: 'failed',
     title: {
-      en: 'EXP-01-B: Document Scroll Lock',
-      ko: 'EXP-01-B: 포커스 시 scrollTo(0,0) 강제 락 (헤더 고정 시도)',
+      en: 'EXP-01-C: Document Scroll Lock',
+      ko: 'EXP-01-C: 포커스 시 scrollTo(0,0) 강제 락 (헤더 고정 시도)',
     },
     hypothesis: {
       en: 'Forcing window.scrollTo(0,0) on focus will keep the top header firmly pinned at (0,0).',
@@ -100,20 +103,20 @@ export const LABS_DATA: LabInfo[] = [
       ko: 'fixed 요소를 (0,0)에 묶으면 헤더는 지키지만 인풋이 키보드 아래 갇히는 position: fixed의 원천적 한계 증명.',
     },
     nextDecision: {
-      en: 'Combining EXP-01, 01-A, and 01-B results: position: fixed is physically unviable. Pivot completely to In-Flow Flexbox (EXP-02).',
-      ko: 'EXP-01(오리지널), 01-A(밀착 시도), 01-B(헤더 락) 종합 결론: fixed 전면 폐기 및 In-Flow Flexbox(EXP-02)로 대전환 결정!',
+      en: 'Abandon fixed and test modern CSS 100dvh unit in EXP-01-D to see if browser can auto-shrink layout without JS.',
+      ko: 'fixed를 버리고, 최신 CSS 규격인 100dvh 단위(EXP-01-D)로 브라우저가 스스로 레이아웃을 줄여주는지 마지막 순수 CSS 검증 착수.',
     },
   },
   {
-    id: 'exp02',
+    id: 'exp01_d',
     status: 'failed',
     title: {
-      en: 'EXP-02: Pure CSS 100dvh In-Flow',
-      ko: 'EXP-02: 순수 CSS 100dvh In-Flow 레이아웃',
+      en: 'EXP-01-D: Pure CSS 100dvh In-Flow',
+      ko: 'EXP-01-D: 순수 CSS 100dvh In-Flow 레이아웃',
     },
     hypothesis: {
       en: 'CSS 100dvh + interactive-widget=resizes-content will auto-shrink container on iOS keyboard open with 0 lines of JS.',
-      ko: 'CSS 100dvh 단위와 interactive-widget 설정을 사용하면 JS 없이도 WebKit이 키보드 크기만큼 컨테이너를 스스로 줄여줄 것이다.',
+      ko: '최신 CSS 100dvh 단위와 In-Flow Flexbox를 사용하면 JS 없이도 WebKit이 키보드 크기만큼 컨테이너를 스스로 줄여줄 것이다.',
     },
     evaluations: [
       { id: '1-1', status: 'fail', comment: { en: '100dvh ignores keyboard, causing window to pan', ko: '100dvh가 키보드를 무시하여 화면 전체가 밀려올라감' } },
@@ -124,14 +127,18 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', status: 'na', comment: { en: 'FSM restoration not in scope (introduced in EXP-03-D)', ko: 'FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)' } },
     ],
     keyFinding: {
-      en: 'iOS WebKit specification explicitly restricts dvh to browser URL bar collapse, ignoring virtual keyboard.',
-      ko: 'iOS 사파리 WebKit 사양상 100dvh는 주소창에만 반응하고 가상 키보드 팝업 시에는 전혀 줄어들지 않고 전체 높이 유지.',
+      en: 'iOS WebKit specification explicitly restricts dvh to browser URL bar collapse, ignoring virtual keyboard. Pure CSS approaches officially exhausted.',
+      ko: 'iOS 사파리 WebKit 사양상 100dvh는 주소창에만 반응하고 가상 키보드는 완전히 무시함을 실증. 순수 CSS(Phase 1)의 한계 공식 확인.',
     },
     nextDecision: {
-      en: 'Acknowledge CSS limits and bind window.visualViewport.height directly to Flex container in EXP-02-A.',
-      ko: '순수 CSS 한계를 인정하고 JS window.visualViewport.height를 부모 Flex 컨테이너에 직접 주입하는 EXP-02-A로 전환.',
+      en: 'Conclude Phase 1 (Pure CSS). Transition to Phase 2 by binding window.visualViewport.height directly to Flex container in EXP-02-A.',
+      ko: '순수 CSS(Phase 1)를 종료하고, JavaScript Visual Viewport 엔진을 도입하는 Phase 2 (EXP-02-A)로 대전환 결정!',
     },
   },
+
+  /* ==========================================================================
+     PHASE 2: JS Viewport Engine & Flaw Eradication (JS 뷰포트 엔진 도입과 물리 결함 격파)
+     ========================================================================== */
   {
     id: 'exp02_a',
     status: 'failed',
@@ -153,7 +160,7 @@ export const LABS_DATA: LabInfo[] = [
     ],
     keyFinding: {
       en: 'Proved In-Flow Flexbox is the correct foundation! But WebKit focus scroll pushes container up by 336px.',
-      ko: 'In-Flow Flex 4단 정렬 뼈대 검증 성공! 단, 초기 포커스 시 WebKit이 도화지를 밀어올려 인풋 아래에 336px 빈 공간 노출.',
+      ko: 'In-Flow Flex 3단 정렬 뼈대 검증 성공! 단, 초기 포커스 시 WebKit이 도화지를 밀어올려 인풋 아래에 336px 빈 공간 노출.',
     },
     nextDecision: {
       en: 'Test top: 0 anchor lock (EXP-02-B) vs transform offset tracking (EXP-02-C) to auto-eliminate the 336px gap.',
@@ -164,7 +171,7 @@ export const LABS_DATA: LabInfo[] = [
     id: 'exp02_b',
     status: 'progress',
     title: {
-      en: 'EXP-02-B: Top Anchor & Scroll Lock',
+      en: 'EXP-02-B: Top Anchor & Focus Scroll Lock',
       ko: 'EXP-02-B: 상단 top: 0 고정 & 포커스 스크롤 락',
     },
     hypothesis: {
@@ -237,13 +244,17 @@ export const LABS_DATA: LabInfo[] = [
     ],
     keyFinding: {
       en: 'Zero-jank architecture complete: Input shell is 100% motionless even during aggressive finger dragging.',
-      ko: '인풋 바를 아무리 세게 문질러도 1프레임 흔들림 없는 0픽셀 완전 고정 아키텍처 완성.',
+      ko: '인풋 바를 아무리 세게 문질러도 1프레임 흔들림 없는 0픽셀 완전 고정 아키텍처 완성!',
     },
     nextDecision: {
-      en: 'Move to EXP-03-A to eliminate the 34px Safe Area Inset gap and snap input directly above keyboard.',
-      ko: 'EXP-03-A로 연계하여 키보드 활성화 시 Safe Area Inset(34px)을 0px로 축소하고 키보드 초밀착 구현 착수.',
+      en: 'Conclude Phase 2 (Core Viewport Lock). Move to Phase 3 (EXP-03-A) to eliminate the 34px Safe Area Inset gap.',
+      ko: 'Phase 2(뷰포트 락 뼈대) 완료. 이제 34px 공백 제거 및 정밀 좌표 제어를 정복하는 Phase 3 (EXP-03-A)로 진입!',
     },
   },
+
+  /* ==========================================================================
+     PHASE 3: Native Parity & Coordinate Precision (네이티브 동등성 & 정밀 좌표 완성)
+     ========================================================================== */
   {
     id: 'exp03_a',
     status: 'progress',
@@ -280,7 +291,7 @@ export const LABS_DATA: LabInfo[] = [
       ko: 'EXP-03-B: ResizeObserver 바디 하단 스크롤 앵커링',
     },
     hypothesis: {
-      en: 'Freezing baseline (S0, H0) and compensating scrollTop by exact body contraction (delta-H) will achieve 0.0px Scroll Anchoring.',
+      en: 'Freezing baseline (S0, H0) and compensating scroll offset by exact body contraction (delta-H) will achieve 0.0px Scroll Anchoring.',
       ko: '닫혀 있을 때의 기준값(S0, H0)을 동결하고, 본문의 실제 축소량(ΔH)만큼만 스크롤을 보정하고 닫힐 때 S0로 1:1 복원한다.',
     },
     evaluations: [
@@ -332,7 +343,7 @@ export const LABS_DATA: LabInfo[] = [
     id: 'exp03_d',
     status: 'winner',
     title: {
-      en: 'EXP-03-D: Isolated Fixed Header & Zero-Jerk Top Anchor (WINNER ★)',
+      en: 'EXP-03-D: Isolated Fixed Header & Zero-Shift Top Anchor (WINNER ★)',
       ko: 'EXP-03-D: 상단 헤더 물리적 격리 & Zero-Shift 완성형 (WINNER ★)',
     },
     hypothesis: {

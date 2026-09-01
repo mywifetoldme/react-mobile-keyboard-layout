@@ -348,10 +348,10 @@ const LabFloatingInput = ({
 )
 
 /* ==========================================================================
-   1. EXP-01: Baseline Standard Fixed
+   1. EXP-01-A: Baseline Standard Fixed
    ========================================================================== */
 
-function Exp01Sandbox({ lab, lang, onClose }: LabSandboxProps) {
+function Exp01ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [scrollY, setScrollY] = useState(0)
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
@@ -410,10 +410,10 @@ function Exp01Sandbox({ lab, lang, onClose }: LabSandboxProps) {
 }
 
 /* ==========================================================================
-   2. EXP-01-A: Dynamic Safe Area Inset
+   2. EXP-01-B: Dynamic Safe Area Inset
    ========================================================================== */
 
-function Exp01ASandbox({ lab, lang, onClose }: LabSandboxProps) {
+function Exp01BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [scrollY, setScrollY] = useState(0)
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
@@ -485,10 +485,10 @@ function Exp01ASandbox({ lab, lang, onClose }: LabSandboxProps) {
 }
 
 /* ==========================================================================
-   3. EXP-01-B: Document Scroll Lock (Header Lock Attempt)
+   3. EXP-01-C: Document Scroll Lock (Header Lock Attempt)
    ========================================================================== */
 
-function Exp01BSandbox({ lab, lang, onClose }: LabSandboxProps) {
+function Exp01CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [scrollY, setScrollY] = useState(0)
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
@@ -562,10 +562,10 @@ function Exp01BSandbox({ lab, lang, onClose }: LabSandboxProps) {
 }
 
 /* ==========================================================================
-   4. EXP-02: Pure CSS 100dvh In-Flow
+   4. EXP-01-D: Pure CSS 100dvh In-Flow
    ========================================================================== */
 
-function Exp02Sandbox({ lab, lang, onClose }: LabSandboxProps) {
+function Exp01DSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [scrollY, setScrollY] = useState(0)
   const [bodyVal, setBodyVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
@@ -1287,14 +1287,14 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
 
 export const LabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
   switch (lab.id) {
-    case 'exp01':
-      return <Exp01Sandbox lab={lab} lang={lang} onClose={onClose} />
     case 'exp01_a':
       return <Exp01ASandbox lab={lab} lang={lang} onClose={onClose} />
     case 'exp01_b':
       return <Exp01BSandbox lab={lab} lang={lang} onClose={onClose} />
-    case 'exp02':
-      return <Exp02Sandbox lab={lab} lang={lang} onClose={onClose} />
+    case 'exp01_c':
+      return <Exp01CSandbox lab={lab} lang={lang} onClose={onClose} />
+    case 'exp01_d':
+      return <Exp01DSandbox lab={lab} lang={lang} onClose={onClose} />
     case 'exp02_a':
       return <Exp02ASandbox lab={lab} lang={lang} onClose={onClose} />
     case 'exp02_b':
