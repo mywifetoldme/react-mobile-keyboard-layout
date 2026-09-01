@@ -34,9 +34,9 @@ export const Navigation = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingLeft: '8px',
-        paddingRight: '8px',
-        gap: '6px',
+        paddingLeft: '10px',
+        paddingRight: '10px',
+        gap: '8px',
       }}
     >
       <div style={{
@@ -54,18 +54,17 @@ export const Navigation = ({
               type="button"
               onClick={() => onSelectTab(tab.key)}
               style={{
-                padding: '6px 2px',
+                padding: '7px 0',
                 borderRadius: '8px',
                 border: 'none',
                 backgroundColor: isActive ? '#3b82f6' : 'transparent',
                 color: isActive ? '#ffffff' : '#a1a1aa',
-                fontSize: '11px',
-                fontWeight: isActive ? 600 : 400,
+                fontSize: '13px',
+                fontWeight: isActive ? 700 : 500,
+                letterSpacing: '-0.2px',
                 cursor: 'pointer',
                 textAlign: 'center',
                 whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
                 transition: 'all 0.1s ease',
               }}
             >
@@ -79,7 +78,7 @@ export const Navigation = ({
         type="button"
         onClick={onToggleLang}
         style={{
-          padding: '5px 8px',
+          padding: '6px 9px',
           borderRadius: '8px',
           border: '1px solid #3f3f46',
           backgroundColor: '#27272a',
