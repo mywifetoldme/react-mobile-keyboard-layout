@@ -5,6 +5,10 @@
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
+.rmkl-floating-input-wrapper--keyboard-open {
+  padding-bottom: 8px;
+}
+
 .rmkl-floating-input-bar {
   display: flex;
   align-items: flex-end;

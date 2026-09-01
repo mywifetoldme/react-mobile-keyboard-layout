@@ -8,6 +8,7 @@ import {
   type ChangeEvent,
   type CSSProperties,
   type ComponentPropsWithoutRef,
+  type PointerEvent as ReactPointerEvent,
 } from 'react'
 import './FloatingInput.css'
 
@@ -24,12 +25,16 @@ export interface FloatingInputProps {
   disabled?: boolean
   /** Whether the floating input is temporarily suppressed by the keyboard engine */
   isSuppressed?: boolean
+  /** Whether the virtual keyboard is currently open */
+  isKeyboardOpen?: boolean
   /** Maximum height in pixels for the auto-growing textarea. Default: 120 */
   maxHeight?: number
   /** Focus handler forwarded from keyboardEngine.floatingProps */
   onFocus?: () => void
   /** Blur handler forwarded from keyboardEngine.floatingProps */
   onBlur?: () => void
+  /** PointerDown handler forwarded from keyboardEngine.floatingProps */
+  onPointerDown?: (e: ReactPointerEvent<HTMLElement> | PointerEvent) => void
   /** Class name for outer wrapper */
   className?: string
   /** Style object for outer wrapper */
@@ -49,9 +54,11 @@ export const FloatingInput = ({
   placeholder = 'Write a message...',
   disabled = false,
   isSuppressed = false,
+  isKeyboardOpen = false,
   maxHeight = 120,
   onFocus,
   onBlur,
+  onPointerDown,
   className = '',
   style,
   textareaProps,
@@ -96,7 +103,7 @@ export const FloatingInput = ({
     <div
       role="region"
       aria-label="Floating input bar"
-      className={`rmkl-floating-input-wrapper ${className}`.trim()}
+      className={`rmkl-floating-input-wrapper${isKeyboardOpen ? ' rmkl-floating-input-wrapper--keyboard-open' : ''} ${className}`.trim()}
       style={style}
     >
       <div className="rmkl-floating-input-bar">
@@ -123,6 +130,10 @@ export const FloatingInput = ({
           onCompositionEnd={(e) => {
             restTextareaProps.onCompositionEnd?.(e)
             isComposingRef.current = false
+          }}
+          onPointerDown={(e) => {
+            restTextareaProps.onPointerDown?.(e)
+            onPointerDown?.(e)
           }}
           onFocus={(e) => {
             restTextareaProps.onFocus?.(e)

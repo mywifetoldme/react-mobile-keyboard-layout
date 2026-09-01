@@ -28,7 +28,7 @@
 }
 
 .rmkl-subpage-root {
-  position: fixed;
+  position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
@@ -55,6 +55,8 @@
   padding-left: 16px;
   padding-right: 16px;
   z-index: 50;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .rmkl-header-left,
