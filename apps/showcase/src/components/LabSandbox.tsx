@@ -388,7 +388,6 @@ const LabFloatingInput = ({
       borderTop: '1px solid #27272a',
       flexShrink: 0,
       boxSizing: 'border-box',
-      touchAction: 'none',
       ...style,
     }}
   >
@@ -475,7 +474,6 @@ function Exp01ASandbox({ lab, lang, onClose }: LabSandboxProps) {
       zIndex: 300,
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden',
     }}>
       <LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />
 
@@ -558,7 +556,6 @@ function Exp01BSandbox({ lab, lang, onClose }: LabSandboxProps) {
       zIndex: 300,
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden',
     }}>
       <LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />
 
@@ -644,7 +641,6 @@ function Exp01CSandbox({ lab, lang, onClose }: LabSandboxProps) {
       zIndex: 300,
       display: 'flex',
       flexDirection: 'column',
-      overflow: 'hidden',
     }}>
       <LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />
 
@@ -1148,6 +1144,7 @@ function Exp02DSandbox({ lab, lang, onClose }: LabSandboxProps) {
         onFocus={handleFocus}
         onSubmit={handleSubmit}
         placeholder="EXP-02-D Zero-Jank Touch Lock (0px motionless)..."
+        style={{ touchAction: 'none' }}
       />
     </div>
   )
@@ -1258,6 +1255,7 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
         onSubmit={handleSubmit}
         placeholder="Safe area drops to 8px (causes 34px scroll jump)..."
         style={{
+          touchAction: 'none',
           padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
         }}
       />
@@ -1394,6 +1392,7 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
         onSubmit={handleSubmit}
         placeholder="ResizeObserver delta-H scroll compensation..."
         style={{
+          touchAction: 'none',
           padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
         }}
       />
@@ -1545,6 +1544,7 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
           onSubmit={handleSubmit}
           placeholder="Focus Handover (0px collapse on body input focus)..."
           style={{
+            touchAction: 'none',
             padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
           }}
         />
