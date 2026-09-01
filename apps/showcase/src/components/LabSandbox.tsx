@@ -105,7 +105,8 @@ const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) =
                   {title}
                 </span>
                 <span style={{
-                  padding: '2px 8px',
+                  width: '62px',
+                  height: '20px',
                   borderRadius: '4px',
                   backgroundColor: badgeBg,
                   color: badgeColor,
@@ -115,7 +116,9 @@ const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) =
                   flexShrink: 0,
                   display: 'inline-flex',
                   alignItems: 'center',
-                  lineHeight: '1.2',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  boxSizing: 'border-box',
                 }}>
                   {badgeText}
                 </span>
