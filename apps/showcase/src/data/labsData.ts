@@ -29,23 +29,23 @@ export const LABS_DATA: LabInfo[] = [
     },
     hypothesis: {
       en: 'Standard CSS position: fixed with safe-area padding can anchor the input at the bottom on iOS Safari.',
-      ko: '표준 CSS fixed와 safe-area-inset만으로 사파리에서 인풋이 바닥에 안정적으로 유지되는지 검증한다.',
+      ko: '표준 CSS fixed와 Safe Area Inset만으로 사파리에서 인풋이 바닥에 안정적으로 유지되는지 검증한다.',
     },
     evaluations: [
       { id: '1-1', pass: false, comment: { en: 'Header pushed off-screen as Safari pans window up', ko: '사파리가 외부 창을 밀어올려 상단 헤더가 화면 위로 밀려 사라짐' } },
       { id: '1-2', pass: false, comment: { en: 'Dual-scroll conflict: Body scroll cannot reach header without dragging input area', ko: '이중 스크롤 발생: 바디 스크롤로는 헤더에 도달하지 못하고 인풋 영역을 잡고 끌어야만 헤더가 내려옴' } },
-      { id: '1-3', pass: false, comment: { en: '34px safe area gap remains above keyboard (no jitter, pure gap)', ko: '키보드 위에도 34px 홈바 안전영역 여백이 그대로 남아 공백 발생 (덜컹거림은 없음)' } },
-      { id: '1-4', pass: true, comment: { en: 'Inner body scrollTop itself is preserved by browser', ko: '내부 바디의 scrollTop 자체는 브라우저에 의해 그대로 보존됨' } },
+      { id: '1-3', pass: false, comment: { en: '34px Safe Area Inset gap remains above keyboard (no jitter, pure gap)', ko: '키보드 위에도 34px Safe Area Inset 여백이 그대로 남아 공백 발생 (덜컹거림은 없음)' } },
+      { id: '1-4', pass: true, comment: { en: 'Safari pans the whole window up, naturally keeping the bottom reading line above input', ko: '사파리가 창 전체를 위로 밀어올려 하단 읽던 줄이 인풋 위에 자연 보존됨' } },
       { id: '2-1', pass: true, comment: { en: 'Floating bar stays at bottom, leaving body forms unobstructed', ko: '플로팅 인풋이 페이지 바닥에 머물러 있어 상단 본문 입력을 가리지 않음' } },
       { id: '3-1', pass: true, comment: { en: 'Native browser dismiss restores layout smoothly', ko: '조작한 JS가 없으므로 사파리 기본 동작으로 매끄럽게 복원됨' } },
     ],
     keyFinding: {
-      en: 'position: fixed creates dual-scrollport fighting, loses the top header, and leaves an unnecessary 34px gap above keyboard.',
-      ko: 'position: fixed는 이중 스크롤 충돌, 상단 헤더 실종, 키보드 위 34px 불필요한 공백을 유발함을 실증.',
+      en: 'position: fixed creates dual-scrollport fighting, loses the top header, and leaves an unnecessary 34px Safe Area gap above keyboard.',
+      ko: 'position: fixed는 이중 스크롤 충돌, 상단 헤더 실종, 키보드 위 34px Safe Area 공백을 유발함을 실증.',
     },
     nextDecision: {
-      en: 'Branch into two investigative paths: (1) Find a way to snap bottom gap (EXP-01-A), and (2) Try locking the top header (EXP-01-B).',
-      ko: '두 갈래 방향으로 분기: (1) 키보드 밀착 방법 탐색(EXP-01-A) 및 (2) 상단 헤더 고정 시도(EXP-01-B)로 연계 결정.',
+      en: 'Branch into two investigative paths: (1) Find a way to snap Safe Area gap (EXP-01-A), and (2) Try locking the top header (EXP-01-B).',
+      ko: '두 갈래 방향으로 분기: (1) Safe Area 34px 여백 밀착 방법 탐색(EXP-01-A) 및 (2) 상단 헤더 고정 시도(EXP-01-B)로 연계 결정.',
     },
   },
   {
@@ -57,7 +57,7 @@ export const LABS_DATA: LabInfo[] = [
     },
     hypothesis: {
       en: 'Detecting keyboard open state and reducing safe-area-inset-bottom from 34px to 0px will snap input to keyboard.',
-      ko: '키보드 오픈을 감지하여 34px Safe Area를 0px로 축소하면 키보드 밀착이 가능할 것이다.',
+      ko: '키보드 오픈을 감지하여 34px Safe Area Inset을 0px로 축소하면 키보드 밀착이 가능할 것이다.',
     },
     evaluations: [
       { id: '1-1', pass: false, comment: { en: 'Header still flies off-screen on focus', ko: '포커스 시 여전히 헤더가 화면 밖으로 밀려남' } },
@@ -68,8 +68,8 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', pass: true, comment: { en: 'Native restore works', ko: '사파리 기본 복원 작동' } },
     ],
     keyFinding: {
-      en: 'window.innerHeight subtraction fails to detect keyboard transitions synchronously, causing safe area removal failure.',
-      ko: 'window.innerHeight 단순 뺄셈으로는 키보드 오픈 여부를 정확히 판별하지 못해 인셋 제거에 실패함.',
+      en: 'window.innerHeight subtraction fails to detect keyboard transitions synchronously, causing Safe Area Inset removal failure.',
+      ko: 'window.innerHeight 단순 뺄셈으로는 키보드 오픈 여부를 정확히 판별하지 못해 Safe Area Inset 제거에 실패함.',
     },
     nextDecision: {
       en: 'Synthesize findings with EXP-01-B to determine if position: fixed can be salvaged or must be abandoned.',
@@ -91,7 +91,7 @@ export const LABS_DATA: LabInfo[] = [
       { id: '1-1', pass: true, comment: { en: 'Header stays at (0,0) top position', ko: '헤더는 상단 (0,0)에 머무름' } },
       { id: '1-2', pass: false, comment: { en: 'FATAL: Input drops to bottom and is 100% COVERED by keyboard', ko: '치명적 결함: 문서를 (0,0)으로 내리니 인풋이 키보드 뒤에 깔려 완전히 사라짐!' } },
       { id: '1-3', pass: false, comment: { en: 'Input completely invisible behind keyboard', ko: '인풋 실종으로 여백 무의미' } },
-      { id: '1-4', pass: false, comment: { en: 'Scroll resets to 0, losing reading row', ko: '스크롤이 0으로 리셋되어 읽던 줄 소실' } },
+      { id: '1-4', pass: false, comment: { en: 'Scroll resets to 0, losing reading anchor', ko: '스크롤이 0으로 리셋되어 읽던 줄 앵커링 소실' } },
       { id: '2-1', pass: true, comment: { en: 'Body forms unobstructed', ko: '본문 폼 입력 간섭 없음' } },
       { id: '3-1', pass: false, comment: { en: 'Focus state stuck', ko: '포커스 복원 꼬임' } },
     ],
@@ -119,7 +119,7 @@ export const LABS_DATA: LabInfo[] = [
       { id: '1-1', pass: false, comment: { en: '100dvh ignores keyboard, causing window to pan', ko: '100dvh가 키보드를 무시하여 화면 전체가 밀려올라감' } },
       { id: '1-2', pass: false, comment: { en: 'Dual-scroll conflict persists', ko: '이중 스크롤 충돌 지속' } },
       { id: '1-3', pass: false, comment: { en: 'Layout clipping on drag', ko: '드래그 시 레이아웃 잘림' } },
-      { id: '1-4', pass: true, comment: { en: 'Inner scroll position preserved', ko: '내부 스크롤 위치 자체는 보존됨' } },
+      { id: '1-4', pass: true, comment: { en: 'Scroll position preserved via window shift', ko: '창 밀림으로 읽던 줄 위치 자체는 보존됨' } },
       { id: '2-1', pass: true, comment: { en: 'Body forms unobstructed', ko: '본문 폼 입력 간섭 없음' } },
       { id: '3-1', pass: true, comment: { en: 'Native restore works', ko: '사파리 기본 복원 작동' } },
     ],
@@ -147,7 +147,7 @@ export const LABS_DATA: LabInfo[] = [
       { id: '1-1', pass: false, comment: { en: 'WebKit initial scroll push creates 336px gap', ko: '초기 포커스 시 WebKit이 도화지를 밀어올려 336px 빈 공간 노출' } },
       { id: '1-2', pass: true, comment: { en: 'Single unified In-Flow scroll verified on manual scroll', ko: '수동 스크롤 시 단일 In-Flow 4단 정렬 완벽 검증 성공' } },
       { id: '1-3', pass: false, comment: { en: '336px massive empty space before manual scroll', ko: '수동 정렬 전 336px 거대 빈 공간 노출' } },
-      { id: '1-4', pass: false, comment: { en: 'Reading line displaced by 336px', ko: '336px 오차로 읽던 줄 위치 소실' } },
+      { id: '1-4', pass: false, comment: { en: 'Reading anchor displaced by 336px', ko: '336px 오차로 읽던 줄 앵커링 소실' } },
       { id: '2-1', pass: true, comment: { en: 'Body forms unobstructed', ko: '본문 폼 입력 간섭 없음' } },
       { id: '3-1', pass: true, comment: { en: 'Restore works', ko: '복원 작동' } },
     ],
@@ -174,7 +174,7 @@ export const LABS_DATA: LabInfo[] = [
     evaluations: [
       { id: '1-1', pass: false, comment: { en: '1-frame visual jitter when rubbing input bar', ko: '인풋 바를 문지를 때 1프레임 미세 덜컹거림 발생' } },
       { id: '1-2', pass: true, comment: { en: 'Single unified scroll lands directly above keyboard', ko: '수동 조작 없이 단일 스크롤로 인풋이 키보드 바로 위에 즉시 안착' } },
-      { id: '1-3', pass: false, comment: { en: '34px safe area gap remains', ko: '34px 홈바 여백 잔존' } },
+      { id: '1-3', pass: false, comment: { en: '34px Safe Area Inset gap remains', ko: '34px Safe Area Inset 여백 잔존' } },
       { id: '1-4', pass: false, comment: { en: 'Reading line still jumps', ko: '읽던 줄 점프 발생' } },
       { id: '2-1', pass: true, comment: { en: 'Body forms unobstructed', ko: '본문 폼 입력 간섭 없음' } },
       { id: '3-1', pass: true, comment: { en: 'Restore works', ko: '복원 작동' } },
@@ -230,7 +230,7 @@ export const LABS_DATA: LabInfo[] = [
     evaluations: [
       { id: '1-1', pass: false, comment: { en: 'Header still slides inside resizing container', ko: '헤더가 리사이징 컨테이너 안에 있어 슬라이드 발생' } },
       { id: '1-2', pass: true, comment: { en: '0-pixel motionless lock achieved when rubbing input shell', ko: '인풋 바를 문질러도 1프레임 흔들림 없는 0픽셀 완전 고정 단일 스크롤 달성' } },
-      { id: '1-3', pass: false, comment: { en: '34px safe area gap remains', ko: '34px 홈바 여백 잔존' } },
+      { id: '1-3', pass: false, comment: { en: '34px Safe Area Inset gap remains', ko: '34px Safe Area Inset 여백 잔존' } },
       { id: '1-4', pass: false, comment: { en: 'Reading line shifts on resize', ko: '컨테이너 축소 시 읽던 줄 이동' } },
       { id: '2-1', pass: true, comment: { en: 'Body forms unobstructed', ko: '본문 폼 입력 간섭 없음' } },
       { id: '3-1', pass: true, comment: { en: 'Restore works', ko: '복원 작동' } },
@@ -240,8 +240,8 @@ export const LABS_DATA: LabInfo[] = [
       ko: '인풋 바를 아무리 세게 문질러도 1프레임 흔들림 없는 0픽셀 완전 고정 아키텍처 완성.',
     },
     nextDecision: {
-      en: 'Move to EXP-03-A to eliminate the 34px safe area gap and snap input directly above keyboard.',
-      ko: 'EXP-03-A로 연계하여 34px Safe Area 여백을 0px로 축소하고 키보드 초밀착 구현 착수.',
+      en: 'Move to EXP-03-A to eliminate the 34px Safe Area Inset gap and snap input directly above keyboard.',
+      ko: 'EXP-03-A로 연계하여 34px Safe Area Inset 여백을 0px로 축소하고 키보드 초밀착 구현 착수.',
     },
   },
   {
@@ -249,26 +249,26 @@ export const LABS_DATA: LabInfo[] = [
     status: 'progress',
     title: {
       en: 'EXP-03-A: Zero-Gap Inset & HUD Relocation',
-      ko: 'EXP-03-A: Safe Area 0px 축소 & 8px 초밀착',
+      ko: 'EXP-03-A: Safe Area Inset 0px 축소 & 8px 초밀착',
     },
     hypothesis: {
       en: 'Relocating HUD to body and collapsing safe-area padding to 8px when keyboard opens will achieve compact snap.',
-      ko: '키보드 오픈 시점에는 홈 바 여백(34px)을 즉시 0px로 축소하여 키보드 윗선에 8px 마진으로 초밀착시킨다.',
+      ko: '키보드 오픈 시점에는 Safe Area Inset(34px)을 즉시 0px로 축소하여 키보드 윗선에 8px 마진으로 초밀착시킨다.',
     },
     evaluations: [
       { id: '1-1', pass: false, comment: { en: 'Header slides during container height contraction', ko: '컨테이너 축소 시 헤더 슬라이드 잔존' } },
       { id: '1-2', pass: true, comment: { en: 'Input perfectly visible with unified scroll', ko: '단일 스크롤로 키보드 위 인풋 온전한 노출' } },
-      { id: '1-3', pass: true, comment: { en: '34px gap eliminated; snaps with 8px compact margin', ko: '34px 빈 공간 완전 해소 & 8px 마진으로 컴팩트 초밀착 성공' } },
-      { id: '1-4', pass: false, comment: { en: '34px height delta causes 34px reading line shift', ko: '34px 인셋 축소로 인해 보던 글자 줄(#5)이 위로 34px 튀어 올라감' } },
+      { id: '1-3', pass: true, comment: { en: '34px Safe Area Inset eliminated; snaps with 8px compact margin', ko: '34px Safe Area Inset 완전 해소 & 8px 마진으로 컴팩트 초밀착 성공' } },
+      { id: '1-4', pass: false, comment: { en: '34px height delta causes 34px reading anchor shift', ko: '34px 인셋 축소로 인해 보던 글자 줄(#5)이 위로 34px 튀어 올라감' } },
       { id: '2-1', pass: false, comment: { en: 'Floating bar now in viewport, obscuring body forms', ko: '플로팅 바가 뷰포트에 남아 본문 폼 입력을 가림' } },
       { id: '3-1', pass: false, comment: { en: 'No suppression restoration', ko: '복원 제어 미구현' } },
     ],
     keyFinding: {
-      en: 'Compact 8px snap verified! But shrinking safe area by 34px shifts body scroll by exactly 34px.',
-      ko: '키보드 위 34px 빈 공간을 완전 해소하고 8px 마진으로 컴팩트 초밀착 성공. 단, 보던 줄(#5)이 34px 튀는 오차 확인.',
+      en: 'Compact 8px snap verified! But shrinking Safe Area by 34px shifts body scroll by exactly 34px.',
+      ko: '키보드 위 34px Safe Area Inset을 완전 해소하고 8px 마진으로 컴팩트 초밀착 성공. 단, 보던 줄(#5)이 34px 튀는 오차 확인.',
     },
     nextDecision: {
-      en: 'Introduce ResizeObserver delta-H scroll compensation in EXP-03-B to achieve 0.0px scroll preservation.',
+      en: 'Introduce ResizeObserver delta-H scroll compensation in EXP-03-B to achieve 0.0px Scroll Anchoring.',
       ko: '본문 ResizeObserver 기반 ΔH 실시간 1:1 스크롤 보정 수식을 도입하는 EXP-03-B로 연계.',
     },
   },
@@ -277,23 +277,23 @@ export const LABS_DATA: LabInfo[] = [
     status: 'progress',
     title: {
       en: 'EXP-03-B: Body ResizeObserver Scroll Anchoring',
-      ko: 'EXP-03-B: ResizeObserver 0.0px 정밀 스크롤 앵커링',
+      ko: 'EXP-03-B: ResizeObserver 0.0px Scroll Anchoring',
     },
     hypothesis: {
-      en: 'Freezing baseline (S0, H0) and compensating scrollTop by exact body contraction (delta-H) will achieve 0.0px anchor.',
+      en: 'Freezing baseline (S0, H0) and compensating scrollTop by exact body contraction (delta-H) will achieve 0.0px Scroll Anchoring.',
       ko: '닫혀 있을 때의 기준값(S0, H0)을 동결하고, 본문의 실제 축소량(ΔH)만큼만 스크롤하고 닫힐 때 S0로 1:1 복원한다.',
     },
     evaluations: [
       { id: '1-1', pass: false, comment: { en: 'Header slides inside resizing container', ko: '헤더가 리사이징 컨테이너 안에 있어 슬라이드 잔존' } },
       { id: '1-2', pass: true, comment: { en: 'Unified single scroll verified', ko: '단일 스크롤 정상 작동' } },
       { id: '1-3', pass: true, comment: { en: '8px bottom snap preserved', ko: '8px 하단 초밀착 유지' } },
-      { id: '1-4', pass: true, comment: { en: 'Target row #5 anchored with 0.0px visual drift!', ko: '보던 줄(#5)이 0.0px 오차로 완벽 고정, 닫힘 시 1:1 완벽 원복 달성!' } },
+      { id: '1-4', pass: true, comment: { en: 'Reading line anchored with 0.0px visual drift!', ko: '보던 줄이 0.0px 오차로 완벽 Scroll Anchoring 고정, 닫힘 시 1:1 완벽 원복 달성!' } },
       { id: '2-1', pass: false, comment: { en: 'Floating bar obscures body form inputs', ko: '본문 폼 입력 시 플로팅 바가 겹쳐서 가림' } },
       { id: '3-1', pass: false, comment: { en: 'No focus handover restoration', ko: '포커스 핸드오버 복원 미구현' } },
     ],
     keyFinding: {
-      en: '0.0px reading line freeze achieved! Target text row stays 100% motionless on keyboard presentation and dismissal.',
-      ko: '동결 기준값(S0, H0)과 ΔH 단일 수식으로 키보드가 열려도 보던 줄(#5)이 0.0px 오차로 완벽 고정되는 쾌거 달성!',
+      en: '0.0px Scroll Anchoring freeze achieved! Reading text row stays 100% motionless on keyboard presentation and dismissal.',
+      ko: '동결 기준값(S0, H0)과 ΔH 단일 수식으로 키보드가 열려도 보던 줄이 0.0px 오차로 완벽 고정되는 Scroll Anchoring 쾌거 달성!',
     },
     nextDecision: {
       en: 'Implement body form input focus handover and floating suppression in EXP-03-C.',
@@ -315,7 +315,7 @@ export const LABS_DATA: LabInfo[] = [
       { id: '1-1', pass: false, comment: { en: 'Header slide artifact remains inside resizing container', ko: '헤더가 리사이징 컨테이너 안에 있어 키보드 오픈 시 솟아오름' } },
       { id: '1-2', pass: true, comment: { en: 'Unified single scroll verified', ko: '단일 스크롤 정상 작동' } },
       { id: '1-3', pass: true, comment: { en: '8px snap preserved', ko: '8px 밀착 유지' } },
-      { id: '1-4', pass: true, comment: { en: '0.0px reading anchor preserved', ko: '0.0px 읽던 줄 보존 유지' } },
+      { id: '1-4', pass: true, comment: { en: '0.0px reading anchor preserved', ko: '0.0px Scroll Anchoring 유지' } },
       { id: '2-1', pass: true, comment: { en: 'Floating bar collapses to 0px when typing in body form', ko: '본문 폼 입력 시 플로팅 바가 0px로 즉시 접혀 본문 입력창 완벽 확보' } },
       { id: '3-1', pass: false, comment: { en: '1-frame flicker on keyboard dismiss after body input blur', ko: '본문 인풋 닫힐 때 1프레임 깜빡임(Flicker) 결함 잔존' } },
     ],
@@ -342,14 +342,14 @@ export const LABS_DATA: LabInfo[] = [
     evaluations: [
       { id: '1-1', pass: true, comment: { en: 'Header physically isolated; 0.0px motionless top-lock achieved!', ko: '헤더 물리 격리 + 350ms rAF 락으로 상단 헤더 0.0px 완전 고정 달성!' } },
       { id: '1-2', pass: true, comment: { en: 'Single unified scroll with 100% feed reachability', ko: '단일 스크롤로 헤더부터 바닥까지 100% 완벽 도달' } },
-      { id: '1-3', pass: true, comment: { en: 'Safe area removed on open; snaps with compact margin', ko: '34px 갭 제거 + 12px 최적 여백 초밀착' } },
-      { id: '1-4', pass: true, comment: { en: 'Target row #5 anchored with 0.0px visual drift', ko: '동결 기준값 기반 0.0px 읽던 줄 완벽 고정' } },
+      { id: '1-3', pass: true, comment: { en: 'Safe Area removed on open; snaps with compact margin', ko: '34px Safe Area Inset 제거 + 12px 최적 여백 초밀착' } },
+      { id: '1-4', pass: true, comment: { en: 'Reading line anchored with 0.0px visual drift', ko: '동결 기준값 기반 0.0px Scroll Anchoring 완벽 고정' } },
       { id: '2-1', pass: true, comment: { en: 'Floating bar suppresses to 0px seamlessly during body form input', ko: '본문 폼 입력 시 플로팅 바 0px 자동 은폐' } },
       { id: '3-1', pass: true, comment: { en: '3-state FSM eliminates dismiss flicker 100%', ko: '3-상태 FSM 도입으로 포커스 해제 시 깜빡임 완전 박멸!' } },
     ],
     keyFinding: {
-      en: 'Native App Parity achieved! 0.0px header lock, single unified scroll, 0.0px reading anchor, compact snap, and zero flicker across all iOS devices.',
-      ko: '상단 헤더 0.0px 완전 고정 + 단일 스크롤 + 0.0px 읽던 줄 보존 + 12px 초밀착 + FSM 깜빡임 완전 박멸로 네이티브 앱 동등 수준 달성!',
+      en: 'Native App Parity achieved! 0.0px header lock, single unified scroll, 0.0px Scroll Anchoring, compact snap, and zero flicker across all iOS devices.',
+      ko: '상단 헤더 0.0px 완전 고정 + 단일 스크롤 + 0.0px Scroll Anchoring + 12px 초밀착 + FSM 깜빡임 완전 박멸로 네이티브 앱 동등 수준 달성!',
     },
     nextDecision: {
       en: 'Adopted as the core production engine of react-mobile-keyboard-layout library!',
