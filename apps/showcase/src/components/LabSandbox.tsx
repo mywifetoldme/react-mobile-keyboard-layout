@@ -18,7 +18,7 @@ const EVAL_TITLES: Record<EvaluationItem['id'], { en: string; ko: string }> = {
   '1-2': { en: '1-2. Single Unified Scrollport', ko: '1-2. 단일 스크롤 유지' },
   '1-3': { en: '1-3. Safe Area Inset Removal on Keyboard Active', ko: '1-3. 키보드 활성화 시 Safe Area Inset 제거' },
   '1-4': { en: '1-4. Body Bottom Scroll Anchoring', ko: '1-4. 바디 하단 스크롤 앵커링' },
-  '2-1': { en: '2-1. Body Form Focus Handover & Suppression', ko: '2-1. 본문 폼 입력 포커스 핸드오버 (플로팅 0px 숨김)' },
+  '2-1': { en: '2-1. Body Form Focus Handover', ko: '2-1. 본문 폼 포커스 핸드오버' },
   '3-1': { en: '3-1. Seamless FSM Dismiss Restoration', ko: '3-1. 포커스 해제 시 깜빡임 없는 복원' },
 }
 
@@ -90,17 +90,22 @@ const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) =
                 gap: '4px',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: '#f4f4f5' }}>
                   {title}
                 </span>
                 <span style={{
-                  padding: '2px 6px',
+                  padding: '2px 8px',
                   borderRadius: '4px',
                   backgroundColor: isPass ? '#22c55e' : '#ef4444',
                   color: isPass ? '#052e16' : '#ffffff',
                   fontSize: '10px',
                   fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  lineHeight: '1.2',
                 }}>
                   {isPass ? '✅ PASS' : '❌ FAIL'}
                 </span>

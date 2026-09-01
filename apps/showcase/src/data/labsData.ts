@@ -280,8 +280,8 @@ export const LABS_DATA: LabInfo[] = [
       ko: 'EXP-03-B: ResizeObserver 바디 하단 스크롤 앵커링',
     },
     hypothesis: {
-      en: 'Freezing baseline (S0, H0) and compensating scrollTop by exact body contraction (delta-H) will achieve 0.0px Scroll Anchoring.',
-      ko: '닫혀 있을 때의 기준값(S0, H0)을 동결하고, 본문의 실제 축소량(ΔH)만큼만 스크롤하고 닫힐 때 S0로 1:1 복원한다.',
+      en: 'Freezing baseline (S0, H0) and compensating scroll offset by exact body contraction (delta-H) will achieve 0.0px Scroll Anchoring.',
+      ko: '닫혀 있을 때의 기준값(S0, H0)을 동결하고, 본문의 실제 축소량(ΔH)만큼만 스크롤을 보정하고 닫힐 때 S0로 1:1 복원한다.',
     },
     evaluations: [
       { id: '1-1', pass: false, comment: { en: 'Header slides inside resizing container', ko: '헤더가 리사이징 컨테이너 안에 있어 슬라이드 잔존' } },
