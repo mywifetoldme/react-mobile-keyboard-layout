@@ -1,8 +1,8 @@
 import { translations, type Language } from '../i18n'
 
-export type TabKey = 'playground' | 'comparator' | 'labs' | 'docs'
+export type TabKey = 'playground' | 'labs' | 'docs'
 
-export const TAB_KEYS: TabKey[] = ['playground', 'comparator', 'labs', 'docs']
+export const TAB_KEYS: TabKey[] = ['playground', 'labs', 'docs']
 
 interface NavigationProps {
   activeTab: TabKey
@@ -21,7 +21,6 @@ export const Navigation = ({
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'playground', label: t.tabPlayground },
-    { key: 'comparator', label: t.tabComparator },
     { key: 'labs', label: t.tabLabs },
     { key: 'docs', label: t.tabDocs },
   ]
@@ -34,15 +33,15 @@ export const Navigation = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingLeft: '10px',
-        paddingRight: '10px',
+        paddingLeft: '12px',
+        paddingRight: '12px',
         gap: '8px',
       }}
     >
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '4px',
+        gridTemplateColumns: 'repeat(3, 1fr)',
+        gap: '6px',
         flex: 1,
         minWidth: 0,
       }}>
@@ -78,7 +77,7 @@ export const Navigation = ({
         type="button"
         onClick={onToggleLang}
         style={{
-          padding: '6px 9px',
+          padding: '6px 10px',
           borderRadius: '8px',
           border: '1px solid #3f3f46',
           backgroundColor: '#27272a',

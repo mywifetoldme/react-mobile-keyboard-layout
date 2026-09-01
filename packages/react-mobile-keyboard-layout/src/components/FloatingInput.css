@@ -11,12 +11,12 @@
 
 .rmkl-floating-input-bar {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   background-color: var(--rmkl-input-bg);
   border: 1px solid var(--rmkl-input-border);
   border-radius: 20px;
-  padding: 6px 6px 6px 14px;
+  padding: 4px 6px 4px 14px;
 }
 
 .rmkl-floating-input-textarea {
@@ -27,11 +27,13 @@
   resize: none;
   font-family: inherit;
   font-size: 15px;
-  line-height: 20px;
+  line-height: 22px;
   color: var(--rmkl-input-text);
   max-height: 120px;
-  padding: 2px 0;
+  padding: 5px 0;
   margin: 0;
+  box-sizing: border-box;
+  display: block;
 }
 
 .rmkl-floating-input-textarea::placeholder {
