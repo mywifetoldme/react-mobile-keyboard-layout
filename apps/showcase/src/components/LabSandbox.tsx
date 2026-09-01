@@ -366,6 +366,40 @@ const LabFormSection = ({
   </div>
 )
 
+const LabBenchmarkFeed = ({ lang }: { lang: Language }) => (
+  <div style={{
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    backgroundColor: '#111114',
+    borderRadius: '12px',
+    border: '1px solid #27272a',
+    padding: '12px',
+  }}>
+    <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa', marginBottom: '4px' }}>
+      📍 {lang === 'ko' ? '스크롤 앵커링 벤치마크 아이템' : 'Scroll Anchor Benchmark'}
+    </div>
+    {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+      <div
+        key={num}
+        style={{
+          padding: '8px 12px',
+          borderRadius: '8px',
+          backgroundColor: num === 5 ? 'rgba(59, 130, 246, 0.15)' : '#18181b',
+          border: `1px solid ${num === 5 ? '#3b82f6' : '#27272a'}`,
+          fontSize: '12px',
+          color: num === 5 ? '#93c5fd' : '#a1a1aa',
+          display: 'flex',
+          justifyContent: 'space-between',
+        }}
+      >
+        <span>Item #{num} {num === 5 ? '🎯 (Anchor Target)' : ''}</span>
+        <span style={{ fontSize: '11px', color: '#71717a' }}>Row {num * 40}px</span>
+      </div>
+    ))}
+  </div>
+)
+
 const LabFloatingInput = ({
   value,
   onChange,
@@ -1241,6 +1275,7 @@ function Exp03ASandbox({ lab, lang, onClose }: LabSandboxProps) {
         gap: '14px',
       }}>
         <LabHeroSection lab={lab} lang={lang} />
+        <LabBenchmarkFeed lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
         <LabFindingDecisionSection lab={lab} lang={lang} />
@@ -1277,8 +1312,10 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [messages, setMessages] = useState<string[]>([])
 
   const bodyRef = useRef<HTMLDivElement | null>(null)
-  const closedScrollTopRef = useRef(0)
-  const closedHeightRef = useRef<number | null>(null)
+  const closedScrollTopRef = useRef<number>(0)
+  const closedBodyHeightRef = useRef<number | null>(null)
+  const isKeyboardActiveRef = useRef<boolean>(false)
+  const isProgrammaticScrollRef = useRef<boolean>(false)
 
   const lockToTop = () => {
     if (typeof window === 'undefined') return
@@ -1294,6 +1331,7 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // 1:1 visualViewport height binding + instant top locking
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
@@ -1302,23 +1340,6 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
       const open = window.innerHeight - vv.height > 80
       setIsKeyboardOpen(open)
       lockToTop()
-
-      if (bodyRef.current) {
-        const el = bodyRef.current
-        if (open) {
-          if (closedHeightRef.current === null) {
-            closedHeightRef.current = el.clientHeight
-            closedScrollTopRef.current = el.scrollTop
-          }
-          const deltaH = closedHeightRef.current - el.clientHeight
-          if (deltaH > 0) el.scrollTop = closedScrollTopRef.current + deltaH
-        } else {
-          if (closedHeightRef.current !== null) {
-            el.scrollTop = closedScrollTopRef.current
-          }
-          closedHeightRef.current = null
-        }
-      }
     }
     updateHeightAndLock()
     vv.addEventListener('resize', updateHeightAndLock)
@@ -1333,7 +1354,78 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     }
   }, [])
 
+  // Absolute Coordinate Estimation with Frozen Base Values (0.0px exact anchor)
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+
+    const handleScroll = () => {
+      if (isProgrammaticScrollRef.current || !el) return
+      if (!isKeyboardActiveRef.current) {
+        closedScrollTopRef.current = el.scrollTop
+        closedBodyHeightRef.current = el.clientHeight
+      }
+    }
+
+    el.addEventListener('scroll', handleScroll, { passive: true })
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (!el) return
+      const currHeight = el.clientHeight
+
+      if (!isKeyboardActiveRef.current) {
+        closedBodyHeightRef.current = currHeight
+        return
+      }
+
+      if (isKeyboardActiveRef.current && closedBodyHeightRef.current !== null) {
+        const deltaH = Math.round(Math.max(0, closedBodyHeightRef.current - currHeight))
+        if (deltaH > 0) {
+          isProgrammaticScrollRef.current = true
+          el.scrollTop = Math.round(closedScrollTopRef.current + deltaH)
+          requestAnimationFrame(() => {
+            isProgrammaticScrollRef.current = false
+          })
+        }
+      }
+    })
+
+    resizeObserver.observe(el)
+    return () => {
+      el.removeEventListener('scroll', handleScroll)
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  // Sync keyboard open/close transitions with exact position restoration
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+
+    if (isKeyboardOpen) {
+      if (!isKeyboardActiveRef.current) {
+        isKeyboardActiveRef.current = true
+        closedScrollTopRef.current = el.scrollTop
+        closedBodyHeightRef.current = el.clientHeight
+      }
+    } else {
+      if (isKeyboardActiveRef.current) {
+        isKeyboardActiveRef.current = false
+        isProgrammaticScrollRef.current = true
+        el.scrollTop = closedScrollTopRef.current
+        requestAnimationFrame(() => {
+          isProgrammaticScrollRef.current = false
+        })
+      }
+    }
+  }, [isKeyboardOpen])
+
   const handleFocus = () => {
+    if (bodyRef.current && !isKeyboardActiveRef.current) {
+      isKeyboardActiveRef.current = true
+      closedScrollTopRef.current = bodyRef.current.scrollTop
+      closedBodyHeightRef.current = bodyRef.current.clientHeight
+    }
     lockToTop()
     requestAnimationFrame(lockToTop)
     setTimeout(lockToTop, 50)
@@ -1378,6 +1470,7 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
         }}
       >
         <LabHeroSection lab={lab} lang={lang} />
+        <LabBenchmarkFeed lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
         <LabFindingDecisionSection lab={lab} lang={lang} />
@@ -1390,7 +1483,7 @@ function Exp03BSandbox({ lab, lang, onClose }: LabSandboxProps) {
         onChange={setFloatingVal}
         onFocus={handleFocus}
         onSubmit={handleSubmit}
-        placeholder="ResizeObserver delta-H scroll compensation..."
+        placeholder="ResizeObserver delta-H scroll compensation (0.0px anchor)..."
         style={{
           touchAction: 'none',
           padding: isKeyboardOpen ? '8px 16px 8px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
@@ -1415,8 +1508,10 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [messages, setMessages] = useState<string[]>([])
 
   const bodyRef = useRef<HTMLDivElement | null>(null)
-  const closedScrollTopRef = useRef(0)
-  const closedHeightRef = useRef<number | null>(null)
+  const closedScrollTopRef = useRef<number>(0)
+  const closedBodyHeightRef = useRef<number | null>(null)
+  const isKeyboardActiveRef = useRef<boolean>(false)
+  const isProgrammaticScrollRef = useRef<boolean>(false)
 
   const lockToTop = () => {
     if (typeof window === 'undefined') return
@@ -1432,6 +1527,7 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // 1:1 visualViewport height binding + instant top locking
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
@@ -1440,23 +1536,6 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
       const open = window.innerHeight - vv.height > 80
       setIsKeyboardOpen(open)
       lockToTop()
-
-      if (bodyRef.current) {
-        const el = bodyRef.current
-        if (open) {
-          if (closedHeightRef.current === null) {
-            closedHeightRef.current = el.clientHeight
-            closedScrollTopRef.current = el.scrollTop
-          }
-          const deltaH = closedHeightRef.current - el.clientHeight
-          if (deltaH > 0) el.scrollTop = closedScrollTopRef.current + deltaH
-        } else {
-          if (closedHeightRef.current !== null) {
-            el.scrollTop = closedScrollTopRef.current
-          }
-          closedHeightRef.current = null
-        }
-      }
     }
     updateHeightAndLock()
     vv.addEventListener('resize', updateHeightAndLock)
@@ -1471,7 +1550,78 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
     }
   }, [])
 
+  // Absolute Coordinate Estimation with Frozen Base Values (0.0px exact anchor)
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+
+    const handleScroll = () => {
+      if (isProgrammaticScrollRef.current || !el) return
+      if (!isKeyboardActiveRef.current) {
+        closedScrollTopRef.current = el.scrollTop
+        closedBodyHeightRef.current = el.clientHeight
+      }
+    }
+
+    el.addEventListener('scroll', handleScroll, { passive: true })
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (!el) return
+      const currHeight = el.clientHeight
+
+      if (!isKeyboardActiveRef.current) {
+        closedBodyHeightRef.current = currHeight
+        return
+      }
+
+      if (isKeyboardActiveRef.current && closedBodyHeightRef.current !== null) {
+        const deltaH = Math.round(Math.max(0, closedBodyHeightRef.current - currHeight))
+        if (deltaH > 0) {
+          isProgrammaticScrollRef.current = true
+          el.scrollTop = Math.round(closedScrollTopRef.current + deltaH)
+          requestAnimationFrame(() => {
+            isProgrammaticScrollRef.current = false
+          })
+        }
+      }
+    })
+
+    resizeObserver.observe(el)
+    return () => {
+      el.removeEventListener('scroll', handleScroll)
+      resizeObserver.disconnect()
+    }
+  }, [])
+
+  // Sync keyboard open/close transitions with exact position restoration
+  useEffect(() => {
+    const el = bodyRef.current
+    if (!el) return
+
+    if (isKeyboardOpen) {
+      if (!isKeyboardActiveRef.current) {
+        isKeyboardActiveRef.current = true
+        closedScrollTopRef.current = el.scrollTop
+        closedBodyHeightRef.current = el.clientHeight
+      }
+    } else {
+      if (isKeyboardActiveRef.current) {
+        isKeyboardActiveRef.current = false
+        isProgrammaticScrollRef.current = true
+        el.scrollTop = closedScrollTopRef.current
+        requestAnimationFrame(() => {
+          isProgrammaticScrollRef.current = false
+        })
+      }
+    }
+  }, [isKeyboardOpen])
+
   const handleFocus = () => {
+    if (bodyRef.current && !isKeyboardActiveRef.current) {
+      isKeyboardActiveRef.current = true
+      closedScrollTopRef.current = bodyRef.current.scrollTop
+      closedBodyHeightRef.current = bodyRef.current.clientHeight
+    }
     lockToTop()
     requestAnimationFrame(lockToTop)
     setTimeout(lockToTop, 50)
@@ -1516,6 +1666,7 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
         }}
       >
         <LabHeroSection lab={lab} lang={lang} />
+        <LabBenchmarkFeed lang={lang} />
         <LabFormSection
           lang={lang}
           bodyVal={bodyVal}
@@ -1628,6 +1779,7 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
     >
       <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <LabHeroSection lab={lab} lang={lang} />
+        <LabBenchmarkFeed lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
         <LabEvaluationSection lab={lab} lang={lang} />
         <LabFindingDecisionSection lab={lab} lang={lang} />
