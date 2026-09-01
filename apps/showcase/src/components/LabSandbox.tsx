@@ -75,7 +75,17 @@ const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) =
 
         {lab.evaluations.map((evalItem) => {
           const title = EVAL_TITLES[evalItem.id][lang]
-          const isPass = evalItem.pass
+          const isPass = evalItem.status === 'pass'
+          const isFail = evalItem.status === 'fail'
+          const isNa = evalItem.status === 'na'
+
+          const badgeBg = isPass ? '#22c55e' : isFail ? '#ef4444' : '#3f3f46'
+          const badgeColor = isPass ? '#052e16' : '#ffffff'
+          const badgeText = isPass ? '✅ PASS' : isFail ? '❌ FAIL' : '⚪ N/A'
+
+          const cardBg = isPass ? 'rgba(34, 197, 94, 0.06)' : isFail ? 'rgba(239, 68, 68, 0.06)' : 'rgba(113, 113, 122, 0.06)'
+          const cardBorder = isPass ? 'rgba(34, 197, 94, 0.3)' : isFail ? 'rgba(239, 68, 68, 0.3)' : 'rgba(113, 113, 122, 0.2)'
+          const commentColor = isPass ? '#86efac' : isFail ? '#fca5a5' : '#a1a1aa'
 
           return (
             <div
@@ -83,22 +93,22 @@ const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) =
               style={{
                 padding: '8px 10px',
                 borderRadius: '8px',
-                backgroundColor: isPass ? 'rgba(34, 197, 94, 0.06)' : 'rgba(239, 68, 68, 0.06)',
-                border: `1px solid ${isPass ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                backgroundColor: cardBg,
+                border: `1px solid ${cardBorder}`,
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '4px',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#f4f4f5' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: isNa ? '#a1a1aa' : '#f4f4f5' }}>
                   {title}
                 </span>
                 <span style={{
                   padding: '2px 8px',
                   borderRadius: '4px',
-                  backgroundColor: isPass ? '#22c55e' : '#ef4444',
-                  color: isPass ? '#052e16' : '#ffffff',
+                  backgroundColor: badgeBg,
+                  color: badgeColor,
                   fontSize: '10px',
                   fontWeight: 700,
                   whiteSpace: 'nowrap',
@@ -107,10 +117,10 @@ const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) =
                   alignItems: 'center',
                   lineHeight: '1.2',
                 }}>
-                  {isPass ? '✅ PASS' : '❌ FAIL'}
+                  {badgeText}
                 </span>
               </div>
-              <div style={{ fontSize: '11px', color: isPass ? '#86efac' : '#fca5a5', lineHeight: '1.3' }}>
+              <div style={{ fontSize: '11px', color: commentColor, lineHeight: '1.3' }}>
                 {evalItem.comment[lang]}
               </div>
             </div>
