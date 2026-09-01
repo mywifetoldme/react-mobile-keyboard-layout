@@ -134,6 +134,9 @@ export const FloatingInput = ({
           onPointerDown={(e) => {
             restTextareaProps.onPointerDown?.(e)
             onPointerDown?.(e)
+            // Prevent Safari's native window pan scroll and focus with preventScroll: true
+            e.preventDefault()
+            textareaRef.current?.focus({ preventScroll: true })
           }}
           onFocus={(e) => {
             restTextareaProps.onFocus?.(e)

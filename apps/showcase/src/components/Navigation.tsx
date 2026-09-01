@@ -2,6 +2,8 @@ import { translations, type Language } from '../i18n'
 
 export type TabKey = 'playground' | 'comparator' | 'labs' | 'docs'
 
+export const TAB_KEYS: TabKey[] = ['playground', 'comparator', 'labs', 'docs']
+
 interface NavigationProps {
   activeTab: TabKey
   onSelectTab: (tab: TabKey) => void
@@ -32,11 +34,18 @@ export const Navigation = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingLeft: '12px',
-        paddingRight: '12px',
+        paddingLeft: '8px',
+        paddingRight: '8px',
+        gap: '6px',
       }}
     >
-      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', flex: 1 }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '4px',
+        flex: 1,
+        minWidth: 0,
+      }}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
           return (
@@ -45,15 +54,18 @@ export const Navigation = ({
               type="button"
               onClick={() => onSelectTab(tab.key)}
               style={{
-                padding: '6px 12px',
+                padding: '6px 2px',
                 borderRadius: '8px',
                 border: 'none',
                 backgroundColor: isActive ? '#3b82f6' : 'transparent',
                 color: isActive ? '#ffffff' : '#a1a1aa',
-                fontSize: '13px',
+                fontSize: '11px',
                 fontWeight: isActive ? 600 : 400,
                 cursor: 'pointer',
+                textAlign: 'center',
                 whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
                 transition: 'all 0.1s ease',
               }}
             >
@@ -67,7 +79,7 @@ export const Navigation = ({
         type="button"
         onClick={onToggleLang}
         style={{
-          padding: '6px 10px',
+          padding: '5px 8px',
           borderRadius: '8px',
           border: '1px solid #3f3f46',
           backgroundColor: '#27272a',
@@ -76,7 +88,6 @@ export const Navigation = ({
           fontWeight: 600,
           cursor: 'pointer',
           flexShrink: 0,
-          marginLeft: '8px',
         }}
       >
         🌐 {t.toggleLang}
