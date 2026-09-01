@@ -65,7 +65,7 @@ const LabHeroSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) => (
     gap: '6px',
   }}>
     <div style={{ fontSize: '11px', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-      🎯 {lang === 'ko' ? '실험 가설 (Hypothesis)' : 'Hypothesis'}
+      🎯 {lang === 'ko' ? '실험 가설' : 'Hypothesis'}
     </div>
     <div style={{ fontSize: '13px', color: '#f4f4f5', lineHeight: '1.5', fontWeight: 500 }}>
       {lab.hypothesis[lang]}
@@ -102,7 +102,7 @@ const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) =
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
-        <span>📋 {lang === 'ko' ? '실험 검증 항목 & 실기기 관찰' : 'Evaluation Criteria & Device Findings'}</span>
+        <span>📋 {lang === 'ko' ? '실험 검증 항목' : 'Evaluation Criteria'}</span>
         <span style={{ fontSize: '11px', color: '#71717a' }}>6 Items</span>
       </div>
 
@@ -167,7 +167,7 @@ const LabFindingDecisionSection = ({ lab, lang }: { lab: LabInfo; lang: Language
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
-        🔍 {lang === 'ko' ? '실기기 관찰 결과 & 결함 발견' : 'Key On-Device Finding'}
+        🔍 {lang === 'ko' ? '실기기 관찰 결과' : 'On-Device Finding'}
       </div>
       <div style={{
         fontSize: '12px',
@@ -189,7 +189,7 @@ const LabFindingDecisionSection = ({ lab, lang }: { lab: LabInfo; lang: Language
       gap: '6px',
     }}>
       <div style={{ fontSize: '11px', fontWeight: 700, color: '#60a5fa', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-        💡 {lang === 'ko' ? '엔지니어링 판단 & 다음 결정' : 'Engineering Judgment & Next Decision'}
+        💡 {lang === 'ko' ? '엔지니어링 판단 & 다음 결정' : 'Engineering Decision'}
       </div>
       <div style={{ fontSize: '12px', color: '#93c5fd', lineHeight: '1.5', fontWeight: 500 }}>
         {lab.nextDecision[lang]}
