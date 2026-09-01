@@ -34,7 +34,7 @@ export const LABS_DATA: LabInfo[] = [
     evaluations: [
       { id: '1-1', pass: false, comment: { en: 'Header pushed off-screen as Safari pans window up', ko: '사파리가 외부 창을 밀어올려 상단 헤더가 화면 위로 밀려 사라짐' } },
       { id: '1-2', pass: false, comment: { en: 'Dual-scroll occurs when scrolling on input area', ko: '인풋 영역 스크롤 시 이중 스크롤 발생' } },
-      { id: '1-3', pass: false, comment: { en: '34px Safe Area Inset gap remains above keyboard (no jitter, pure gap)', ko: '키보드 활성화 시 34px Safe Area Inset 공백 미제거 (덜컹거림은 없음)' } },
+      { id: '1-3', pass: false, comment: { en: '34px Safe Area Inset gap remains above keyboard', ko: '키보드 활성화 시 34px Safe Area Inset 공백 미제거' } },
       { id: '1-4', pass: true, comment: { en: 'Safari pans window up, naturally keeping body bottom above input', ko: '사파리가 창을 올려 바디 하단 위치가 인풋 위에 자연 보존됨' } },
       { id: '2-1', pass: true, comment: { en: 'Floating bar stays at bottom, leaving body forms unobstructed', ko: '플로팅 인풋이 바닥에 머물러 있어 상단 본문 입력을 가리지 않음' } },
       { id: '3-1', pass: true, comment: { en: 'Native browser dismiss restores layout smoothly', ko: '조작한 JS가 없으므로 사파리 기본 동작으로 매끄럽게 복원됨' } },
