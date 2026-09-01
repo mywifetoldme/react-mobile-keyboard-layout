@@ -320,6 +320,7 @@ const WinnerLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
 const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
   const [windowScrollY, setWindowScrollY] = useState(0)
   const [vvHeight, setVvHeight] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : 0)
+  const [vvOffsetTop, setVvOffsetTop] = useState(() => typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetTop : 0)
   const [bodyInputVal, setBodyInputVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [floatingInputVal, setFloatingInputVal] = useState('')
@@ -329,8 +330,14 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
   const isExp01 = lab.id === 'exp01'
   const isExp01A = lab.id === 'exp01_a'
   const isExp01B = lab.id === 'exp01_b'
+  const isExp01Family = isExp01 || isExp01A || isExp01B
+
+  const isExp02 = lab.id === 'exp02'
   const isExp02A = lab.id === 'exp02_a'
-  const isExp02C = lab.id === 'exp02_c' || lab.id === 'exp02_d'
+  const isExp02B = lab.id === 'exp02_b'
+  const isExp02C = lab.id === 'exp02_c'
+  const isExp02D = lab.id === 'exp02_d'
+
   const isExp03A = lab.id === 'exp03_a'
   const isExp03B = lab.id === 'exp03_b'
   const isExp03C = lab.id === 'exp03_c'
@@ -347,7 +354,7 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
   }, [])
 
   const startRafTopLock = useCallback(() => {
-    if (!isExp02C && !isExp03A && !isExp03B && !isExp03C) return
+    if (!isExp01B && !isExp02B && !isExp02D && !isExp03A && !isExp03B && !isExp03C) return
     if (rafIdRef.current !== null) cancelAnimationFrame(rafIdRef.current)
     const startTime = performance.now()
     const step = (now: number) => {
@@ -359,21 +366,30 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
       }
     }
     rafIdRef.current = requestAnimationFrame(step)
-  }, [isExp02C, isExp03A, isExp03B, isExp03C])
+  }, [isExp01B, isExp02B, isExp02D, isExp03A, isExp03B, isExp03C])
 
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
     const handleVv = () => {
       setVvHeight(vv.height)
-      const open = window.innerHeight - vv.height > 100
+      setVvOffsetTop(vv.offsetTop)
+      const open = window.innerHeight - vv.height > 80
       setIsKeyboardOpen(open)
 
-      if (isExp02A && open) window.scrollTo(0, 0)
-      if ((isExp02C || isExp03A || isExp03B || isExp03C) && open) startRafTopLock()
+      if (isExp01B && open) {
+        window.scrollTo(0, 0)
+        startRafTopLock()
+      }
+      if (isExp02A && open) {
+        // EXP-02-A has no scroll lock, WebKit pushes window up by 336px!
+      }
+      if ((isExp02B || isExp02D || isExp03A || isExp03B || isExp03C) && open) {
+        startRafTopLock()
+      }
 
-      // EXP-03-C: 0.0px Coordinate Preservation Formula
-      if (isExp03C && bodyRef.current) {
+      // EXP-03-B / EXP-03-C: Coordinate Preservation Formula
+      if ((isExp03B || isExp03C) && bodyRef.current) {
         const el = bodyRef.current
         if (open) {
           if (closedHeightRef.current === null) {
@@ -388,42 +404,83 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
       }
     }
     vv.addEventListener('resize', handleVv)
-    return () => vv.removeEventListener('resize', handleVv)
-  }, [isExp02A, isExp02C, isExp03A, isExp03B, isExp03C, startRafTopLock])
+    vv.addEventListener('scroll', handleVv)
+    return () => {
+      vv.removeEventListener('resize', handleVv)
+      vv.removeEventListener('scroll', handleVv)
+    }
+  }, [isExp01B, isExp02A, isExp02B, isExp02D, isExp03A, isExp03B, isExp03C, startRafTopLock])
 
   const handleBodyFocus = () => {
-    if (isExp03A || isExp03B || isExp03C) setIsSuppressed(true)
+    if (isExp03C) setIsSuppressed(true)
     startRafTopLock()
   }
 
   const handleFloatingFocus = () => {
     setIsSuppressed(false)
+    if (isExp01B) {
+      const lockDocumentScroll = () => {
+        window.scrollTo(0, 0)
+        if (document.scrollingElement) document.scrollingElement.scrollTop = 0
+        if (document.documentElement) document.documentElement.scrollTop = 0
+        if (document.body) document.body.scrollTop = 0
+      }
+      lockDocumentScroll()
+      requestAnimationFrame(lockDocumentScroll)
+      setTimeout(lockDocumentScroll, 50)
+      setTimeout(lockDocumentScroll, 150)
+      setTimeout(lockDocumentScroll, 300)
+    }
     startRafTopLock()
   }
 
-  // Root sandbox dimensions
-  const rootHeightStyle: CSSProperties = isExp01
-    ? { height: '100vh' }
-    : isExp01B
-    ? { height: '100dvh' }
-    : isKeyboardOpen && vvHeight > 0
-    ? { height: `${vvHeight}px`, maxHeight: `${vvHeight}px` }
-    : { height: '100%' }
+  // Root sandbox dimensions and positioning
+  const rootStyle: CSSProperties = isExp01Family
+    ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100vh',
+      }
+    : isExp02
+    ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        height: '100dvh',
+      }
+    : isExp02C
+    ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '100%',
+        transform: `translateY(${vvOffsetTop}px)`,
+        transition: 'transform 0.05s linear',
+      }
+    : {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
+        maxHeight: isKeyboardOpen && vvHeight > 0 ? `${vvHeight}px` : '100%',
+      }
 
   return (
     <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: isKeyboardOpen && vvHeight > 0 && !isExp01 && !isExp01B ? undefined : 0,
       backgroundColor: '#09090b',
       color: '#f4f4f5',
       zIndex: 300,
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
-      ...rootHeightStyle,
+      ...rootStyle,
     }}>
       {/* Top Header */}
       <header style={{
@@ -485,7 +542,7 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
           padding: '14px 16px',
-          paddingBottom: isExp01 ? '80px' : '24px',
+          paddingBottom: isExp01Family ? '90px' : '24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
@@ -559,21 +616,26 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
         <LabEvaluationSection lab={lab} lang={lang} />
 
         {/* Bottom spacer for perfect scroll clearance */}
-        <div style={{ height: isExp01 ? '90px' : '40px', flexShrink: 0 }} />
+        <div style={{ height: isExp01Family ? '90px' : '40px', flexShrink: 0 }} />
       </main>
 
       {/* Floating Input Bar */}
       {!isSuppressed && (
         <footer
           style={{
-            padding: isExp01A && isKeyboardOpen ? '8px 16px 34px' : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
+            padding: (isExp03A || isExp03B || isExp03C) && isKeyboardOpen
+              ? '8px 16px'
+              : isExp01A && isKeyboardOpen
+              ? '8px 16px 34px'
+              : '8px 16px calc(8px + env(safe-area-inset-bottom, 0px))',
             backgroundColor: '#18181b',
             borderTop: '1px solid #27272a',
             flexShrink: 0,
-            position: isExp01 ? 'fixed' : 'relative',
-            bottom: isExp01 ? 0 : undefined,
-            left: isExp01 ? 0 : undefined,
-            right: isExp01 ? 0 : undefined,
+            position: isExp01Family ? 'fixed' : 'relative',
+            bottom: isExp01Family ? 0 : undefined,
+            left: isExp01Family ? 0 : undefined,
+            right: isExp01Family ? 0 : undefined,
+            touchAction: isExp02D ? 'none' : 'auto',
           }}
         >
           <div style={{
@@ -589,7 +651,13 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
               value={floatingInputVal}
               onChange={(e) => setFloatingInputVal(e.target.value)}
               onFocus={handleFloatingFocus}
-              placeholder={isExp01 ? 'Naive fixed input (gets covered on iOS)...' : 'Test input...'}
+              placeholder={
+                isExp01B
+                  ? 'Tap to test scrollTo(0,0) (gets covered!)...'
+                  : isExp01Family
+                  ? 'Naive fixed input (gets covered on iOS)...'
+                  : 'Test input...'
+              }
               style={{
                 flex: 1,
                 border: 'none',
