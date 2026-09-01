@@ -60,16 +60,16 @@ export const LABS_DATA: LabInfo[] = [
       ko: '키보드 오픈을 감지하여 34px Safe Area Inset을 0px로 축소하면 키보드 밀착이 가능할 것이다.',
     },
     evaluations: [
-      { id: '1-1', status: 'fail', comment: { en: 'Header still flies off-screen on focus', ko: '포커스 시 여전히 헤더가 화면 밖으로 밀려남' } },
+      { id: '1-1', status: 'fail', comment: { en: 'Header pushed off-screen as Safari pans window up', ko: '사파리가 외부 창을 밀어올려 상단 헤더가 화면 위로 밀려 사라짐' } },
       { id: '1-2', status: 'fail', comment: { en: 'Dual-scroll occurs when scrolling on input area', ko: '인풋 영역 스크롤 시 이중 스크롤 발생' } },
-      { id: '1-3', status: 'fail', comment: { en: 'Detection mismatch leaves 34px gap intact', ko: '키보드 감지 불일치로 Safe Area Inset 제거 실패' } },
-      { id: '1-4', status: 'fail', comment: { en: '100px reading line displacement occurs', ko: '100px 스크롤 급발진으로 바디 하단 앵커링 튕김' } },
+      { id: '1-3', status: 'fail', comment: { en: '34px Safe Area Inset padding is not removed, behaving identical to EXP-01', ko: '키보드가 열려도 34px Safe Area Inset이 제거되지 않고 그대로 유지됨 (EXP-01과 동일)' } },
+      { id: '1-4', status: 'pass', comment: { en: 'Safari pans window up, naturally keeping body bottom above input', ko: '사파리가 창을 올려 바디 하단 위치가 인풋 위에 자연 보존됨' } },
       { id: '2-1', status: 'na', comment: { en: 'Focus handover not in scope (introduced in EXP-03-C)', ko: '포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)' } },
       { id: '3-1', status: 'na', comment: { en: 'FSM restoration not in scope (introduced in EXP-03-D)', ko: 'FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)' } },
     ],
     keyFinding: {
-      en: 'window.innerHeight subtraction fails to detect keyboard transitions synchronously, causing Safe Area Inset removal failure.',
-      ko: 'window.innerHeight 단순 뺄셈으로는 키보드 오픈 여부를 정확히 판별하지 못해 Safe Area Inset 제거에 실패함.',
+      en: 'In pure position: fixed layout, dynamically toggling Safe Area Inset padding fails to collapse the 34px gap above keyboard.',
+      ko: '순수 position: fixed 구조에서는 Safe Area Inset을 동적으로 줄이려 해도 키보드 위 34px 공백이 제거되지 않음을 실증.',
     },
     nextDecision: {
       en: 'Synthesize findings with EXP-01-B to determine if position: fixed can be salvaged or must be abandoned.',
