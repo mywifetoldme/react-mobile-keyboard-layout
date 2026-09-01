@@ -1,4 +1,4 @@
-import { useState, useRef, type CSSProperties } from 'react'
+import { useState, useRef, type CSSProperties, type ReactNode } from 'react'
 import {
   SubpageLayout,
   FloatingInput,
@@ -16,6 +16,7 @@ interface Message {
 
 interface PlaygroundViewProps {
   lang: Language
+  header?: ReactNode
 }
 
 const inputStyle: CSSProperties = {
@@ -34,7 +35,7 @@ const inputStyle: CSSProperties = {
   fontFamily: 'inherit',
 }
 
-export const PlaygroundView = ({ lang }: PlaygroundViewProps) => {
+export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
   const t = translations[lang]
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const engine = useMobileKeyboard({ bodyRef })
@@ -83,6 +84,7 @@ export const PlaygroundView = ({ lang }: PlaygroundViewProps) => {
     <SubpageLayout
       bodyRef={bodyRef}
       keyboardEngine={engine}
+      header={header}
       title="Playground"
       footer={
         <FloatingInput

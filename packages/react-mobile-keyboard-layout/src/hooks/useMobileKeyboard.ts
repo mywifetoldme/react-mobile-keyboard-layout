@@ -280,7 +280,7 @@ export const useMobileKeyboard = ({
     [lockDurationMs],
   )
 
-  // 1. VisualViewport subscription
+  // 1. VisualViewport subscription with synchronous baseline capture
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
@@ -290,10 +290,29 @@ export const useMobileKeyboard = ({
       (height, open) => {
         setVvHeight(height)
         setIsKeyboardOpen(open)
-        if (open) startContinuousLockLoop()
+
+        const el = bodyRef?.current
+        if (open) {
+          if (!isKeyboardActiveRef.current) {
+            isKeyboardActiveRef.current = true
+            if (el) {
+              closedScrollTopRef.current = el.scrollTop
+              closedBodyHeightRef.current = el.clientHeight
+            }
+          }
+          startContinuousLockLoop()
+        } else {
+          if (isKeyboardActiveRef.current) {
+            startContinuousLockLoop()
+            isKeyboardActiveRef.current = false
+            if (el && !isBodyInputFocused) {
+              el.scrollTop = closedScrollTopRef.current
+            }
+          }
+        }
       },
     )
-  }, [keyboardThreshold, startContinuousLockLoop])
+  }, [keyboardThreshold, startContinuousLockLoop, bodyRef, isBodyInputFocused])
 
   // 2. ResizeObserver & Coordinate Preservation
   useEffect(() => {
@@ -313,29 +332,7 @@ export const useMobileKeyboard = ({
     })
   }, [bodyRef, isBodyInputFocused])
 
-  // 3. Sync baseline metrics on open/close transitions
-  useEffect(() => {
-    const el = bodyRef?.current
-    if (!el) return
-
-    if (isKeyboardOpen) {
-      if (!isKeyboardActiveRef.current) {
-        isKeyboardActiveRef.current = true
-        closedScrollTopRef.current = el.scrollTop
-        closedBodyHeightRef.current = el.clientHeight
-      }
-    } else {
-      if (isKeyboardActiveRef.current) {
-        startContinuousLockLoop()
-        isKeyboardActiveRef.current = false
-        if (!isBodyInputFocused) {
-          el.scrollTop = closedScrollTopRef.current
-        }
-      }
-    }
-  }, [bodyRef, isKeyboardOpen, isBodyInputFocused, startContinuousLockLoop])
-
-  // 4. Focus Handover FSM (Body + Global)
+  // 3. Focus Handover FSM (Body + Global)
   useEffect(() => {
     const el = bodyRef?.current
     const cleanupBody = el
@@ -361,7 +358,7 @@ export const useMobileKeyboard = ({
     }
   }, [bodyRef, startContinuousLockLoop])
 
-  // 5. Optional touchmove clamp
+  // 4. Optional touchmove clamp
   useEffect(() => {
     return bindOuterScrollLock(bodyRef?.current ?? null, preventOuterScroll)
   }, [bodyRef, preventOuterScroll])

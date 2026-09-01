@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, type ReactNode } from 'react'
 import {
   SubpageLayout,
   FloatingInput,
 } from 'react-mobile-keyboard-layout'
 import { translations, type Language } from '../i18n'
 
-export const ComparatorView = ({ lang }: { lang: Language }) => {
+export const ComparatorView = ({ lang, header }: { lang: Language; header?: ReactNode }) => {
   const t = translations[lang]
   const [mode, setMode] = useState<'zeroShift' | 'standard'>('zeroShift')
   const [inputVal, setInputVal] = useState('')
@@ -16,6 +16,7 @@ export const ComparatorView = ({ lang }: { lang: Language }) => {
   return (
     <SubpageLayout
       bodyRef={bodyRef}
+      header={header}
       title="Before / After"
       footer={
         isZeroShift ? (

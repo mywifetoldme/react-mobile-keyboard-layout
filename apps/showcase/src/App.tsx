@@ -15,21 +15,21 @@ export default function App() {
     setLang((prev) => (prev === 'en' ? 'ko' : 'en'))
   }
 
-  return (
-    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Navigation
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
-        lang={lang}
-        onToggleLang={toggleLang}
-      />
+  const navHeader = (
+    <Navigation
+      activeTab={activeTab}
+      onSelectTab={setActiveTab}
+      lang={lang}
+      onToggleLang={toggleLang}
+    />
+  )
 
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {activeTab === 'playground' && <PlaygroundView lang={lang} />}
-        {activeTab === 'comparator' && <ComparatorView lang={lang} />}
-        {activeTab === 'labs' && <LabsView lang={lang} />}
-        {activeTab === 'docs' && <DocsView lang={lang} />}
-      </div>
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {activeTab === 'playground' && <PlaygroundView lang={lang} header={navHeader} />}
+      {activeTab === 'comparator' && <ComparatorView lang={lang} header={navHeader} />}
+      {activeTab === 'labs' && <LabsView lang={lang} header={navHeader} />}
+      {activeTab === 'docs' && <DocsView lang={lang} header={navHeader} />}
     </div>
   )
 }

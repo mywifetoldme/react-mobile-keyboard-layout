@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { SubpageLayout } from 'react-mobile-keyboard-layout'
 import { LABS_DATA, type LabInfo } from '../data/labsData'
 import { translations, type Language } from '../i18n'
 
-export const LabsView = ({ lang }: { lang: Language }) => {
+export const LabsView = ({ lang, header }: { lang: Language; header?: ReactNode }) => {
   const t = translations[lang]
   const [selectedLab, setSelectedLab] = useState<LabInfo>(LABS_DATA[LABS_DATA.length - 1])
 
@@ -19,7 +19,7 @@ export const LabsView = ({ lang }: { lang: Language }) => {
   }
 
   return (
-    <SubpageLayout title={t.labsArchiveTitle}>
+    <SubpageLayout header={header} title={t.labsArchiveTitle}>
       <div style={{ padding: '16px 16px 32px' }}>
         <p style={{ fontSize: '13px', color: '#a1a1aa', marginBottom: '16px', lineHeight: '1.5' }}>
           {t.labsArchiveSubtitle}
@@ -41,8 +41,8 @@ export const LabsView = ({ lang }: { lang: Language }) => {
               const badge = getStatusBadge(selectedLab.status)
               return (
                 <span style={{
-                  padding: '3px 8px',
-                  borderRadius: '12px',
+                  padding: '4px 8px',
+                  borderRadius: '6px',
                   backgroundColor: badge.bg,
                   color: badge.color,
                   fontSize: '11px',
@@ -54,19 +54,27 @@ export const LabsView = ({ lang }: { lang: Language }) => {
             })()}
           </div>
 
-          <div style={{ fontSize: '13px', color: '#d4d4d8', marginBottom: '10px', lineHeight: '1.5' }}>
-            <strong>{t.hypothesisLabel}:</strong> {selectedLab.description[lang]}
+          <div style={{ fontSize: '13px', color: '#d4d4d8', marginBottom: '12px' }}>
+            <strong style={{ color: '#a1a1aa' }}>{t.hypothesisLabel}: </strong>
+            {selectedLab.description[lang]}
           </div>
 
-          <div style={{ fontSize: '13px', color: selectedLab.status === 'winner' ? '#86efac' : '#fca5a5', lineHeight: '1.5' }}>
-            <strong>{t.keyFindingLabel}:</strong> {selectedLab.keyFinding[lang]}
+          <div style={{
+            fontSize: '13px',
+            color: '#60a5fa',
+            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+            padding: '10px 12px',
+            borderRadius: '8px',
+          }}>
+            <strong>{t.keyFindingLabel}: </strong>
+            {selectedLab.keyFinding[lang]}
           </div>
         </div>
 
-        {/* List of Labs */}
+        {/* Lab Grid */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {LABS_DATA.map((lab) => {
-            const isSelected = lab.id === selectedLab.id
+            const isSelected = selectedLab.id === lab.id
             const badge = getStatusBadge(lab.status)
             return (
               <button
@@ -79,24 +87,27 @@ export const LabsView = ({ lang }: { lang: Language }) => {
                   justifyContent: 'space-between',
                   padding: '12px 14px',
                   borderRadius: '10px',
-                  backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.15)' : 'rgba(255, 255, 255, 0.03)',
-                  border: `1px solid ${isSelected ? '#3b82f6' : '#27272a'}`,
+                  border: isSelected ? '1px solid #3b82f6' : '1px solid #27272a',
+                  backgroundColor: isSelected ? '#27272a' : '#18181b',
                   color: '#f4f4f5',
-                  cursor: 'pointer',
+                  fontSize: '13px',
                   textAlign: 'left',
+                  cursor: 'pointer',
                   transition: 'all 0.1s ease',
                 }}
               >
-                <span style={{ fontSize: '13px', fontWeight: isSelected ? 600 : 400 }}>
+                <span style={{ fontWeight: isSelected ? 600 : 400 }}>
                   {lab.title[lang]}
                 </span>
                 <span style={{
                   padding: '2px 6px',
-                  borderRadius: '6px',
+                  borderRadius: '4px',
                   backgroundColor: badge.bg,
                   color: badge.color,
                   fontSize: '10px',
                   fontWeight: 700,
+                  flexShrink: 0,
+                  marginLeft: '8px',
                 }}>
                   {badge.text}
                 </span>

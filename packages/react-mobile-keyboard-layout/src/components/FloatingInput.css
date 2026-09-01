@@ -1,12 +1,12 @@
 .rmkl-floating-input-wrapper {
-  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
   background-color: var(--rmkl-bg);
   border-top: 1px solid var(--rmkl-border);
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
 .rmkl-floating-input-wrapper--keyboard-open {
-  padding-bottom: 8px;
+  padding-bottom: 12px;
 }
 
 .rmkl-floating-input-bar {

@@ -25,18 +25,18 @@ export const Navigation = ({
   ]
 
   return (
-    <nav style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '8px 12px',
-      backgroundColor: '#18181b',
-      borderBottom: '1px solid #27272a',
-      position: 'sticky',
-      top: 0,
-      zIndex: 100,
-    }}>
-      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto' }}>
+    <header
+      role="banner"
+      className="rmkl-subpage-header"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingLeft: '12px',
+        paddingRight: '12px',
+      }}
+    >
+      <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', flex: 1 }}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
           return (
@@ -50,7 +50,7 @@ export const Navigation = ({
                 border: 'none',
                 backgroundColor: isActive ? '#3b82f6' : 'transparent',
                 color: isActive ? '#ffffff' : '#a1a1aa',
-                fontSize: '12px',
+                fontSize: '13px',
                 fontWeight: isActive ? 600 : 400,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
@@ -81,6 +81,6 @@ export const Navigation = ({
       >
         🌐 {t.toggleLang}
       </button>
-    </nav>
+    </header>
   )
 }
