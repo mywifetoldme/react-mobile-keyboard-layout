@@ -15,9 +15,9 @@ interface LabSandboxProps {
 
 const EVAL_TITLES: Record<EvaluationItem['id'], { en: string; ko: string }> = {
   '1-1': { en: '1-1. Header Top-Lock', ko: '1-1. 상단 헤더 고정' },
-  '1-2': { en: '1-2. Single Unified Scrollport & Reachability', ko: '1-2. 단일 스크롤 & 전체 도달성 (이중 스크롤 방지)' },
-  '1-3': { en: '1-3. Keyboard Safe Area Inset 12px Snap', ko: '1-3. Safe Area Inset 12px 초밀착' },
-  '1-4': { en: '1-4. Visual Scroll Anchoring', ko: '1-4. 읽던 줄 스크롤 앵커링 (Scroll Anchoring)' },
+  '1-2': { en: '1-2. Single Unified Scrollport', ko: '1-2. 단일 스크롤 유지' },
+  '1-3': { en: '1-3. Safe Area Inset Removal on Keyboard Active', ko: '1-3. 키보드 활성화 시 Safe Area Inset 제거' },
+  '1-4': { en: '1-4. Body Bottom Scroll Anchoring', ko: '1-4. 바디 하단 스크롤 앵커링' },
   '2-1': { en: '2-1. Body Form Focus Handover & Suppression', ko: '2-1. 본문 폼 입력 포커스 핸드오버 (플로팅 0px 숨김)' },
   '3-1': { en: '3-1. Seamless FSM Dismiss Restoration', ko: '3-1. 포커스 해제 시 깜빡임 없는 복원' },
 }
