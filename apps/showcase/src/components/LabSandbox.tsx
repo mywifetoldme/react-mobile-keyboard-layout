@@ -1196,88 +1196,63 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
   })
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: '#09090b',
-      color: '#f4f4f5',
-      zIndex: 300,
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
-      <SubpageLayout
-        keyboardEngine={engine}
-        bodyRef={bodyRef}
-        header={
-          <header
-            style={{
-              height: '52px',
-              paddingTop: 'env(safe-area-inset-top, 0px)',
-              backgroundColor: '#18181b',
-              borderBottom: '1px solid #27272a',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              paddingLeft: '12px',
-              paddingRight: '12px',
-            }}
-          >
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                border: '1px solid #3f3f46',
-                backgroundColor: '#27272a',
-                color: '#f4f4f5',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              {lang === 'ko' ? '← 나가기' : '← Back'}
-            </button>
-
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#4ade80' }}>
-              EXP-03-D (Winner ★)
-            </div>
-
-            <span style={{
-              padding: '3px 8px',
-              borderRadius: '6px',
-              backgroundColor: '#22c55e',
-              color: '#052e16',
-              fontSize: '11px',
-              fontWeight: 700,
-            }}>
-              WINNER
-            </span>
-          </header>
-        }
-        footer={
-          <FloatingInput
-            value={floatingVal}
-            onChange={setFloatingVal}
-            onSubmit={() => setFloatingVal('')}
-            placeholder={lang === 'ko' ? 'Zero-Shift 키보드 테스트...' : 'Test zero-shift keyboard input...'}
-            {...engine.floatingProps}
-            isSuppressed={engine.isFloatingSuppressed}
-            isKeyboardOpen={engine.isKeyboardOpen}
-          />
-        }
-      >
-        <div style={{ padding: '0 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
-          <LabEvaluationSection lab={lab} lang={lang} />
-          <div style={{ height: '40px', flexShrink: 0 }} />
+    <SubpageLayout
+      keyboardEngine={engine}
+      bodyRef={bodyRef}
+      style={{ zIndex: 300 }}
+      headerLeft={
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            padding: '6px 12px',
+            borderRadius: '8px',
+            border: '1px solid #3f3f46',
+            backgroundColor: '#27272a',
+            color: '#f4f4f5',
+            fontSize: '12px',
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          {lang === 'ko' ? '← 나가기' : '← Back'}
+        </button>
+      }
+      title={
+        <div style={{ fontSize: '13px', fontWeight: 700, color: '#4ade80' }}>
+          EXP-03-D (Winner ★)
         </div>
-      </SubpageLayout>
-    </div>
+      }
+      headerRight={
+        <span style={{
+          padding: '3px 8px',
+          borderRadius: '6px',
+          backgroundColor: '#22c55e',
+          color: '#052e16',
+          fontSize: '11px',
+          fontWeight: 700,
+        }}>
+          WINNER
+        </span>
+      }
+      footer={
+        <FloatingInput
+          value={floatingVal}
+          onChange={setFloatingVal}
+          onSubmit={() => setFloatingVal('')}
+          placeholder={lang === 'ko' ? 'Zero-Shift 키보드 테스트...' : 'Test zero-shift keyboard input...'}
+          {...engine.floatingProps}
+          isSuppressed={engine.isFloatingSuppressed}
+          isKeyboardOpen={engine.isKeyboardOpen}
+        />
+      }
+    >
+      <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
+        <LabEvaluationSection lab={lab} lang={lang} />
+        <div style={{ height: '40px', flexShrink: 0 }} />
+      </div>
+    </SubpageLayout>
   )
 }
 
