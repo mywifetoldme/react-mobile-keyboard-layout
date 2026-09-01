@@ -92,10 +92,6 @@ export const FloatingInput = ({
     }
   }
 
-  if (isSuppressed) {
-    return null
-  }
-
   const { icon: customIcon, className: buttonClassName = '', style: buttonStyle, ...restButtonProps } = buttonProps ?? {}
   const { className: textareaClassName = '', style: textareaStyle, ...restTextareaProps } = textareaProps ?? {}
 
@@ -103,8 +99,11 @@ export const FloatingInput = ({
     <div
       role="region"
       aria-label="Floating input bar"
-      className={`rmkl-floating-input-wrapper${isKeyboardOpen ? ' rmkl-floating-input-wrapper--keyboard-open' : ''} ${className}`.trim()}
-      style={style}
+      className={`rmkl-floating-input-wrapper${isKeyboardOpen ? ' rmkl-floating-input-wrapper--keyboard-open' : ''}${isSuppressed ? ' rmkl-floating-input-wrapper--suppressed' : ''} ${className}`.trim()}
+      style={{
+        ...style,
+        ...(isSuppressed ? { display: 'none' } : {}),
+      }}
     >
       <div className="rmkl-floating-input-bar">
         <textarea

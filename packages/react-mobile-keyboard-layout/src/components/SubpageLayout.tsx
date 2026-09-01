@@ -51,7 +51,9 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
     >
       {/* 1. Physically Isolated Header - Untouched by dynamic body resizing */}
       {header ? (
-        header
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60 }}>
+          {header}
+        </div>
       ) : (
         <header
           role="banner"
