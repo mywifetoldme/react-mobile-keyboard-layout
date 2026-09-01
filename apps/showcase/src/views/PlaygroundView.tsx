@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, type CSSProperties, type ReactNode } from 'react'
 import {
   SubpageLayout,
   FloatingInput,
@@ -14,55 +14,77 @@ interface Message {
   time: string
 }
 
-export const PlaygroundView = ({ lang }: { lang: Language }) => {
+interface PlaygroundViewProps {
+  lang: Language
+  header?: ReactNode
+}
+
+const inputStyle: CSSProperties = {
+  display: 'block',
+  width: '100%',
+  boxSizing: 'border-box',
+  minHeight: '44px',
+  padding: '10px 14px',
+  borderRadius: '10px',
+  border: '1px solid #3f3f46',
+  backgroundColor: '#18181b',
+  color: '#f4f4f5',
+  fontSize: '15px',
+  outline: 'none',
+  WebkitAppearance: 'none',
+  fontFamily: 'inherit',
+}
+
+export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
   const t = translations[lang]
   const bodyRef = useRef<HTMLDivElement | null>(null)
   const engine = useMobileKeyboard({ bodyRef })
 
-  const [inputVal, setInputVal] = useState('')
-  const [titleVal, setTitleVal] = useState('')
-  const [dateVal, setDateVal] = useState('')
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       text: t.sampleMessage1,
       sender: 'bot',
-      time: '10:00 AM',
+      time: '12:00',
     },
     {
       id: '2',
       text: t.sampleMessage2,
       sender: 'bot',
-      time: '10:01 AM',
+      time: '12:01',
     },
     {
       id: '3',
       text: t.sampleMessage3,
       sender: 'bot',
-      time: '10:02 AM',
+      time: '12:02',
     },
   ])
+
+  const [inputVal, setInputVal] = useState('')
+  const [titleVal, setTitleVal] = useState('')
+  const [dateVal, setDateVal] = useState('2026-09-01')
 
   const handleSend = () => {
     if (!inputVal.trim()) return
     const newMsg: Message = {
-      id: String(Date.now()),
-      text: inputVal.trim(),
+      id: Date.now().toString(),
+      text: inputVal,
       sender: 'user',
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     }
     setMessages((prev) => [...prev, newMsg])
     setInputVal('')
-
-    requestAnimationFrame(() => {
+    setTimeout(() => {
       engine.scrollToBottom('smooth')
-    })
+    }, 50)
   }
 
   return (
     <SubpageLayout
       bodyRef={bodyRef}
       keyboardEngine={engine}
+      header={header}
       title="Playground"
       footer={
         <FloatingInput
@@ -72,6 +94,7 @@ export const PlaygroundView = ({ lang }: { lang: Language }) => {
           placeholder={t.demoInputPlaceholder}
           {...engine.floatingProps}
           isSuppressed={engine.isFloatingSuppressed}
+          isKeyboardOpen={engine.isKeyboardOpen}
         />
       }
     >
@@ -102,16 +125,7 @@ export const PlaygroundView = ({ lang }: { lang: Language }) => {
               value={titleVal}
               onChange={(e) => setTitleVal(e.target.value)}
               placeholder="Tap here (floating bar will suppress)..."
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '10px',
-                border: '1px solid #3f3f46',
-                backgroundColor: '#18181b',
-                color: '#f4f4f5',
-                fontSize: '14px',
-                outline: 'none',
-              }}
+              style={inputStyle}
             />
           </div>
 
@@ -123,16 +137,7 @@ export const PlaygroundView = ({ lang }: { lang: Language }) => {
               type="date"
               value={dateVal}
               onChange={(e) => setDateVal(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                borderRadius: '10px',
-                border: '1px solid #3f3f46',
-                backgroundColor: '#18181b',
-                color: '#f4f4f5',
-                fontSize: '14px',
-                outline: 'none',
-              }}
+              style={inputStyle}
             />
           </div>
         </div>
@@ -145,28 +150,29 @@ export const PlaygroundView = ({ lang }: { lang: Language }) => {
               <div
                 key={msg.id}
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: isUser ? 'flex-end' : 'flex-start',
+                  alignSelf: isUser ? 'flex-end' : 'flex-start',
+                  maxWidth: '82%',
+                  backgroundColor: isUser ? '#3b82f6' : '#27272a',
+                  color: isUser ? '#ffffff' : '#f4f4f5',
+                  padding: '10px 14px',
+                  borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                  fontSize: '14px',
+                  lineHeight: '1.4',
+                  wordBreak: 'break-word',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.2)',
                 }}
               >
+                <div>{msg.text}</div>
                 <div
                   style={{
-                    maxWidth: '82%',
-                    padding: '10px 14px',
-                    borderRadius: isUser ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                    backgroundColor: isUser ? '#2563eb' : '#27272a',
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    lineHeight: '1.45',
-                    wordBreak: 'break-word',
+                    fontSize: '10px',
+                    opacity: 0.6,
+                    marginTop: '4px',
+                    textAlign: 'right',
                   }}
                 >
-                  {msg.text}
-                </div>
-                <span style={{ fontSize: '10px', color: '#71717a', marginTop: '3px' }}>
                   {msg.time}
-                </span>
+                </div>
               </div>
             )
           })}

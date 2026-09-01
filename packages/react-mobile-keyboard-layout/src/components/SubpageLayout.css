@@ -39,7 +39,7 @@
 }
 
 .rmkl-subpage-header {
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   right: 0;
@@ -55,6 +55,8 @@
   padding-left: 16px;
   padding-right: 16px;
   z-index: 50;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
 }
 
 .rmkl-header-left,
