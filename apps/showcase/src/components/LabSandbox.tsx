@@ -15,11 +15,11 @@ interface LabSandboxProps {
 
 const EVAL_TITLES: Record<EvaluationItem['id'], { en: string; ko: string }> = {
   '1-1': { en: '1-1. Header 0.0px Top-Lock', ko: '1-1. 상단 헤더 0.0px 고정' },
-  '1-2': { en: '1-2. Floating Input Visibility', ko: '1-2. 플로팅 인풋 키보드 위 노출' },
-  '1-3': { en: '1-3. Bottom Inset Gap Snap', ko: '1-3. 하단 여백 12px 초밀착' },
-  '1-4': { en: '1-4. 0.0px Reading Scroll Anchor', ko: '1-4. 본문 읽기 스크롤 0.0px 보존' },
-  '2-1': { en: '2-1. Body Focus Floating Suppression', ko: '2-1. 본문 인풋 입력 시 플로팅 숨김' },
-  '3-1': { en: '3-1. Seamless Focus Dismiss Restore', ko: '3-1. 본문 포커스 해제 시 즉시 복원' },
+  '1-2': { en: '1-2. Single Unified Scroll & Reachability', ko: '1-2. 단일 스크롤 & 전체 도달성 (이중 스크롤 방지)' },
+  '1-3': { en: '1-3. Bottom Inset 12px Snap', ko: '1-3. 하단 여백 12px 초밀착' },
+  '1-4': { en: '1-4. Reading Line 0.0px Anchor', ko: '1-4. 읽던 줄 0.0px 위치 보존' },
+  '2-1': { en: '2-1. Body Form Input Usability', ko: '2-1. 본문 폼 입력 시 간섭 없음 (플로팅 숨김)' },
+  '3-1': { en: '3-1. Seamless Focus Dismiss Restore', ko: '3-1. 포커스 해제 시 깜빡임 없는 복원' },
 }
 
 /* ==========================================================================
@@ -102,7 +102,7 @@ const LabEvaluationSection = ({ lab, lang }: { lab: LabInfo; lang: Language }) =
                   fontSize: '10px',
                   fontWeight: 700,
                 }}>
-                  {isPass ? (lang === 'ko' ? '✅ PASS (성공 기대)' : '✅ PASS') : (lang === 'ko' ? '❌ FAIL (결함 발생)' : '❌ FAIL')}
+                  {isPass ? '✅ PASS' : '❌ FAIL'}
                 </span>
               </div>
               <div style={{ fontSize: '11px', color: isPass ? '#86efac' : '#fca5a5', lineHeight: '1.3' }}>
@@ -494,7 +494,8 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
           flex: 1,
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
-          padding: '14px 16px 24px',
+          padding: '14px 16px',
+          paddingBottom: isExp01 ? '80px' : '24px',
           display: 'flex',
           flexDirection: 'column',
           gap: '14px',
