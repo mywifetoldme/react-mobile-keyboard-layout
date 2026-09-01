@@ -282,7 +282,7 @@ const LabHeader = ({ lab, lang, onClose, windowScrollY }: { lab: LabInfo; lang: 
       fontSize: '11px',
       fontWeight: 700,
     }}>
-      {lab.status.toUpperCase()}
+      {lab.status === 'winner' ? 'FINAL' : lab.status.toUpperCase()}
     </span>
   </header>
 )
@@ -1690,7 +1690,7 @@ function Exp03CSandbox({ lab, lang, onClose }: LabSandboxProps) {
 }
 
 /* ==========================================================================
-   12. EXP-03-D: WINNER ★ (Production Library Architecture)
+   12. EXP-03-D: FINAL (Production Library Architecture)
    ========================================================================== */
 
 function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
@@ -1735,7 +1735,7 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
       }
       title={
         <div style={{ fontSize: '13px', fontWeight: 700, color: '#4ade80' }}>
-          EXP-03-D (Winner ★)
+          {lang === 'ko' ? 'EXP-03-D (최종 아키텍처)' : 'EXP-03-D (Final Architecture)'}
         </div>
       }
       headerRight={
@@ -1747,7 +1747,7 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
           fontSize: '11px',
           fontWeight: 700,
         }}>
-          WINNER
+          FINAL
         </span>
       }
       footer={

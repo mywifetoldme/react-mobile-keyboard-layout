@@ -187,12 +187,12 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', status: 'na', comment: { en: 'FSM restoration not in scope (introduced in EXP-03-D)', ko: 'FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)' } },
     ],
     keyFinding: {
-      en: 'Pinning container to top and locking window scroll successfully conceals the gap, with only minor 1-frame jitter remaining when dragging input bar.',
-      ko: '컨테이너를 상단에 고정하고 스크롤을 차단하는 구조가 유효함을 확인. 단, 인풋 바를 터치하여 문지를 때 1프레임 미세 덜컹거림 발생.',
+      en: 'Pinning container to top and locking window scroll successfully conceals the gap, with only minor jitter remaining when dragging input bar.',
+      ko: '컨테이너를 상단에 고정하고 스크롤을 차단하는 구조가 유효함을 확인. 단, 인풋 바를 터치하여 문지를 때 미세한 덜컹거림 발생.',
     },
     nextDecision: {
-      en: 'Apply touch-action: none on input shell in EXP-02-D to eliminate the 1-frame jitter.',
-      ko: '인풋 바에 touch-action: none을 적용하여 터치 덜컹거림을 제거하는 EXP-02-D로 연계.',
+      en: 'Apply touch-action: none on input shell in EXP-02-D to eliminate the touch jitter.',
+      ko: '인풋 바에 touch-action: none을 적용하여 터치 시 덜컹거림을 제거하는 EXP-02-D로 연계.',
     },
   },
   {
@@ -244,7 +244,7 @@ export const LABS_DATA: LabInfo[] = [
     ],
     keyFinding: {
       en: 'Input shell remains 100% motionless even during aggressive dragging, completing the core viewport lock architecture.',
-      ko: '인풋 바를 문질러도 1프레임의 흔들림 없이 안정적으로 고정되는 뷰포트 락 구조 확보.',
+      ko: '인풋 바를 문질러도 흔들림 없이 안정적으로 고정되는 뷰포트 락 구조 확보.',
     },
     nextDecision: {
       en: 'Conclude Phase 2. Move to Phase 3 (EXP-03-A) to eliminate the 34px Safe Area Inset gap and implement body scroll anchoring.',
@@ -328,23 +328,23 @@ export const LABS_DATA: LabInfo[] = [
       { id: '1-3', status: 'pass', comment: { en: '8px snap preserved', ko: '8px 초밀착 상태 유지' } },
       { id: '1-4', status: 'pass', comment: { en: '0.0px reading anchor preserved', ko: '0.0px 바디 하단 스크롤 앵커링 유지' } },
       { id: '2-1', status: 'pass', comment: { en: 'Floating bar collapses to 0px when typing in body form', ko: '본문 폼 입력 시 플로팅 인풋 0px 자동 숨김 성공' } },
-      { id: '3-1', status: 'fail', comment: { en: '1-frame flicker on keyboard dismiss after body input blur', ko: '본문 포커스 해제 후 키보드가 닫힐 때 1프레임 깜빡임(Flicker) 발생' } },
+      { id: '3-1', status: 'fail', comment: { en: 'Momentary flicker on keyboard dismiss after body input blur', ko: '본문 포커스 해제 후 키보드가 닫힐 때 순간적인 깜빡임(Flicker) 발생' } },
     ],
     keyFinding: {
-      en: 'Floating bar collapses seamlessly to 0px during body form input. However, 1-frame dismiss flicker remains when keyboard closes after body input blur.',
-      ko: '본문 폼 입력 시 플로팅 바 0px 숨김에 성공하여 입력창 충돌을 해결함. 단, 본문 포커스 해제 후 키보드가 닫힐 때 1프레임 깜빡임 잔존 확인.',
+      en: 'Floating bar collapses seamlessly to 0px during body form input. However, momentary dismiss flicker remains when keyboard closes after body input blur.',
+      ko: '본문 폼 입력 시 플로팅 바 0px 숨김에 성공하여 입력창 충돌을 해결함. 단, 본문 포커스 해제 후 키보드가 닫힐 때 순간적인 깜빡임 현상 확인.',
     },
     nextDecision: {
       en: 'Physically isolate header outside resizing container and implement 3-state FSM in EXP-03-D.',
-      ko: '헤더를 뷰포트 수축 컨테이너 밖으로 완전히 물리적으로 격리하고 3-상태 FSM을 도입하는 EXP-03-D (Winner)로 연계.',
+      ko: '헤더를 뷰포트 수축 컨테이너 밖으로 완전히 물리적으로 격리하고 3-상태 FSM을 도입하는 EXP-03-D (최종 아키텍처)로 연계.',
     },
   },
   {
     id: 'exp03_d',
     status: 'winner',
     title: {
-      en: 'EXP-03-D: Isolated Fixed Header & Zero-Shift Top Anchor (WINNER ★)',
-      ko: 'EXP-03-D: 상단 헤더 물리적 격리 & Zero-Shift 완성형 (WINNER ★)',
+      en: 'EXP-03-D: Isolated Fixed Header & Zero-Shift Final Architecture',
+      ko: 'EXP-03-D: 상단 헤더 물리적 격리 & Zero-Shift 최종 완성형',
     },
     hypothesis: {
       en: 'Decoupling header outside visualViewport container + preventScroll + 350ms rAF lock + 3-state FSM achieves Native App Parity.',
