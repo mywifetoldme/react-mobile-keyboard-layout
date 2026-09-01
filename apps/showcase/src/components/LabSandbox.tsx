@@ -1019,7 +1019,7 @@ function Exp02CSandbox({ lab, lang, onClose }: LabSandboxProps) {
         value={floatingVal}
         onChange={setFloatingVal}
         onSubmit={handleSubmit}
-        placeholder="Offset translateY Tracking (120Hz strobe artifact)..."
+        placeholder="Offset translateY Tracking (stutter follow & bottom gap)..."
       />
     </div>
   )
