@@ -40,12 +40,12 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', pass: true, comment: { en: 'Native browser dismiss restores layout smoothly', ko: '조작한 JS가 없으므로 사파리 기본 동작으로 매끄럽게 복원됨' } },
     ],
     keyFinding: {
-      en: 'position: fixed creates dual-scrollport fighting where body scroll cannot reach the top header.',
-      ko: 'position: fixed는 외부 창과 내부 바디가 따로 노는 이중 스크롤 충돌을 유발하여 헤더 접근성을 파괴함.',
+      en: 'position: fixed creates dual-scrollport fighting, loses the top header, and leaves an unnecessary 34px gap above keyboard.',
+      ko: 'position: fixed는 이중 스크롤 충돌, 상단 헤더 실종, 키보드 위 34px 불필요한 공백을 유발함을 실증.',
     },
     nextDecision: {
-      en: 'Transition to In-Flow Flexbox architecture to unify into a single scrollable context.',
-      ko: '이중 스크롤을 단일 스크롤로 통합하기 위해 In-Flow Flexbox 구조로의 전면 전환 결정.',
+      en: 'Branch into two investigative paths: (1) Find a way to snap bottom gap (EXP-01-A), and (2) Try locking the top header (EXP-01-B).',
+      ko: '두 갈래 방향으로 분기: (1) 키보드 밀착 방법 탐색(EXP-01-A) 및 (2) 상단 헤더 고정 시도(EXP-01-B)로 연계 결정.',
     },
   },
   {
@@ -53,11 +53,11 @@ export const LABS_DATA: LabInfo[] = [
     status: 'failed',
     title: {
       en: 'EXP-01-A: Dynamic Safe Area Inset',
-      ko: 'EXP-01-A: Safe Area Inset 동적 제거 시도',
+      ko: 'EXP-01-A: Safe Area Inset 동적 제거 시도 (밀착 시도)',
     },
     hypothesis: {
-      en: 'Detecting keyboard open state and reducing safe-area-inset-bottom from 34px to 0px will eliminate bottom gap.',
-      ko: '키보드 오픈 시점의 34px 빈 공간을 제거하기 위해 Safe Area를 0px로 축소한다.',
+      en: 'Detecting keyboard open state and reducing safe-area-inset-bottom from 34px to 0px will snap input to keyboard.',
+      ko: '키보드 오픈을 감지하여 34px Safe Area를 0px로 축소하면 키보드 밀착이 가능할 것이다.',
     },
     evaluations: [
       { id: '1-1', pass: false, comment: { en: 'Header still flies off-screen on focus', ko: '포커스 시 여전히 헤더가 화면 밖으로 밀려남' } },
@@ -68,12 +68,12 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', pass: true, comment: { en: 'Native restore works', ko: '사파리 기본 복원 작동' } },
     ],
     keyFinding: {
-      en: 'window.innerHeight subtraction fails to detect keyboard transitions synchronously.',
+      en: 'window.innerHeight subtraction fails to detect keyboard transitions synchronously, causing safe area removal failure.',
       ko: 'window.innerHeight 단순 뺄셈으로는 키보드 오픈 여부를 정확히 판별하지 못해 인셋 제거에 실패함.',
     },
     nextDecision: {
-      en: 'Discontinue fixed inset tweaks and transition to EXP-02 Flexbox In-Flow.',
-      ko: 'EXP-02로 연계하여 In-Flow Flexbox 기반 실험 착수.',
+      en: 'Synthesize findings with EXP-01-B to determine if position: fixed can be salvaged or must be abandoned.',
+      ko: 'EXP-01-B(헤더 고정 시도) 결과와 종합하여 position: fixed 유지 가능 여부 최종 판단.',
     },
   },
   {
@@ -81,11 +81,11 @@ export const LABS_DATA: LabInfo[] = [
     status: 'failed',
     title: {
       en: 'EXP-01-B: Document Scroll Lock',
-      ko: 'EXP-01-B: 포커스 시 scrollTo(0,0) 강제 락',
+      ko: 'EXP-01-B: 포커스 시 scrollTo(0,0) 강제 락 (헤더 고정 시도)',
     },
     hypothesis: {
       en: 'Forcing window.scrollTo(0,0) on focus will keep the top header firmly pinned at (0,0).',
-      ko: '인풋 포커스 시 스크롤을 즉시 (0,0)으로 잠그면 헤더가 화면 상단에 견고하게 고정될 것이다.',
+      ko: '인풋 포커스 시 스크롤을 즉시 (0,0)으로 잠그면 헤더라도 화면 상단에 견고하게 고정될 것이다.',
     },
     evaluations: [
       { id: '1-1', pass: true, comment: { en: 'Header stays at (0,0) top position', ko: '헤더는 상단 (0,0)에 머무름' } },
@@ -96,12 +96,12 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', pass: false, comment: { en: 'Focus state stuck', ko: '포커스 복원 꼬임' } },
     ],
     keyFinding: {
-      en: 'Proved the fundamental paradox of position: fixed: locking window at (0,0) traps input behind keyboard.',
+      en: 'Proved the fundamental paradox: Locking window at (0,0) keeps header but traps input behind keyboard.',
       ko: 'fixed 요소를 (0,0)에 묶으면 헤더는 지키지만 인풋이 키보드 아래 갇히는 position: fixed의 원천적 한계 증명.',
     },
     nextDecision: {
-      en: 'Discontinue fixed positioning and transition to In-Flow Flexbox with visualViewport height control.',
-      ko: 'fixed 시도를 중단하고 화면 컨테이너 자체를 Visual Viewport 크기로 가두는 In-Flow Flexbox로 전면 전환.',
+      en: 'Combining EXP-01, 01-A, and 01-B results: position: fixed is physically unviable. Pivot completely to In-Flow Flexbox (EXP-02).',
+      ko: 'EXP-01(오리지널), 01-A(밀착 시도), 01-B(헤더 락) 종합 결론: fixed 전면 폐기 및 In-Flow Flexbox(EXP-02)로 대전환 결정!',
     },
   },
   {
@@ -348,7 +348,7 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', pass: true, comment: { en: '3-state FSM eliminates dismiss flicker 100%', ko: '3-상태 FSM 도입으로 포커스 해제 시 깜빡임 완전 박멸!' } },
     ],
     keyFinding: {
-      en: 'Native App Parity achieved! 0.0px header lock, 0.0px reading anchor, compact snap, and zero flicker across all iOS devices.',
+      en: 'Native App Parity achieved! 0.0px header lock, single unified scroll, 0.0px reading anchor, compact snap, and zero flicker across all iOS devices.',
       ko: '상단 헤더 0.0px 완전 고정 + 단일 스크롤 + 0.0px 읽던 줄 보존 + 12px 초밀착 + FSM 깜빡임 완전 박멸로 네이티브 앱 동등 수준 달성!',
     },
     nextDecision: {

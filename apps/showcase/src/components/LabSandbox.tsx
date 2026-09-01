@@ -317,6 +317,9 @@ const WinnerLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
               Item #{i + 6} — Zero-shift feed row
             </div>
           ))}
+
+          {/* Bottom spacer for perfect scroll clearance */}
+          <div style={{ height: '50px', flexShrink: 0 }} />
         </div>
       </SubpageLayout>
     </div>
@@ -580,6 +583,26 @@ const SimulatedLabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
         }}>
           🎯 {lang === 'ko' ? '[TARGET ROW #5] 키보드를 열 때 이 줄이 고정되는지 확인하세요!' : '[TARGET ROW #5] Check scroll anchor on keyboard open!'}
         </div>
+
+        {/* Extra test rows */}
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              padding: '12px 14px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid #27272a',
+              fontSize: '12px',
+              color: '#d4d4d8',
+            }}
+          >
+            Item #{i + 6} — Scroll reachability test row
+          </div>
+        ))}
+
+        {/* Bottom spacer for perfect scroll clearance */}
+        <div style={{ height: isExp01 ? '110px' : '50px', flexShrink: 0 }} />
       </main>
 
       {/* Floating Input Bar */}
