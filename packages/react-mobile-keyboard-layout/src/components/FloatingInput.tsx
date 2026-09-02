@@ -95,6 +95,12 @@ export const FloatingInput = ({
   const { icon: customIcon, className: buttonClassName = '', style: buttonStyle, ...restButtonProps } = buttonProps ?? {}
   const { className: textareaClassName = '', style: textareaStyle, ...restTextareaProps } = textareaProps ?? {}
 
+  const suppressedStyle: CSSProperties = isSuppressed
+    ? isKeyboardOpen
+      ? { display: 'none' }
+      : { visibility: 'hidden', pointerEvents: 'none' }
+    : {}
+
   return (
     <div
       role="region"
@@ -102,7 +108,7 @@ export const FloatingInput = ({
       className={`rmkl-floating-input-wrapper${isKeyboardOpen ? ' rmkl-floating-input-wrapper--keyboard-open' : ''}${isSuppressed ? ' rmkl-floating-input-wrapper--suppressed' : ''} ${className}`.trim()}
       style={{
         ...style,
-        ...(isSuppressed ? { display: 'none' } : {}),
+        ...suppressedStyle,
       }}
     >
       <div className="rmkl-floating-input-bar">

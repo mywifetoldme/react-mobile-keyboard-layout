@@ -44,16 +44,30 @@ describe('FloatingInput', () => {
     expect(handleSubmit).toHaveBeenCalledTimes(1)
   })
 
-  it('hides with display: none when isSuppressed is true', () => {
-    const { container } = render(
+  it('applies 2-step suppression (visibility: hidden initially, display: none when keyboard open)', () => {
+    // Step 1: Suppressed while keyboard not yet open (ghost state holding 60px slot)
+    const { container, rerender } = render(
       <FloatingInput
         value="Hidden"
         onChange={vi.fn()}
         onSubmit={vi.fn()}
         isSuppressed={true}
+        isKeyboardOpen={false}
       />
     )
+    expect((container.firstChild as HTMLElement).style.visibility).toBe('hidden')
+    expect((container.firstChild as HTMLElement).style.display).not.toBe('none')
 
+    // Step 2: Suppressed when keyboard opens (collapse to reclaim space)
+    rerender(
+      <FloatingInput
+        value="Hidden"
+        onChange={vi.fn()}
+        onSubmit={vi.fn()}
+        isSuppressed={true}
+        isKeyboardOpen={true}
+      />
+    )
     expect((container.firstChild as HTMLElement).style.display).toBe('none')
   })
 
