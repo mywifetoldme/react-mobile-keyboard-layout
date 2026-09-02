@@ -1829,7 +1829,6 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
       height: dynamicH,
       maxHeight: dynamicH,
     },
-    headerStyle: {},
     isKeyboardOpen,
     isFloatingSuppressed: isBodyInputFocused,
     floatingProps: {

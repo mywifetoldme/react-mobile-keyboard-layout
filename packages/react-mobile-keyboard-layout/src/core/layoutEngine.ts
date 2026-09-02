@@ -21,7 +21,6 @@ export class LayoutEngine {
     focusTarget: { type: 'none' },
     isKeyboardOpen: false,
     vvHeight: typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.height : null,
-    vvOffsetTop: typeof window !== 'undefined' && window.visualViewport ? window.visualViewport.offsetTop : 0,
   }
 
   private anchor: AnchorSnapshot = {

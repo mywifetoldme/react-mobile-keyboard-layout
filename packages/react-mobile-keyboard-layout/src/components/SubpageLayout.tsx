@@ -51,7 +51,7 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
     >
       {/* 1. Physically Isolated Header - Untouched by dynamic body resizing */}
       {header ? (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60, ...engine.headerStyle }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60 }}>
           {header}
         </div>
       ) : (
@@ -59,7 +59,7 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
           role="banner"
           {...headerProps}
           className={`rmkl-subpage-header ${headerProps?.className ?? ''}`.trim()}
-          style={{ ...engine.headerStyle, ...headerProps?.style }}
+          style={headerProps?.style}
         >
           <div className="rmkl-header-left">{headerLeft}</div>
           <h1 className="rmkl-header-title">{title}</h1>

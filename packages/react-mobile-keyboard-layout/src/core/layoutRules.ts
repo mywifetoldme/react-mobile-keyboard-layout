@@ -140,13 +140,12 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
         focusTarget: { type: 'none' },
         isKeyboardOpen: false,
         vvHeight: null,
-        vvOffsetTop: 0,
       }
     },
   },
 
   /* --------------------------------------------------------------------------
-     4. visualViewport.resize: Viewport Geometry & Offset Tracking
+     4. visualViewport.resize: Viewport Geometry Contraction / Expansion
      -------------------------------------------------------------------------- */
   {
     on: 'visualViewport.resize',
@@ -155,7 +154,6 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
       if (typeof window === 'undefined' || !window.visualViewport) return
       const vv = window.visualViewport
       const currentH = vv.height
-      const offsetTop = vv.offsetTop || 0
       const screenH = window.innerHeight || currentH
       const open = screenH - currentH > keyboardThreshold && isTouchDevice()
 
@@ -166,29 +164,13 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
 
       return {
         vvHeight: currentH,
-        vvOffsetTop: offsetTop,
         isKeyboardOpen: open,
       }
     },
   },
 
   /* --------------------------------------------------------------------------
-     5. visualViewport.scroll: Visual Viewport Offset Tracking (Motionless Top Anchor)
-     -------------------------------------------------------------------------- */
-  {
-    on: 'visualViewport.scroll',
-    when: [hasActiveTextInput],
-    apply: () => {
-      if (typeof window === 'undefined' || !window.visualViewport) return
-      const vv = window.visualViewport
-      return {
-        vvOffsetTop: vv.offsetTop || 0,
-      }
-    },
-  },
-
-  /* --------------------------------------------------------------------------
-     6. resize: Body ResizeObserver while typing in Floating Input
+     5. resize: Body ResizeObserver while typing in Floating Input
      -------------------------------------------------------------------------- */
   {
     on: 'resize',
@@ -203,7 +185,7 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     7. resize: Body ResizeObserver while Keyboard is Closed
+     6. resize: Body ResizeObserver while Keyboard is Closed
      -------------------------------------------------------------------------- */
   {
     on: 'resize',
@@ -218,7 +200,7 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     8. scroll: Body Scrolling while Keyboard is Closed (Sync Baseline S_0)
+     7. scroll: Body Scrolling while Keyboard is Closed (Sync Baseline S_0)
      -------------------------------------------------------------------------- */
   {
     on: 'scroll',
@@ -233,14 +215,13 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     9. pointerdown: Keyboard Text Input 0ms Proactive Prevention (Idea 1)
+     8. pointerdown: Keyboard Text Input 0ms Proactive Prevention
      -------------------------------------------------------------------------- */
   {
     on: 'pointerdown',
     when: [isTextInput],
     apply: (e, ctx) => {
       const ev = e as PointerEvent | React.PointerEvent
-      // 0ms Proactive Prevention: Cancel Safari's native window pan gesture
       if (typeof ev.preventDefault === 'function') {
         ev.preventDefault()
       }

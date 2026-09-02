@@ -62,23 +62,20 @@ export const useMobileKeyboard = ({
     }
   }, [engine])
 
-  // 1. Subscribe to VisualViewport (resize & scroll)
+  // 1. Subscribe to VisualViewport resize
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return
     const vv = window.visualViewport
 
     const handleVvResize = (e: Event) => engine.dispatch('visualViewport.resize', e)
-    const handleVvScroll = (e: Event) => engine.dispatch('visualViewport.scroll', e)
 
     vv.addEventListener('resize', handleVvResize)
-    vv.addEventListener('scroll', handleVvScroll)
 
     // Initial check
     engine.dispatch('visualViewport.resize', new Event('resize'))
 
     return () => {
       vv.removeEventListener('resize', handleVvResize)
-      vv.removeEventListener('scroll', handleVvScroll)
     }
   }, [engine])
 
@@ -185,21 +182,10 @@ export const useMobileKeyboard = ({
     state.focusTarget.type === 'body-inline' &&
     (state.isKeyboardOpen || (typeof document !== 'undefined' && document.activeElement?.tagName === 'INPUT'))
 
-  const headerStyle: CSSProperties = state.vvOffsetTop > 0 && state.isKeyboardOpen
-    ? {
-        transform: `translate3d(0, ${state.vvOffsetTop}px, 0)`,
-        WebkitTransform: `translate3d(0, ${state.vvOffsetTop}px, 0)`,
-      }
-    : {}
-
   const containerStyle: CSSProperties = state.vvHeight && state.isKeyboardOpen
     ? {
         height: `${state.vvHeight}px`,
         maxHeight: `${state.vvHeight}px`,
-        ...(state.vvOffsetTop > 0 ? {
-          transform: `translate3d(0, ${state.vvOffsetTop}px, 0)`,
-          WebkitTransform: `translate3d(0, ${state.vvOffsetTop}px, 0)`,
-        } : {}),
       }
     : {
         height: '100dvh',
@@ -208,7 +194,6 @@ export const useMobileKeyboard = ({
 
   return {
     containerStyle,
-    headerStyle,
     isKeyboardOpen: state.isKeyboardOpen,
     isFloatingSuppressed,
     floatingProps: {
