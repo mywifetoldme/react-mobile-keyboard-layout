@@ -185,10 +185,21 @@ export const useMobileKeyboard = ({
     state.focusTarget.type === 'body-inline' &&
     (state.isKeyboardOpen || (typeof document !== 'undefined' && document.activeElement?.tagName === 'INPUT'))
 
+  const headerStyle: CSSProperties = state.vvOffsetTop > 0 && state.isKeyboardOpen
+    ? {
+        transform: `translate3d(0, ${state.vvOffsetTop}px, 0)`,
+        WebkitTransform: `translate3d(0, ${state.vvOffsetTop}px, 0)`,
+      }
+    : {}
+
   const containerStyle: CSSProperties = state.vvHeight && state.isKeyboardOpen
     ? {
         height: `${state.vvHeight}px`,
         maxHeight: `${state.vvHeight}px`,
+        ...(state.vvOffsetTop > 0 ? {
+          transform: `translate3d(0, ${state.vvOffsetTop}px, 0)`,
+          WebkitTransform: `translate3d(0, ${state.vvOffsetTop}px, 0)`,
+        } : {}),
       }
     : {
         height: '100dvh',
@@ -197,6 +208,7 @@ export const useMobileKeyboard = ({
 
   return {
     containerStyle,
+    headerStyle,
     isKeyboardOpen: state.isKeyboardOpen,
     isFloatingSuppressed,
     floatingProps: {

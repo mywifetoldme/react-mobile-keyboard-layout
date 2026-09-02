@@ -12,6 +12,8 @@ export interface LayoutState {
   isKeyboardOpen: boolean
   /** Measured visualViewport height in pixels (null when keyboard is closed) */
   vvHeight: number | null
+  /** Measured visualViewport offsetTop in pixels */
+  vvOffsetTop: number
 }
 
 export interface AnchorSnapshot {
@@ -75,6 +77,8 @@ export interface UseMobileKeyboardOptions {
 export interface UseMobileKeyboardReturn {
   /** Dynamic container styles locking height to window.visualViewport.height */
   containerStyle: CSSProperties
+  /** Dynamic header styles locking position to window.visualViewport.offsetTop */
+  headerStyle: CSSProperties
   /** Whether the virtual keyboard is currently open */
   isKeyboardOpen: boolean
   /** Whether floating input should be hidden/suppressed due to body input focus */

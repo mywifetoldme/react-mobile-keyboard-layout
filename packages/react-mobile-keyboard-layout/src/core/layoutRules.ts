@@ -110,17 +110,13 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     2. focusin: Body Inline Form Input Focused (50ms Delayed Top-Lock for UIKit)
+     2. focusin: Body Inline Form Input Focused (Hardware Anchored, No Window Scroll Interference)
      -------------------------------------------------------------------------- */
   {
     on: 'focusin',
     when: [isTextInput, isInsideBody],
-    apply: (e, ctx) => {
+    apply: (e) => {
       const ev = e as FocusEvent
-      // Delay top-lock by 50ms so iOS UIKit registers firstResponder without aborting
-      setTimeout(() => {
-        ctx.lockWindowTop()
-      }, 50)
       return {
         focusTarget: { type: 'body-inline', element: ev.target as HTMLElement },
       }
@@ -135,20 +131,21 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
     when: [isTextInput, isNoNextTextInput],
     apply: (_, ctx) => {
       const wasFloating = ctx.state.focusTarget.type === 'floating'
-      ctx.lockWindowTop()
       if (wasFloating) {
+        ctx.lockWindowTop()
         ctx.restoreBaselineScroll()
       }
       return {
         focusTarget: { type: 'none' },
         isKeyboardOpen: false,
         vvHeight: null,
+        vvOffsetTop: 0,
       }
     },
   },
 
   /* --------------------------------------------------------------------------
-     4. visualViewport.resize: Viewport Geometry Contraction / Expansion
+     4. visualViewport.resize: Viewport Geometry & Offset Tracking
      -------------------------------------------------------------------------- */
   {
     on: 'visualViewport.resize',
@@ -157,23 +154,40 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
       if (typeof window === 'undefined' || !window.visualViewport) return
       const vv = window.visualViewport
       const currentH = vv.height
+      const offsetTop = vv.offsetTop || 0
       const screenH = window.innerHeight || currentH
       const open = screenH - currentH > keyboardThreshold && isTouchDevice()
 
-      ctx.lockWindowTop()
-      if (open && !ctx.state.isKeyboardOpen) {
+      if (open && !ctx.state.isKeyboardOpen && ctx.state.focusTarget.type === 'floating') {
         ctx.captureBaselineAnchor()
+        ctx.lockWindowTop()
       }
 
       return {
         vvHeight: currentH,
+        vvOffsetTop: offsetTop,
         isKeyboardOpen: open,
       }
     },
   },
 
   /* --------------------------------------------------------------------------
-     5. resize: Body ResizeObserver while typing in Floating Input
+     5. visualViewport.scroll: Visual Viewport Offset Tracking (Motionless Top Anchor)
+     -------------------------------------------------------------------------- */
+  {
+    on: 'visualViewport.scroll',
+    when: [hasActiveTextInput],
+    apply: () => {
+      if (typeof window === 'undefined' || !window.visualViewport) return
+      const vv = window.visualViewport
+      return {
+        vvOffsetTop: vv.offsetTop || 0,
+      }
+    },
+  },
+
+  /* --------------------------------------------------------------------------
+     6. resize: Body ResizeObserver while typing in Floating Input
      -------------------------------------------------------------------------- */
   {
     on: 'resize',
@@ -188,7 +202,7 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     6. resize: Body ResizeObserver while Keyboard is Closed
+     7. resize: Body ResizeObserver while Keyboard is Closed
      -------------------------------------------------------------------------- */
   {
     on: 'resize',
@@ -203,7 +217,7 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     7. scroll: Body Scrolling while Keyboard is Closed (Sync Baseline S_0)
+     8. scroll: Body Scrolling while Keyboard is Closed (Sync Baseline S_0)
      -------------------------------------------------------------------------- */
   {
     on: 'scroll',
@@ -214,19 +228,6 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
         ctx.updateClosedScrollTop(el.scrollTop)
         ctx.updateClosedHeight(el.clientHeight)
       }
-    },
-  },
-
-  /* --------------------------------------------------------------------------
-     8. pointerdown: Body Input Tap Guard (50ms Delayed Top-Lock)
-     -------------------------------------------------------------------------- */
-  {
-    on: 'pointerdown',
-    when: [isTextInput],
-    apply: (_, ctx) => {
-      setTimeout(() => {
-        ctx.lockWindowTop()
-      }, 50)
     },
   },
 ]
