@@ -118,8 +118,14 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
     apply: (e, ctx) => {
       const ev = e as FocusEvent
       ctx.lockWindowTop()
+      const target = ev.target as HTMLElement | null
+      const body = ctx.refs.bodyRef?.current
+      if (body && target && typeof target.scrollIntoView === 'function') {
+        // Ensure input is visible within body container so Safari does not pan window and blur
+        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }
       return {
-        focusTarget: { type: 'body-inline', element: ev.target as HTMLElement },
+        focusTarget: { type: 'body-inline', element: target as HTMLElement },
       }
     },
   },
@@ -215,18 +221,13 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     8. pointerdown: Body Input Tap Interception
+     8. pointerdown: Body Input Tap Guard
      -------------------------------------------------------------------------- */
   {
     on: 'pointerdown',
     when: [isTextInput],
-    apply: (e, ctx) => {
-      if (typeof (e as Event).stopPropagation === 'function') {
-        (e as Event).stopPropagation()
-      }
+    apply: (_, ctx) => {
       ctx.lockWindowTop()
-      const target = (e as { target?: unknown }).target as HTMLElement | null
-      target?.focus({ preventScroll: true })
     },
   },
 ]

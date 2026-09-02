@@ -24,47 +24,6 @@ describe('useMobileKeyboard hook', () => {
     expect(typeof result.current.scrollToBottom).toBe('function')
   })
 
-  it('intercepts text inputs on pointerDown with preventScroll: true', () => {
-    const bodyRef = { current: document.createElement('div') }
-    const { result } = renderHook(() => useMobileKeyboard({ bodyRef }))
-
-    const input = document.createElement('input')
-    input.type = 'text'
-    const focusSpy = vi.spyOn(input, 'focus')
-
-    const fakeEvent = {
-      target: input,
-      stopPropagation: vi.fn(),
-    } as unknown as React.PointerEvent<HTMLElement>
-
-    act(() => {
-      result.current.bodyProps.onPointerDown(fakeEvent)
-    })
-
-    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
-    expect(fakeEvent.stopPropagation).toHaveBeenCalled()
-  })
-
-  it('does NOT intercept date picker or non-keyboard inputs', () => {
-    const bodyRef = { current: document.createElement('div') }
-    const { result } = renderHook(() => useMobileKeyboard({ bodyRef }))
-
-    const dateInput = document.createElement('input')
-    dateInput.type = 'date'
-    const focusSpy = vi.spyOn(dateInput, 'focus')
-
-    const fakeEvent = {
-      target: dateInput,
-      stopPropagation: vi.fn(),
-    } as unknown as React.PointerEvent<HTMLElement>
-
-    act(() => {
-      result.current.bodyProps.onPointerDown(fakeEvent)
-    })
-
-    expect(focusSpy).not.toHaveBeenCalled()
-  })
-
   it('scrolls to bottom and updates baseline anchor', () => {
     const div = document.createElement('div')
     Object.defineProperty(div, 'scrollHeight', { value: 1000, configurable: true })
