@@ -128,12 +128,8 @@ const createCoordinateObserver = (
         metrics.setClosedHeight(currHeight)
         metrics.setClosedScrollTop(el.scrollTop)
       } else {
-        // If a body input is focused, preserve active element view without blind deltaH addition
+        // If a body input is focused, preserve natural scroll position without forcing synchronous jumps or deltaH addition
         if (metrics.isBodyInputFocused()) {
-          const active = document.activeElement as HTMLElement | null
-          if (active && el.contains(active)) {
-            active.scrollIntoView({ block: 'nearest', behavior: 'instant' as ScrollBehavior })
-          }
           return
         }
 
