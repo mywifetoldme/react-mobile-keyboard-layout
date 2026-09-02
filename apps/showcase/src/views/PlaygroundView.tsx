@@ -64,6 +64,8 @@ export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
   const [inputVal, setInputVal] = useState('')
   const [titleVal, setTitleVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
+  const [bottomTitleVal, setBottomTitleVal] = useState('')
+  const [bottomDateVal, setBottomDateVal] = useState('2026-09-02')
 
   const handleSend = () => {
     if (!inputVal.trim()) return
@@ -176,6 +178,47 @@ export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
               </div>
             )
           })}
+        </div>
+
+        {/* Bottom Test Inline Body Inputs */}
+        <div style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.04)',
+          border: '1px solid #27272a',
+          borderRadius: '16px',
+          padding: '16px',
+          marginTop: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: '#a1a1aa' }}>
+            Form Inputs & Picker Test (Bottom of Body)
+          </div>
+
+          <div>
+            <label style={{ fontSize: '12px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
+              {t.testBodyInput} (Bottom input)
+            </label>
+            <input
+              type="text"
+              value={bottomTitleVal}
+              onChange={(e) => setBottomTitleVal(e.target.value)}
+              placeholder="Bottom input tap test..."
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={{ fontSize: '12px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
+              {t.testDatePicker} (Bottom picker)
+            </label>
+            <input
+              type="date"
+              value={bottomDateVal}
+              onChange={(e) => setBottomDateVal(e.target.value)}
+              style={inputStyle}
+            />
+          </div>
         </div>
       </div>
     </SubpageLayout>
