@@ -90,6 +90,17 @@ describe('LayoutEngine Reference-Driven Rule FSM', () => {
     const bodyDiv = document.createElement('div')
     bodyDiv.scrollTop = 150
     Object.defineProperty(bodyDiv, 'clientHeight', { value: 600, configurable: true })
+    bodyDiv.getBoundingClientRect = () => ({
+      top: 84,
+      bottom: 684,
+      left: 0,
+      right: 390,
+      width: 390,
+      height: 600,
+      x: 0,
+      y: 84,
+      toJSON: () => {},
+    })
 
     const textInput = document.createElement('input')
     textInput.type = 'text'

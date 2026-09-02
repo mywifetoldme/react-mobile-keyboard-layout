@@ -24,12 +24,6 @@ export {
   hasActiveTextInput,
 } from './core/layoutRules'
 
-export {
-  alignElementToSafeZone,
-  calculateSafeZoneAdjustment,
-  type SafeZoneOptions,
-} from './utils/safeZone'
-
 export type {
   FocusTarget,
   LayoutState,

@@ -1,5 +1,4 @@
 import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
-import { alignElementToSafeZone } from '../utils/safeZone'
 import type {
   LayoutRule,
   ConditionPredicate,
@@ -111,7 +110,7 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     2. focusin: Body Inline Form Input Focused (Safe-Zone Aligned)
+     2. focusin: Body Inline Form Input Focused (Align to Header Bottom)
      -------------------------------------------------------------------------- */
   {
     on: 'focusin',
@@ -119,8 +118,17 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
     apply: (e, ctx) => {
       const ev = e as FocusEvent
       const target = ev.target as HTMLElement | null
-      const body = ctx.refs.bodyRef?.current ?? null
-      alignElementToSafeZone(target, body)
+      const bodyEl = ctx.refs.bodyRef?.current
+
+      if (target && bodyEl) {
+        const mainRect = bodyEl.getBoundingClientRect()
+        const inputRect = target.getBoundingClientRect()
+        const diff = inputRect.top - mainRect.top - 16
+        if (Math.abs(diff) > 2) {
+          bodyEl.scrollTop += diff
+        }
+      }
+
       return {
         focusTarget: { type: 'body-inline', element: target as HTMLElement },
       }
@@ -214,20 +222,6 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
         ctx.updateClosedScrollTop(el.scrollTop)
         ctx.updateClosedHeight(el.clientHeight)
       }
-    },
-  },
-
-  /* --------------------------------------------------------------------------
-     8. pointerdown: Pre-align Body Input into Safe Zone on Touch
-     -------------------------------------------------------------------------- */
-  {
-    on: 'pointerdown',
-    when: [isTextInput, isInsideBody],
-    apply: (e, ctx) => {
-      const ev = e as PointerEvent | React.PointerEvent
-      const target = (ev as { target?: unknown }).target as HTMLElement | null
-      const body = ctx.refs.bodyRef?.current ?? null
-      alignElementToSafeZone(target, body)
     },
   },
 ]
