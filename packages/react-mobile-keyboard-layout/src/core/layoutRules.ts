@@ -159,7 +159,24 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
 
       ctx.lockWindowTop()
       if (open && !ctx.state.isKeyboardOpen) {
-        ctx.captureBaselineAnchor()
+        if (ctx.state.focusTarget.type === 'floating') {
+          ctx.captureBaselineAnchor()
+        } else if (ctx.state.focusTarget.type === 'body-inline') {
+          const target = ctx.state.focusTarget.element
+          const bodyEl = ctx.refs.bodyRef?.current
+          if (target && bodyEl) {
+            const mainRect = bodyEl.getBoundingClientRect()
+            const inputRect = target.getBoundingClientRect()
+            const diff = inputRect.top - mainRect.top - 16
+            if (Math.abs(diff) > 2) {
+              if (typeof bodyEl.scrollTo === 'function') {
+                bodyEl.scrollTo({ top: bodyEl.scrollTop + diff, behavior: 'smooth' })
+              } else {
+                bodyEl.scrollTop += diff
+              }
+            }
+          }
+        }
       }
 
       return {
