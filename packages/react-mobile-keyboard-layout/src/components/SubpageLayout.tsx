@@ -78,10 +78,7 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
           {...bodyProps}
           {...engine.bodyProps}
           className={`rmkl-subpage-body ${bodyProps?.className ?? ''}`.trim()}
-          style={{
-            ...bodyProps?.style,
-            ...engine.bodyProps?.style,
-          }}
+          style={bodyProps?.style}
         >
           {children}
         </main>

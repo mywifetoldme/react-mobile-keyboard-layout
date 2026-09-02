@@ -88,7 +88,6 @@ export interface UseMobileKeyboardReturn {
   /** Grouped props to spread onto the scrollable body container */
   bodyProps: {
     onPointerDown: (e: ReactPointerEvent<HTMLElement> | PointerEvent) => void
-    style?: CSSProperties
   }
   /** Smoothly scroll feed to bottom and sync baseline closed anchor */
   scrollToBottom: (behavior?: ScrollBehavior) => void

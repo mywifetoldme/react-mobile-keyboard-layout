@@ -165,10 +165,21 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
           const target = ctx.state.focusTarget.element
           const bodyEl = ctx.refs.bodyRef?.current
           if (target && bodyEl) {
-            const alignToHeader = () => {
+            const alignElement = () => {
               const mainRect = bodyEl.getBoundingClientRect()
               const inputRect = target.getBoundingClientRect()
-              const diff = inputRect.top - mainRect.top - 16
+              const topLimit = mainRect.top + 16
+              const bottomLimit = mainRect.bottom - 16
+
+              let diff = 0
+              if (inputRect.top < topLimit) {
+                // Obscured by top header: align 16px below header
+                diff = inputRect.top - topLimit
+              } else if (inputRect.bottom > bottomLimit) {
+                // Obscured by virtual keyboard: align 16px above keyboard
+                diff = inputRect.bottom - bottomLimit
+              }
+
               if (Math.abs(diff) > 2) {
                 if (typeof bodyEl.scrollTo === 'function') {
                   bodyEl.scrollTo({ top: bodyEl.scrollTop + diff, behavior: 'smooth' })
@@ -178,9 +189,9 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
               }
             }
             if (typeof requestAnimationFrame !== 'undefined') {
-              requestAnimationFrame(alignToHeader)
+              requestAnimationFrame(alignElement)
             } else {
-              alignToHeader()
+              alignElement()
             }
           }
         }
