@@ -94,7 +94,7 @@ export const calculatePreservedScrollTop = (
 
 export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<unknown>[] => [
   /* --------------------------------------------------------------------------
-     1. focusin: Floating Input Focused
+     1. focusin: Floating Input Focused (Immediate 0ms Top-Lock)
      -------------------------------------------------------------------------- */
   {
     on: 'focusin',
@@ -110,22 +110,19 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     2. focusin: Body Inline Form Input Focused
+     2. focusin: Body Inline Form Input Focused (50ms Delayed Top-Lock for UIKit)
      -------------------------------------------------------------------------- */
   {
     on: 'focusin',
     when: [isTextInput, isInsideBody],
     apply: (e, ctx) => {
       const ev = e as FocusEvent
-      ctx.lockWindowTop()
-      const target = ev.target as HTMLElement | null
-      const body = ctx.refs.bodyRef?.current
-      if (body && target && typeof target.scrollIntoView === 'function') {
-        // Ensure input is visible within body container so Safari does not pan window and blur
-        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-      }
+      // Delay top-lock by 50ms so iOS UIKit registers firstResponder without aborting
+      setTimeout(() => {
+        ctx.lockWindowTop()
+      }, 50)
       return {
-        focusTarget: { type: 'body-inline', element: target as HTMLElement },
+        focusTarget: { type: 'body-inline', element: ev.target as HTMLElement },
       }
     },
   },
@@ -221,13 +218,15 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     8. pointerdown: Body Input Tap Guard
+     8. pointerdown: Body Input Tap Guard (50ms Delayed Top-Lock)
      -------------------------------------------------------------------------- */
   {
     on: 'pointerdown',
     when: [isTextInput],
     apply: (_, ctx) => {
-      ctx.lockWindowTop()
+      setTimeout(() => {
+        ctx.lockWindowTop()
+      }, 50)
     },
   },
 ]
