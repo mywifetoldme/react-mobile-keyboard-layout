@@ -1,6 +1,6 @@
 {
   "name": "react-mobile-keyboard-layout",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Zero-shift header, 0.0px scroll anchoring, and seamless floating input for mobile web and iOS Safari.",
   "author": "Clubsandwich",
   "license": "MIT",
