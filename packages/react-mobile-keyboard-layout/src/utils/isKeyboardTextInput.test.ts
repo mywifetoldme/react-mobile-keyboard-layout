@@ -57,6 +57,16 @@ describe('isKeyboardTextInput helper', () => {
     const plainDiv = document.createElement('div')
     expect(isKeyboardTextInput(plainDiv)).toBe(false)
 
+    const disabledInput = document.createElement('input')
+    disabledInput.type = 'text'
+    disabledInput.disabled = true
+    expect(isKeyboardTextInput(disabledInput)).toBe(false)
+
+    const readOnlyInput = document.createElement('input')
+    readOnlyInput.type = 'text'
+    readOnlyInput.readOnly = true
+    expect(isKeyboardTextInput(readOnlyInput)).toBe(false)
+
     expect(isKeyboardTextInput(null)).toBe(false)
     expect(isKeyboardTextInput(undefined)).toBe(false)
   })

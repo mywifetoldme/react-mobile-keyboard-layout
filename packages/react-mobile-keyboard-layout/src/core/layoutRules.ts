@@ -110,13 +110,14 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     2. focusin: Body Inline Form Input Focused (Hardware Anchored, No Window Scroll Interference)
+     2. focusin: Body Inline Form Input Focused
      -------------------------------------------------------------------------- */
   {
     on: 'focusin',
     when: [isTextInput, isInsideBody],
-    apply: (e) => {
+    apply: (e, ctx) => {
       const ev = e as FocusEvent
+      ctx.lockWindowTop()
       return {
         focusTarget: { type: 'body-inline', element: ev.target as HTMLElement },
       }
@@ -131,8 +132,8 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
     when: [isTextInput, isNoNextTextInput],
     apply: (_, ctx) => {
       const wasFloating = ctx.state.focusTarget.type === 'floating'
+      ctx.lockWindowTop()
       if (wasFloating) {
-        ctx.lockWindowTop()
         ctx.restoreBaselineScroll()
       }
       return {
@@ -158,9 +159,9 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
       const screenH = window.innerHeight || currentH
       const open = screenH - currentH > keyboardThreshold && isTouchDevice()
 
+      ctx.lockWindowTop()
       if (open && !ctx.state.isKeyboardOpen && ctx.state.focusTarget.type === 'floating') {
         ctx.captureBaselineAnchor()
-        ctx.lockWindowTop()
       }
 
       return {
@@ -228,6 +229,27 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
         ctx.updateClosedScrollTop(el.scrollTop)
         ctx.updateClosedHeight(el.clientHeight)
       }
+    },
+  },
+
+  /* --------------------------------------------------------------------------
+     9. pointerdown: Keyboard Text Input 0ms Proactive Prevention (Idea 1)
+     -------------------------------------------------------------------------- */
+  {
+    on: 'pointerdown',
+    when: [isTextInput],
+    apply: (e, ctx) => {
+      const ev = e as PointerEvent | React.PointerEvent
+      // 0ms Proactive Prevention: Cancel Safari's native window pan gesture
+      if (typeof ev.preventDefault === 'function') {
+        ev.preventDefault()
+      }
+      if (typeof (ev as Event).stopPropagation === 'function') {
+        (ev as Event).stopPropagation()
+      }
+      ctx.lockWindowTop()
+      const target = (ev as { target?: unknown }).target as HTMLElement | null
+      target?.focus({ preventScroll: true })
     },
   },
 ]

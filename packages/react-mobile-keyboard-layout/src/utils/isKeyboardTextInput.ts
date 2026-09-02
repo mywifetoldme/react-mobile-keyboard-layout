@@ -7,7 +7,20 @@
  */
 export const isKeyboardTextInput = (el: unknown): boolean => {
   if (!el || typeof el !== 'object' || !('tagName' in el)) return false
-  const element = el as { tagName?: string; isContentEditable?: boolean; contentEditable?: string; type?: string }
+  const element = el as {
+    tagName?: string
+    isContentEditable?: boolean
+    contentEditable?: string
+    type?: string
+    readOnly?: boolean
+    disabled?: boolean
+  }
+
+  // Guard: Disabled or read-only inputs do not open software keyboards
+  if (element.disabled === true || element.readOnly === true) {
+    return false
+  }
+
   const tagName = (element.tagName || '').toUpperCase()
 
   if (tagName === 'TEXTAREA' || element.isContentEditable === true || element.contentEditable === 'true') {
