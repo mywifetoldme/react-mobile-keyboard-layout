@@ -195,6 +195,11 @@ export const useMobileKeyboard = ({
         maxHeight: '100dvh',
       }
 
+  const bodyStyle: CSSProperties =
+    state.focusTarget.type === 'body-inline' && state.isKeyboardOpen
+      ? { paddingBottom: '60vh' }
+      : {}
+
   return {
     containerStyle,
     isKeyboardOpen: state.isKeyboardOpen,
@@ -206,6 +211,7 @@ export const useMobileKeyboard = ({
     },
     bodyProps: {
       onPointerDown: handleBodyPointerDown,
+      style: bodyStyle,
     },
     scrollToBottom: engine.scrollToBottom,
   }
