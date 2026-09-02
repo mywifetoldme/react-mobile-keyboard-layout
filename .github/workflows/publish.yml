@@ -33,5 +33,8 @@ jobs:
       - name: Build packages
         run: npm run build
 
+      - name: Update npm to latest
+        run: npm install -g npm@latest
+
       - name: Publish to npm with Provenance
         run: npm publish --workspace=react-mobile-keyboard-layout --access public --provenance
