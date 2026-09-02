@@ -34,4 +34,4 @@ jobs:
         run: npm run build
 
       - name: Publish to npm with Provenance
-        run: npm publish --workspace=packages/react-mobile-keyboard-layout --access public --provenance
+        run: npm publish --workspace=react-mobile-keyboard-layout --access public --provenance
