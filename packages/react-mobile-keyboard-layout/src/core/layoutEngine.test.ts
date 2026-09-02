@@ -93,6 +93,17 @@ describe('LayoutEngine Reference-Driven Rule FSM', () => {
 
     const textInput = document.createElement('input')
     textInput.type = 'text'
+    textInput.getBoundingClientRect = () => ({
+      top: 100,
+      bottom: 140,
+      left: 0,
+      right: 100,
+      width: 100,
+      height: 40,
+      x: 0,
+      y: 100,
+      toJSON: () => {},
+    })
     bodyDiv.appendChild(textInput)
 
     const engine = new LayoutEngine({

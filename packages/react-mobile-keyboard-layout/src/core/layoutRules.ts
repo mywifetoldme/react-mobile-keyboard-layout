@@ -1,4 +1,5 @@
 import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
+import { alignElementToSafeZone } from '../utils/safeZone'
 import type {
   LayoutRule,
   ConditionPredicate,
@@ -110,16 +111,18 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     2. focusin: Body Inline Form Input Focused
+     2. focusin: Body Inline Form Input Focused (Safe-Zone Aligned)
      -------------------------------------------------------------------------- */
   {
     on: 'focusin',
     when: [isTextInput, isInsideBody],
     apply: (e, ctx) => {
       const ev = e as FocusEvent
-      ctx.lockWindowTop()
+      const target = ev.target as HTMLElement | null
+      const body = ctx.refs.bodyRef?.current ?? null
+      alignElementToSafeZone(target, body)
       return {
-        focusTarget: { type: 'body-inline', element: ev.target as HTMLElement },
+        focusTarget: { type: 'body-inline', element: target as HTMLElement },
       }
     },
   },
@@ -157,9 +160,9 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
       const screenH = window.innerHeight || currentH
       const open = screenH - currentH > keyboardThreshold && isTouchDevice()
 
-      ctx.lockWindowTop()
       if (open && !ctx.state.isKeyboardOpen && ctx.state.focusTarget.type === 'floating') {
         ctx.captureBaselineAnchor()
+        ctx.lockWindowTop()
       }
 
       return {
@@ -215,22 +218,16 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
   },
 
   /* --------------------------------------------------------------------------
-     8. pointerdown: Keyboard Text Input 0ms Proactive Prevention
+     8. pointerdown: Pre-align Body Input into Safe Zone on Touch
      -------------------------------------------------------------------------- */
   {
     on: 'pointerdown',
-    when: [isTextInput],
+    when: [isTextInput, isInsideBody],
     apply: (e, ctx) => {
       const ev = e as PointerEvent | React.PointerEvent
-      if (typeof ev.preventDefault === 'function') {
-        ev.preventDefault()
-      }
-      if (typeof (ev as Event).stopPropagation === 'function') {
-        (ev as Event).stopPropagation()
-      }
-      ctx.lockWindowTop()
       const target = (ev as { target?: unknown }).target as HTMLElement | null
-      target?.focus({ preventScroll: true })
+      const body = ctx.refs.bodyRef?.current ?? null
+      alignElementToSafeZone(target, body)
     },
   },
 ]
