@@ -117,6 +117,7 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
     when: [isTextInput, isInsideBody],
     apply: (e, ctx) => {
       const ev = e as FocusEvent
+      ctx.lockWindowTop()
       const target = ev.target as HTMLElement | null
       const bodyEl = ctx.refs.bodyRef?.current
 
@@ -168,9 +169,9 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
       const screenH = window.innerHeight || currentH
       const open = screenH - currentH > keyboardThreshold && isTouchDevice()
 
+      ctx.lockWindowTop()
       if (open && !ctx.state.isKeyboardOpen && ctx.state.focusTarget.type === 'floating') {
         ctx.captureBaselineAnchor()
-        ctx.lockWindowTop()
       }
 
       return {
@@ -222,6 +223,17 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
         ctx.updateClosedScrollTop(el.scrollTop)
         ctx.updateClosedHeight(el.clientHeight)
       }
+    },
+  },
+
+  /* --------------------------------------------------------------------------
+     8. pointerdown: Top Lock Guard
+     -------------------------------------------------------------------------- */
+  {
+    on: 'pointerdown',
+    when: [isTextInput],
+    apply: (_, ctx) => {
+      ctx.lockWindowTop()
     },
   },
 ]
