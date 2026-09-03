@@ -7,3 +7,5 @@ coverage
 .turbo
 .vercel
 .cache
+packages/react-mobile-keyboard-layout/README*.md
+packages/react-mobile-keyboard-layout/docs/

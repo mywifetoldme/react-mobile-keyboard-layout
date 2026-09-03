@@ -218,4 +218,18 @@ describe('LayoutEngine Reference-Driven Rule FSM', () => {
     engine.updateClosedScrollTop(300)
     expect(engine.getAnchor().closedScrollTop).toBe(300)
   })
+
+  it('guarantees immutability of getAnchor() snapshot return value', () => {
+    const engine = new LayoutEngine()
+    engine.updateClosedScrollTop(150)
+
+    const anchor1 = engine.getAnchor()
+    expect(anchor1.closedScrollTop).toBe(150)
+
+    // Attempting to mutate snapshot should not corrupt internal state
+    ;(anchor1 as { closedScrollTop: number }).closedScrollTop = 9999
+
+    const anchor2 = engine.getAnchor()
+    expect(anchor2.closedScrollTop).toBe(150)
+  })
 })

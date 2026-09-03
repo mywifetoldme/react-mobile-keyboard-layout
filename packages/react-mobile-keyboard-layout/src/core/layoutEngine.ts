@@ -12,6 +12,7 @@ export interface LayoutEngineOptions {
   refs?: LayoutRefs
   rules?: LayoutRule<unknown>[]
   keyboardThreshold?: number
+  alignPadding?: number
   lockDurationMs?: number
   onStateChange?: (state: LayoutState) => void
 }
@@ -41,7 +42,10 @@ export class LayoutEngine {
 
   constructor(options: LayoutEngineOptions = {}) {
     this.refs = options.refs ?? {}
-    this.rules = options.rules ?? createDefaultLayoutRules(options.keyboardThreshold ?? 100)
+    this.rules = options.rules ?? createDefaultLayoutRules(
+      options.keyboardThreshold ?? 100,
+      options.alignPadding ?? 16,
+    )
     this.lockDurationMs = options.lockDurationMs ?? 350
     this.onStateChange = options.onStateChange
   }
@@ -55,7 +59,7 @@ export class LayoutEngine {
   }
 
   public getAnchor(): Readonly<AnchorSnapshot> {
-    return this.anchor
+    return { ...this.anchor }
   }
 
   public setState(partial: Partial<LayoutState>) {

@@ -9,6 +9,16 @@
 > **상단 헤더 흔들림 제로, 0.0px 스크롤 앵커링, 매끄러운 플로팅 입력을 제공하는 React 모바일 키보드 레이아웃 라이브러리.**
 >
 > 📱 **인터랙티브 라이브 데모**: [https://react-mobile-keyboard-layout.pages.dev/](https://react-mobile-keyboard-layout.pages.dev/)
+>
+> ⚠️ **중요 안내**: 이 라이브러리는 터치 디바이스의 소프트웨어 가상 키보드 환경(**iOS Safari**, 안드로이드 크롬, 모바일 PWA)에서 발생하는 레이아웃 왜곡을 제어하도록 특화되어 있습니다. 데스크톱에서는 가상 키보드가 동작하지 않으므로, **반드시 실제 스마트폰(아이폰 권장)이나 모바일 에뮬레이터에서 열어주세요.**
+
+<p align="center">
+  <a href="https://react-mobile-keyboard-layout.pages.dev/">
+    <img src="./docs/assets/demo-qr.png" alt="모바일 데모 열기 QR 코드" width="140" height="140" />
+  </a>
+  <br />
+  <sub>📱 스마트폰 카메라로 QR 코드를 스캔하여 라이브 데모 열기</sub>
+</p>
 
 [English](./README.md) | [한국어]
 

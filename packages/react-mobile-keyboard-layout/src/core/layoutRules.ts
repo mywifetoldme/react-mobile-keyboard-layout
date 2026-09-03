@@ -92,7 +92,10 @@ export const calculatePreservedScrollTop = (
    Declarative Reference-Driven Layout Rules (FSM Transition Matrix)
    ========================================================================== */
 
-export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<unknown>[] => [
+export const createDefaultLayoutRules = (
+  keyboardThreshold = 100,
+  alignPadding = 16,
+): LayoutRule<unknown>[] => [
   /* --------------------------------------------------------------------------
      1. focusin: Floating Input Focused
      -------------------------------------------------------------------------- */
@@ -168,15 +171,15 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
             const alignElement = () => {
               const mainRect = bodyEl.getBoundingClientRect()
               const inputRect = target.getBoundingClientRect()
-              const topLimit = mainRect.top + 16
-              const bottomLimit = mainRect.bottom - 16
+              const topLimit = mainRect.top + alignPadding
+              const bottomLimit = mainRect.bottom - alignPadding
 
               let diff = 0
               if (inputRect.top < topLimit) {
-                // Obscured by top header: align 16px below header
+                // Obscured by top header: align alignPadding below header
                 diff = inputRect.top - topLimit
               } else if (inputRect.bottom > bottomLimit) {
-                // Obscured by virtual keyboard: align 16px above keyboard
+                // Obscured by virtual keyboard: align alignPadding above keyboard
                 diff = inputRect.bottom - bottomLimit
               }
 

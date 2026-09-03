@@ -35,10 +35,16 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "docs"
+  ],
+  "sideEffects": [
+    "*.css",
+    "**/*.css"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "mkdir -p docs/assets && cp ../../docs/assets/demo-qr.png ./docs/assets/ && cp ../../README.md ./README.md && cp ../../README.ko.md ./README.ko.md && tsup",
+    "prepack": "mkdir -p docs/assets && cp ../../docs/assets/demo-qr.png ./docs/assets/ && cp ../../README.md ./README.md && cp ../../README.ko.md ./README.ko.md",
     "dev": "tsup --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
