@@ -32,22 +32,22 @@
 3. **34px 하단 갭**: 바닥 고정 인풋창이 홈바 위로 34px 떠서 빈 공간 발생.
 4. **네이티브 피커 닫힘 현상**: 스크롤 락 로직이 날짜/시간 피커(`<input type="date">`)를 즉시 닫아버리는 문제.
 
-`react-mobile-keyboard-layout`은 외부 라이브러리 없이 **표준 W3C 웹 API(`visualViewport`, `ResizeObserver`, `preventScroll`)를 활용하여 레이아웃을 안정화**합니다.
+`react-mobile-keyboard-layout`은 외부 라이브러리 없이 **CSS(`:has()`, `:focus-within`)와 표준 웹 API 둘(`visualViewport`, `preventScroll`)만으로 레이아웃을 안정화**합니다.
 
 ---
 
 ## 🎯 핵심 구조 및 접근법
 
-- **0.0px 좌표 보정 수식 (Coordinate Preservation)**:
-  $$\Delta H = H_{\text{closed}} - H_{\text{current}}$$
-  $$S_{\text{new}} = S_0 + \Delta H$$
-  컨테이너 바닥이 수축하는 만큼 `scrollTop`을 보정하여, 키보드가 팝업되어도 읽고 있던 텍스트 위치를 안정적으로 유지.
+- **키보드 상태는 CSS가 판정**:
+  키보드가 열렸는지, 포커스가 본문 폼에 있는지 하단 플로팅 바에 있는지, 네이티브 피커가 열렸는지를 전부 스타일시트의 셀렉터(`:focus-within`, `:has()`)로 읽는다. 어긋날 JS 상태 기계가 없다.
 - **물리적 독립 헤더 격리 (Isolated Static Header)**:
   헤더를 리사이징 컨테이너 밖에 배치하여 레이아웃 리플로우로 인한 흔들림을 차단.
-- **120Hz rAF 연속 윈도우 탑락 (Top-Lock Loop)**:
-  키보드가 올라오는 350ms 동안 모니터 주사율에 맞춰 `window.scrollY = 0`을 유지.
-- **3-상태 포커스 핸드오버 FSM (State Machine)**:
-  본문 인라인 폼과 하단 플로팅 바 간의 포커스 이동 시 깜빡임 방지.
+- **되돌리기 대신 탭 가로채기**:
+  텍스트 입력은 `pointerdown`에서 `preventScroll: true`로 직접 포커스해, iOS가 창을 밀어 올리기 전에 끝낸다. 350ms rAF 탑락은 보험으로만 남는다. iOS 26에서 영상을 프레임 단위로 재보면, 밀린 뒤 되돌리는 방식은 항상 약 240ms 헤더 튐이 남는다.
+- **키보드 높이는 CSS 변수로**:
+  CSS가 읽을 수 없는 유일한 값 `innerHeight - visualViewport.height`를 `--rmkl-kb`로 내보내 아래 여백으로 잡는다. 블러 시엔 지연되는 `visualViewport` resize를 기다리지 않고 `:not(:focus-within)`으로 즉시 되돌아간다.
+- **읽던 위치는 브라우저가 유지**:
+  본문은 아래에서부터 스크롤한다(`flex-direction: column-reverse`, 자식은 DOM 순서 그대로). 컨테이너가 줄어도 읽던 메시지가 그 자리에 있다.
 - **네이티브 피커 분기 (Picker Passthrough)**:
   가상 키보드 텍스트 입력창과 OS 모달 시트(날짜/시간 피커)를 구분하여 자연스러운 동작 보장.
 
@@ -103,9 +103,7 @@ export default function ChatScreen() {
           onChange={setText}
           onSubmit={handleSend}
           placeholder="메시지를 입력하세요..."
-          onFocus={engine.handleFloatingFocus}
-          onBlur={engine.handleFloatingBlur}
-          isSuppressed={engine.isFloatingSuppressed}
+          {...engine.floatingProps}
         />
       }
     >
@@ -125,7 +123,8 @@ export default function ChatScreen() {
 
 ## 📱 테스트 환경 및 피드백
 
-- **실기기 테스트 환경**: iOS 26 및 27 beta 실기기(Mobile Safari, PWA Standalone Mode, iOS Chrome), Android Chrome, 데스크톱 Chrome/Safari.
+- **검증 환경**: CSS-first 레이아웃은 iOS 26 시뮬레이터(Mobile Safari)에서 영상을 프레임 단위로 재서 확인했습니다. 이전 엔진 기반 버전은 iOS 26 및 27 beta 실기기(Mobile Safari, PWA Standalone Mode, iOS Chrome), Android Chrome, 데스크톱 Chrome/Safari에서 확인됐으며, 실기기 재검증 제보를 환영합니다.
+- **브라우저 지원**: CSS `:has()`가 필요합니다(Safari 15.4+, Chrome 105+, Firefox 121+).
 - **참고사항**: 서드파티 키보드 앱이나 특수한 스플릿 뷰 환경에서는 동작 차이가 있을 수 있습니다. 다양한 기기에서의 테스트 피드백과 이슈 제보는 언제나 환영합니다.
 
 ---

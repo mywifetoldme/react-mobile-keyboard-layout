@@ -2,7 +2,9 @@
   flex-shrink: 0;
   position: relative;
   z-index: 40;
-  padding: 8px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+  /* the safe-area inset is only needed while the bar sits on the screen edge; once the keyboard
+     is up (--rmkl-kb > 0) it is dropped, without a JS-driven class */
+  padding: 8px 16px calc(8px + max(0px, env(safe-area-inset-bottom, 0px) - var(--rmkl-kb, 0px)));
   box-sizing: border-box;
   background-color: var(--rmkl-bg);
   border-top: 1px solid var(--rmkl-border);

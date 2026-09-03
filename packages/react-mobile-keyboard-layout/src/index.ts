@@ -1,41 +1,11 @@
 export {
   useMobileKeyboard,
+  KEYBOARD_HEIGHT_CSS_VAR,
   type UseMobileKeyboardOptions,
   type UseMobileKeyboardReturn,
 } from './hooks/useMobileKeyboard'
 
-export {
-  LayoutEngine,
-  type LayoutEngineOptions,
-} from './core/layoutEngine'
-
-export {
-  createDefaultLayoutRules,
-  calculatePreservedScrollTop,
-  isTouchDevice,
-  isTextInput,
-  isInsideFloating,
-  isInsideBody,
-  isNoNextTextInput,
-  isFloatingActive,
-  isBodyActive,
-  isKeyboardOpen,
-  isKeyboardClosed,
-  hasActiveTextInput,
-} from './core/layoutRules'
-
-export type {
-  FocusTarget,
-  LayoutState,
-  AnchorSnapshot,
-  LayoutRefs,
-  EngineEventType,
-  ConditionPredicate,
-  LayoutContext,
-  LayoutRule,
-} from './core/layoutTypes'
-
-// Backwards compatibility alias
+/** Which kind of input holds the keyboard focus. Kept for backwards compatibility. */
 export type ActiveInputType = 'none' | 'floating' | 'body'
 
 export {

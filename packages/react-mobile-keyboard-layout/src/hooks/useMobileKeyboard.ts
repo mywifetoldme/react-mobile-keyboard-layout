@@ -1,214 +1,176 @@
 'use client'
 
 import {
-  useState,
+  useCallback,
   useEffect,
   useRef,
-  useCallback,
+  useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type RefObject,
 } from 'react'
-import type {
-  UseMobileKeyboardOptions,
-  UseMobileKeyboardReturn,
-  LayoutState,
-} from '../core/layoutTypes'
-import { LayoutEngine } from '../core/layoutEngine'
+import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
 
-export type { UseMobileKeyboardOptions, UseMobileKeyboardReturn } from '../core/layoutTypes'
+/** CSS custom property that carries the keyboard-covered height, e.g. `337px` (`0px` while closed). */
+export const KEYBOARD_HEIGHT_CSS_VAR = '--rmkl-kb'
 
-/* ==========================================================================
-   Main Headless Hook (Delegates to Declarative Reference-Driven LayoutEngine)
-   ========================================================================== */
+export interface UseMobileKeyboardOptions {
+  /** Ref to the scrollable content container */
+  bodyRef?: RefObject<HTMLElement | null>
+  /** Threshold in pixels to treat viewport height contraction as keyboard opening. Default: 100 */
+  keyboardThreshold?: number
+  /** Duration in milliseconds of the fallback rAF top-lock loop started on tap. Default: 350 */
+  lockDurationMs?: number
+  /** Whether to prevent rubber-banding on non-scrollable background areas. Default: false */
+  preventOuterScroll?: boolean
+}
+
+export interface UseMobileKeyboardReturn {
+  /** Reserves the keyboard-covered height as bottom padding (SubpageLayout does the same in CSS) */
+  containerStyle: CSSProperties
+  /** Whether the virtual keyboard is currently open */
+  isKeyboardOpen: boolean
+  /** Grouped props to spread onto the floating input component */
+  floatingProps: {
+    onPointerDown: (e: ReactPointerEvent<HTMLElement> | PointerEvent) => void
+  }
+  /** Grouped props to spread onto the scrollable body container */
+  bodyProps: {
+    onPointerDown: (e: ReactPointerEvent<HTMLElement> | PointerEvent) => void
+  }
+  /** Scroll the body to its end (the newest message in a chat) */
+  scrollToBottom: (behavior?: ScrollBehavior) => void
+}
+
+const INPUT_SELECTOR = 'input, textarea, [contenteditable]'
+
+/** How much of the layout viewport the keyboard covers right now. */
+const measureKeyboardHeight = (): number => {
+  const vv = window.visualViewport
+  if (!vv) return 0
+  return Math.max(0, Math.round(window.innerHeight - vv.height))
+}
 
 /**
  * useMobileKeyboard
  *
- * Zero-shift mobile keyboard layout engine with 0.0px scroll preservation
- * powered by a declarative reference-driven Rule Engine & FSM.
+ * Keeps the header and the reading position still while the iOS keyboard opens.
+ * Keyboard state (open? which input? native picker?) is decided by CSS selectors in
+ * SubpageLayout.css. This hook only does the three things CSS cannot:
+ *  1. publish the keyboard-covered height as a CSS variable (`--rmkl-kb`), and reveal the focused
+ *     body input if the shorter box hid it
+ *  2. focus tapped text inputs itself, before iOS pans the window to reveal them
+ *  3. a short rAF top-lock as a fallback for 2.
  */
 export const useMobileKeyboard = ({
   bodyRef,
   keyboardThreshold = 100,
-  alignPadding = 16,
   lockDurationMs = 350,
   preventOuterScroll = false,
-  rules,
 }: UseMobileKeyboardOptions = {}): UseMobileKeyboardReturn => {
-  const floatingRef = useRef<HTMLElement | null>(null)
+  const [keyboardHeight, setKeyboardHeight] = useState(0)
+  const rafIdRef = useRef<number | null>(null)
 
-  // Maintain reactive state synchronized with LayoutEngine
-  const [, setRenderTick] = useState(0)
-
-  const engineRef = useRef<LayoutEngine | null>(null)
-  if (!engineRef.current) {
-    engineRef.current = new LayoutEngine({
-      refs: { bodyRef, floatingRef },
-      rules,
-      keyboardThreshold,
-      alignPadding,
-      lockDurationMs,
-      onStateChange: () => setRenderTick((t) => t + 1),
-    })
-  }
-
-  const engine = engineRef.current
-
-  // Keep DOM refs up to date on each render
-  useEffect(() => {
-    engine.setRefs({ bodyRef, floatingRef })
-  })
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      engine.destroy()
-    }
-  }, [engine])
-
-  // 1. Subscribe to VisualViewport (resize & scroll)
+  // 1. Keyboard height → CSS variable + state
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return
     const vv = window.visualViewport
+    const root = document.documentElement
 
-    const handleVvResize = (e: Event) => engine.dispatch('visualViewport.resize', e)
-    const handleVvScroll = (e: Event) => engine.dispatch('visualViewport.scroll', e)
+    const update = () => {
+      const measured = measureKeyboardHeight()
+      const height = measured >= keyboardThreshold ? measured : 0
+      root.style.setProperty(KEYBOARD_HEIGHT_CSS_VAR, `${height}px`)
+      setKeyboardHeight(height)
 
-    vv.addEventListener('resize', handleVvResize)
-    vv.addEventListener('scroll', handleVvScroll)
+      // The body just lost `height` px at the bottom while the tap above focused without scrolling:
+      // if the focused body input ended up outside the shorter box, reveal it (a no-op when visible)
+      const active = document.activeElement
+      if (height > 0 && bodyRef?.current?.contains(active) && isKeyboardTextInput(active)) {
+        requestAnimationFrame(() => (active as HTMLElement).scrollIntoView?.({ block: 'nearest' }))
+      }
+    }
 
-    // Initial check
-    engine.dispatch('visualViewport.resize', new Event('resize'))
-
+    vv.addEventListener('resize', update)
+    update()
     return () => {
-      vv.removeEventListener('resize', handleVvResize)
-      vv.removeEventListener('scroll', handleVvScroll)
+      vv.removeEventListener('resize', update)
+      root.style.removeProperty(KEYBOARD_HEIGHT_CSS_VAR)
     }
-  }, [engine])
+  }, [bodyRef, keyboardThreshold])
 
-  // 2. Subscribe to Body ResizeObserver & Scroll
-  useEffect(() => {
-    const el = bodyRef?.current
-    if (!el) return
-
-    const handleScroll = (e: Event) => engine.dispatch('scroll', e)
-    el.addEventListener('scroll', handleScroll, { passive: true })
-
-    let ro: ResizeObserver | null = null
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          engine.dispatch('resize', entry)
-        }
-      })
-      ro.observe(el)
+  // 3. Fallback lock: undo any window pan iOS still performs during the keyboard animation
+  const cancelLock = useCallback(() => {
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = null
     }
+  }, [])
 
-    return () => {
-      el.removeEventListener('scroll', handleScroll)
-      ro?.disconnect()
+  const lockWindowTop = useCallback(() => {
+    if (typeof window === 'undefined') return
+    cancelLock()
+    const startedAt = performance.now()
+    const step = (now: number) => {
+      if (window.scrollY !== 0) window.scrollTo(0, 0)
+      rafIdRef.current = now - startedAt < lockDurationMs ? requestAnimationFrame(step) : null
     }
-  }, [bodyRef, engine])
+    rafIdRef.current = requestAnimationFrame(step)
+  }, [cancelLock, lockDurationMs])
 
-  // 3. Subscribe to Body Inline FocusIn
-  useEffect(() => {
-    const el = bodyRef?.current
-    if (!el) return
-
-    const handleFocusIn = (e: FocusEvent) => {
-      engine.dispatch('focusin', e)
-    }
-
-    el.addEventListener('focusin', handleFocusIn)
-    return () => el.removeEventListener('focusin', handleFocusIn)
-  }, [bodyRef, engine])
-
-  // 4. Subscribe to Window Global FocusOut (Loss of Focus / Dismissal)
+  // The lock is only meaningful while an input is focused: stop it on blur and on unmount
   useEffect(() => {
     if (typeof window === 'undefined') return
-
-    const handleGlobalFocusOut = (e: FocusEvent) => {
-      queueMicrotask(() => {
-        engine.dispatch('focusout', e)
-      })
+    window.addEventListener('focusout', cancelLock)
+    return () => {
+      window.removeEventListener('focusout', cancelLock)
+      cancelLock()
     }
+  }, [cancelLock])
 
-    window.addEventListener('focusout', handleGlobalFocusOut)
-    return () => window.removeEventListener('focusout', handleGlobalFocusOut)
-  }, [engine])
-
-  // 5. Optional Outer TouchMove Scroll Lock
+  // Optional: block rubber-banding outside the scrollable body
   useEffect(() => {
     if (!preventOuterScroll || typeof window === 'undefined') return
-
     const preventOuterTouchMove = (e: TouchEvent) => {
       const scrollable = bodyRef?.current
-      const target = e.target as HTMLElement | null
-      if (scrollable && scrollable.contains(target)) return
+      if (scrollable && scrollable.contains(e.target as Node | null)) return
       if (e.cancelable) e.preventDefault()
     }
-
     window.addEventListener('touchmove', preventOuterTouchMove, { passive: false })
     return () => window.removeEventListener('touchmove', preventOuterTouchMove)
   }, [bodyRef, preventOuterScroll])
 
-  // Floating Input Props Handlers
-  const handleFloatingFocus = useCallback(
-    () => {
-      const activeEl = typeof document !== 'undefined' ? document.activeElement : null
-      engine.dispatch('focusin', { target: activeEl ?? floatingRef.current })
-    },
-    [engine],
-  )
-
-  const handleFloatingBlur = useCallback(() => {
-    engine.lockWindowTop()
-  }, [engine])
-
-  const handleFloatingPointerDown = useCallback(
-    (e: ReactPointerEvent<HTMLElement> | PointerEvent) => {
-      engine.lockWindowTop()
-      if (e.target) {
-        floatingRef.current = (e.target as HTMLElement).closest('.rmkl-floating-input-wrapper') ?? (e.target as HTMLElement)
-      }
-    },
-    [engine],
-  )
-
-  // Body Props Handlers
+  // 2. Tap interception — focus text inputs ourselves, without the scroll iOS would add.
+  //    Native pickers (date/time/select) and buttons keep their default action untouched.
   const handleBodyPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLElement> | PointerEvent) => {
-      engine.dispatch('pointerdown', e)
+      const target = e.target instanceof Element ? e.target.closest(INPUT_SELECTOR) : null
+      if (!isKeyboardTextInput(target)) return
+      const input = target as HTMLElement
+      input.focus({ preventScroll: true })
+      lockWindowTop()
     },
-    [engine],
+    [lockWindowTop],
   )
 
-  const state: LayoutState = engine.getState()
+  // FloatingInput already focuses its textarea with preventScroll on pointerdown; only the fallback lock is needed
+  const handleFloatingPointerDown = useCallback(() => lockWindowTop(), [lockWindowTop])
 
-  const isFloatingSuppressed = state.focusTarget.type === 'body-inline'
-
-  const containerStyle: CSSProperties = state.vvHeight && state.isKeyboardOpen
-    ? {
-        height: `${state.vvHeight}px`,
-        maxHeight: `${state.vvHeight}px`,
-      }
-    : {
-        height: '100dvh',
-        maxHeight: '100dvh',
-      }
+  const scrollToBottom = useCallback(
+    (behavior: ScrollBehavior = 'smooth') => {
+      const el = bodyRef?.current
+      if (!el) return
+      const reversed = getComputedStyle(el).flexDirection === 'column-reverse'
+      el.scrollTo({ top: reversed ? 0 : Math.max(0, el.scrollHeight - el.clientHeight), behavior })
+    },
+    [bodyRef],
+  )
 
   return {
-    containerStyle,
-    isKeyboardOpen: state.isKeyboardOpen,
-    isFloatingSuppressed,
-    floatingProps: {
-      onFocus: handleFloatingFocus,
-      onBlur: handleFloatingBlur,
-      onPointerDown: handleFloatingPointerDown,
-    },
-    bodyProps: {
-      onPointerDown: handleBodyPointerDown,
-    },
-    scrollToBottom: engine.scrollToBottom,
+    containerStyle: { paddingBottom: `${keyboardHeight}px`, boxSizing: 'border-box' },
+    isKeyboardOpen: keyboardHeight > 0,
+    floatingProps: { onPointerDown: handleFloatingPointerDown },
+    bodyProps: { onPointerDown: handleBodyPointerDown },
+    scrollToBottom,
   }
 }

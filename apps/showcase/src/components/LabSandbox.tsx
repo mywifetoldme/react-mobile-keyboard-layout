@@ -2268,11 +2268,8 @@ function Exp03FSandbox({ lab, lang, onClose }: LabSandboxProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // EXP-03-F: Uses production engine with In-Viewport Boundary Evasion (alignPadding: 16)
-  const engine = useMobileKeyboard({
-    bodyRef,
-    alignPadding: 16,
-  })
+  // EXP-03-F: Uses the production hook (state and boundary handling now live in SubpageLayout.css)
+  const engine = useMobileKeyboard({ bodyRef })
 
   const handleSubmit = () => {
     if (!floatingVal.trim()) return
@@ -2293,7 +2290,6 @@ function Exp03FSandbox({ lab, lang, onClose }: LabSandboxProps) {
           onSubmit={handleSubmit}
           placeholder={lang === 'ko' ? 'Zero-Shift 키보드 테스트...' : 'Test zero-shift keyboard input...'}
           {...engine.floatingProps}
-          isSuppressed={engine.isFloatingSuppressed}
           isKeyboardOpen={engine.isKeyboardOpen}
         />
       }
