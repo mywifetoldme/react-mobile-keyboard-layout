@@ -1955,6 +1955,149 @@ function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
 }
 
 /* ==========================================================================
+   14. EXP-03-F: WINNER (In-Viewport Boundary Evasion)
+   ========================================================================== */
+
+function Exp03FSandbox({ lab, lang, onClose }: LabSandboxProps) {
+  const [floatingVal, setFloatingVal] = useState('')
+  const [bottomInputVal, setBottomInputVal] = useState('')
+  const [enableAlignment, setEnableAlignment] = useState(true)
+  const [messages, setMessages] = useState<string[]>([
+    lang === 'ko' ? '스크롤을 아래로 끝까지 내려서 최하단 인풋을 터치해보세요.' : 'Scroll down to the bottom and focus the bottom-most input.',
+    lang === 'ko' ? '사파리 기본 동작은 최하단 인풋을 억지로 화면 중앙으로 끌어올리려다 키보드와 충돌합니다.' : 'Safari natively tries to yank bottom inputs into center view, fighting viewport controls.',
+    lang === 'ko' ? '16px 안전 여백 정렬(회피 로직)이 활성화되면 키보드가 솟아오르다 내려가는 현상이 사라집니다.' : 'With 16px boundary evasion active, the keyboard ascends smoothly without bouncing down.',
+  ])
+  const [scrollY, setScrollY] = useState(0)
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const engine = useMobileKeyboard({
+    bodyRef,
+  })
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
+  return (
+    <SubpageLayout
+      keyboardEngine={engine}
+      bodyRef={bodyRef}
+      style={{ zIndex: 300 }}
+      header={<LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />}
+      footer={
+        <FloatingInput
+          value={floatingVal}
+          onChange={setFloatingVal}
+          onSubmit={handleSubmit}
+          placeholder={lang === 'ko' ? 'Zero-Shift 키보드 테스트...' : 'Test zero-shift keyboard input...'}
+          {...engine.floatingProps}
+          isSuppressed={engine.isFloatingSuppressed}
+          isKeyboardOpen={engine.isKeyboardOpen}
+        />
+      }
+    >
+      <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <LabHeroSection lab={lab} lang={lang} />
+
+        {/* Boundary Evasion Mode Switcher */}
+        <div style={{
+          padding: '12px 14px',
+          borderRadius: '12px',
+          backgroundColor: '#18181b',
+          border: '1px solid #27272a',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <div>
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#f4f4f5' }}>
+              {lang === 'ko' ? '16px 뷰포트 경계 회피 로직' : '16px Boundary Evasion Logic'}
+            </div>
+            <div style={{ fontSize: '11px', color: '#a1a1aa' }}>
+              {lang === 'ko' ? '사파리 개입 조건을 원천 차단' : 'Eliminates Safari collision triggers'}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setEnableAlignment((prev) => !prev)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              backgroundColor: enableAlignment ? '#15803d' : '#3f3f46',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 700,
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {enableAlignment ? (lang === 'ko' ? '활성화 (ON)' : 'ACTIVE (ON)') : (lang === 'ko' ? '비활성화 (OFF)' : 'DISABLED (OFF)')}
+          </button>
+        </div>
+
+        <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
+
+        {/* Dedicated Bottom-of-Container Form Card */}
+        <div style={{
+          padding: '14px',
+          borderRadius: '12px',
+          backgroundColor: '#18181b',
+          border: '1px solid #27272a',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          marginTop: '16px',
+          marginBottom: '32px',
+        }}>
+          <div style={{ fontSize: '13px', fontWeight: 700, color: '#fbbf24' }}>
+            📍 {lang === 'ko' ? '컨테이너 최하단 인풋 테스트 영역' : 'Bottom-of-Container Target Input'}
+          </div>
+          <p style={{ fontSize: '12px', color: '#a1a1aa', margin: 0, lineHeight: '1.4' }}>
+            {lang === 'ko'
+              ? '이 인풋은 스크롤 영역의 가장 밑바닥에 위치합니다. 터치하여 키보드가 솟아오를 때 튕김이나 흔들림 없이 매끄럽게 안착하는지 확인하세요.'
+              : 'This input sits at the very bottom boundary. Focus it to verify zero keyboard-bounce or viewport jitter.'}
+          </p>
+          <input
+            type="text"
+            value={bottomInputVal}
+            onChange={(e) => setBottomInputVal(e.target.value)}
+            placeholder={lang === 'ko' ? '최하단 인풋 터치하여 테스트...' : 'Tap bottom input to test...'}
+            onFocus={(e) => {
+              if (enableAlignment) {
+                // Emulates the 16px safe boundary alignment
+                const target = e.currentTarget
+                setTimeout(() => {
+                  target.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+                }, 50)
+              }
+            }}
+            style={{
+              padding: '10px 12px',
+              borderRadius: '8px',
+              backgroundColor: '#09090b',
+              border: '1px solid #3f3f46',
+              color: '#f4f4f5',
+              fontSize: '14px',
+              outline: 'none',
+            }}
+          />
+        </div>
+      </div>
+    </SubpageLayout>
+  )
+}
+
+/* ==========================================================================
    Main Sandbox Dispatcher
    ========================================================================== */
 
@@ -1985,7 +2128,9 @@ export const LabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
     case 'exp03_d':
       return <Exp03DSandbox lab={lab} lang={lang} onClose={onClose} />
     case 'exp03_e':
-    default:
       return <Exp03ESandbox lab={lab} lang={lang} onClose={onClose} />
+    case 'exp03_f':
+    default:
+      return <Exp03FSandbox lab={lab} lang={lang} onClose={onClose} />
   }
 }

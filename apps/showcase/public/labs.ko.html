@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>react-mobile-keyboard-layout — 실험 및 연구 아카이브 (Labs Archive)</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --card-bg: #141418;
+      --border: #27272f;
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --primary: #3b82f6;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding-bottom: 60px;
+    }
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(9, 9, 11, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand { display: flex; align-items: center; gap: 8px; }
+    .brand-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 800;
+      background: #27272f;
+      color: #60a5fa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .btn-lang {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      transition: all 0.15s;
+    }
+    .btn-lang:hover { color: #fff; border-color: #52525b; }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .container { max-width: 960px; margin: 0 auto; padding: 30px 20px; }
+    .hero { margin-bottom: 32px; }
+    .hero h1 { font-size: 26px; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.02em; }
+    .subtitle { color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+    .toc-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 40px;
+    }
+    .toc-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+    .toc-grid { display: flex; flex-direction: column; gap: 20px; }
+    .toc-phase h3 { font-size: 14px; font-weight: 600; color: #60a5fa; margin-bottom: 10px; }
+    .toc-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; }
+    .toc-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: #d4d4d8;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+    .toc-item:hover { background: rgba(255,255,255,0.06); border-color: var(--border); color: #fff; }
+    .phase-divider {
+      margin: 50px 0 24px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .phase-divider h2 { font-size: 20px; font-weight: 700; color: #93c5fd; }
+    .lab-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 28px;
+      scroll-margin-top: 80px;
+    }
+    .lab-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .lab-title-group { display: flex; flex-direction: column; gap: 8px; }
+    .lab-title-group h3 { font-size: 18px; font-weight: 700; color: #fff; }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      letter-spacing: 0.04em;
+    }
+    .status-winner { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid #22c55e; }
+    .status-progress { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid #3b82f6; }
+    .status-failed { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid #ef4444; }
+    .sandbox-btn {
+      background: #272730;
+      color: #f4f4f5;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #3f3f4e;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .sandbox-btn:hover { background: #3f3f4e; color: #fff; }
+    .section-block { margin-top: 16px; }
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .hypothesis-text {
+      background: #191920;
+      border-left: 3px solid #3b82f6;
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
+      font-size: 14px;
+      color: #e4e4e7;
+    }
+    .finding-text { font-size: 14px; color: #d4d4d8; line-height: 1.6; }
+    .decision-text { font-size: 14px; color: #93c5fd; line-height: 1.6; font-weight: 500; }
+    .table-wrapper { overflow-x: auto; margin-top: 6px; }
+    .eval-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .eval-table th {
+      background: #1a1a22;
+      color: var(--text-muted);
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .eval-table td {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      color: #d4d4d8;
+    }
+    .cell-criterion { font-weight: 600; color: #f4f4f5; }
+    .eval-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 9999px;
+    }
+    .badge-pass { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid #22c55e; }
+    .badge-fail { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid #ef4444; }
+    .badge-na { background: rgba(113, 113, 122, 0.15); color: #a1a1aa; border: 1px solid #52525b; }
+  </style>
+</head>
+<body>
+  
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-title">react-mobile-keyboard-layout</span>
+        <span class="brand-badge">LABS ARCHIVE</span>
+      </div>
+      <div class="header-actions">
+        <a href="/labs.html" class="btn-lang">English</a>
+        <a href="/#labs" class="btn-primary">🎮 라이브 데모 샌드박스</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="hero">
+      <h1>🔬 react-mobile-keyboard-layout — 실험 및 연구 아카이브 (Labs Archive)</h1>
+      <p class="subtitle">
+        모바일 웹 및 iOS Safari/PWA 환경에서 하단 고정 입력창(Floating Input)과 상단 고정 헤더, 스크롤 앵커링을 구현하기 위해 수행된 14단계 단일 변수 통제 실험의 전체 기록입니다.
+      </p>
+    </div>
+
+    <nav class="toc-card">
+      <h2>📑 목차 (Table of Contents)</h2>
+      <div class="toc-grid">
+  
+        <div class="toc-phase">
+          <h3>Phase 1: 순수 CSS의 한계와 Fixed 포지셔닝 검증</h3>
+          <div class="toc-list">
+      
+      <a href="#exp01-a" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-01-A: 순수 CSS position: fixed 기준점</span>
+      </a>
+    
+      <a href="#exp01-b" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-01-B: Safe Area Inset 동적 제거 시도</span>
+      </a>
+    
+      <a href="#exp01-c" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-01-C: 포커스 시 상단 스크롤 강제 고정</span>
+      </a>
+    
+      <a href="#exp01-d" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-01-D: 순수 CSS 100dvh In-Flow 레이아웃</span>
+      </a>
+    </div></div>
+        <div class="toc-phase">
+          <h3>Phase 2: 동적 뷰포트 연동과 스크롤 제어 검증</h3>
+          <div class="toc-list">
+      
+      <a href="#exp02-a" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-02-A: visualViewport.height 1:1 동기화</span>
+      </a>
+    
+      <a href="#exp02-b" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-02-B: 상단 top: 0 고정 & 포커스 스크롤 락</span>
+      </a>
+    
+      <a href="#exp02-c" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-02-C: translateY(offsetTop) 실시간 추적</span>
+      </a>
+    
+      <a href="#exp02-d" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-02-D: 인풋 쉘 touch-action: none 완전 고정</span>
+      </a>
+    </div></div>
+        <div class="toc-phase">
+          <h3>Phase 3: 포커스 주도 상태 기계 & 뷰포트 경계 회피 (최종 완성)</h3>
+          <div class="toc-list">
+      
+      <a href="#exp03-a" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-03-A: Safe Area Inset 0px 축소 & 8px 초밀착</span>
+      </a>
+    
+      <a href="#exp03-b" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-03-B: ResizeObserver 바디 하단 스크롤 앵커링</span>
+      </a>
+    
+      <a href="#exp03-c" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-03-C: 본문 인풋 포커스 핸드오버 & 0px 숨김</span>
+      </a>
+    
+      <a href="#exp03-d" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-03-D: 상단 헤더 물리적 격리 & 3-상태 FSM</span>
+      </a>
+    
+      <a href="#exp03-e" class="toc-item">
+        <span class="badge status-winner">WINNER</span>
+        <span class="toc-label">EXP-03-E: 원자적 뷰포트 복원 & 닫힘 시차 제어 (최종 완성형)</span>
+      </a>
+    
+      <a href="#exp03-f" class="toc-item">
+        <span class="badge status-winner">WINNER</span>
+        <span class="toc-label">EXP-03-F: 뷰포트 경계 회피를 통한 사파리 개입 무력화</span>
+      </a>
+    </div></div></div></nav><div class="phase-divider"><h2>Phase 1: 순수 CSS의 한계와 Fixed 포지셔닝 검증</h2></div>
+      <section id="exp01-a" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-01-A: 순수 CSS position: fixed 기준점</h3>
+          </div>
+          <a href="/#labs?exp=exp01_a" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">표준 CSS position: fixed와 Safe Area Inset만으로 iOS 사파리에서 인풋이 바닥에 안정적으로 유지되는지 검증한다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">사파리가 외부 창을 밀어올려 상단 헤더가 화면 위로 사라짐</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">인풋 영역 스크롤 시 이중 스크롤 발생</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">키보드 활성화 시 34px Safe Area Inset 공백 잔존</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">사파리가 창을 올려 바디 하단 위치가 인풋 위에 자연 보존됨</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">position: fixed 구조에서는 사파리의 뷰포트 이동으로 인해 상단 헤더가 화면 밖으로 밀려나고, 인풋 터치 시 이중 스크롤이 발생하며, 키보드 위에 34px Safe Area Inset 공백이 그대로 남음.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">position: fixed를 유지한 채 키보드 위 34px Safe Area Inset 공백을 동적으로 제거해보는 EXP-01-B로 연계.</p>
+        </div>
+      </section>
+    
+      <section id="exp01-b" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-01-B: Safe Area Inset 동적 제거 시도</h3>
+          </div>
+          <a href="/#labs?exp=exp01_b" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">키보드 오픈 시점(뷰포트 높이 축소 감지)에 Safe Area 하단 패딩(34px)을 0px로 줄이면 키보드에 밀착될 것이다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">사파리가 외부 창을 밀어올려 상단 헤더가 화면 위로 사라짐</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">인풋 영역 스크롤 시 이중 스크롤 발생</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">동적 패딩 변경 시도에도 fixed 렌더링 특성상 34px 공백이 유지됨</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">사파리가 창을 올려 바디 하단 위치가 인풋 위에 자연 보존됨</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">순수 position: fixed 구조에서는 뷰포트 축소 감지 후 하단 패딩을 줄여도 브라우저 렌더링 특성상 키보드 위 34px 공백이 제거되지 않음.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">fixed 상태에서 헤더 위치를 고정하기 위해 포커스 시점에 화면 스크롤을 강제로 (0,0)에 고정하는 EXP-01-C로 연계.</p>
+        </div>
+      </section>
+    
+      <section id="exp01-c" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-01-C: 포커스 시 상단 스크롤 강제 고정</h3>
+          </div>
+          <a href="/#labs?exp=exp01_c" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">인풋 포커스 시 화면 스크롤을 (0,0)으로 강제 고정하면 상단 헤더 위치를 유지할 수 있을 것이다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">상단 헤더 고정 성공</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">화면 스크롤이 (0,0)으로 고정되면서 인풋이 키보드 뒤에 가려져 보이지 않음</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">인풋 가림으로 인해 인셋 여백 무의미</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">스크롤이 강제 초기화되어 바디 하단 앵커링 소실</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">화면 스크롤을 (0,0)에 묶으면 상단 헤더는 유지되지만, position: fixed 인풋이 키보드 뒤에 완전히 가려지는 원천적 한계 확인.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">position: fixed 방식을 배제하고, CSS 100dvh 단위를 사용하는 In-Flow Flexbox 레이아웃(EXP-01-D)으로 전환.</p>
+        </div>
+      </section>
+    
+      <section id="exp01-d" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-01-D: 순수 CSS 100dvh In-Flow 레이아웃</h3>
+          </div>
+          <a href="/#labs?exp=exp01_d" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">CSS 100dvh 단위와 In-Flow Flexbox를 적용하면 자바스크립트 없이도 브라우저가 키보드 크기에 맞춰 레이아웃을 스스로 축소할 것이다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">100dvh가 가상 키보드에 반응하지 않아 화면 전체가 밀려 올라감</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">인풋 영역 스크롤 시 이중 스크롤 발생</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">키보드 활성화 시 레이아웃 하단 잘림</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">창 이동으로 인해 바디 하단 위치가 자연 보존됨</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">iOS 사파리 WebKit 명세상 100dvh는 주소창 변화에만 반응하고 가상 키보드는 무시하므로, 순수 CSS만으로는 뷰포트 대응이 불가능함을 확인.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">순수 CSS 방식(Phase 1)을 종료하고, Visual Viewport API를 컨테이너 높이에 직접 연동하는 Phase 2 (EXP-02-A)로 전환.</p>
+        </div>
+      </section>
+    <div class="phase-divider"><h2>Phase 2: 동적 뷰포트 연동과 스크롤 제어 검증</h2></div>
+      <section id="exp02-a" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-02-A: visualViewport.height 1:1 동기화</h3>
+          </div>
+          <a href="/#labs?exp=exp02_a" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">실시간 측정하는 visualViewport.height를 Flex 컨테이너 높이로 1:1 주입하면 키보드 위 가시 영역에 레이아웃이 맞추어질 것이다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">초기 포커스 시 브라우저 기본 스크롤 동작으로 인해 하단에 336px 빈 공간 노출</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">단일 스크롤로 매끄럽게 통합 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">수동 스크롤 전까지 336px 빈 공간 잔존</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">336px 오차로 바디 하단 앵커링 소실</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">In-Flow Flex 3단 정렬 구조의 기반을 확보했으나, 초기 포커스 시 사파리가 외부 창을 밀어올리며 인풋 아래에 키보드 높이만큼(약 336px) 빈 공간이 노출됨.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">상단 고정 및 스크롤 락(02-B)과 오프셋 실시간 추적(02-C)을 비교 검증하여 하단 빈 공간 제거 착수.</p>
+        </div>
+      </section>
+    
+      <section id="exp02-b" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-02-B: 상단 top: 0 고정 & 포커스 스크롤 락</h3>
+          </div>
+          <a href="/#labs?exp=exp02_b" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">컨테이너를 top: 0에 고정하고 외부 화면 스크롤을 즉시 (0,0)으로 잠그면 하단 336px 빈 공간이 키보드 아래로 가려질 것이다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">상단 헤더 고정 성공 (스크롤 위치 0 유지)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">단일 스크롤로 매끄럽게 통합 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">키보드 활성화 시 34px Safe Area Inset 공백 잔존</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">컨테이너 높이 축소 시 바디 하단 앵커링 위치 이동</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">visualViewport 1:1 바인딩으로 키보드 위 인풋 안착에 성공함. 단, 사파리 브라우저 환경에서 키보드가 닫힐 때 뷰포트 리사이즈 지연으로 인풋이 늦게 따라 내려오는 시차가 최초 관찰됨 (➔ 3E에서 해결).</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">인풋 바에 touch-action: none을 적용하여 터치 시 덜컹거림을 제거하는 EXP-02-D로 연계.</p>
+        </div>
+      </section>
+    
+      <section id="exp02-c" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-02-C: translateY(offsetTop) 실시간 추적</h3>
+          </div>
+          <a href="/#labs?exp=exp02_c" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">스크롤을 잠그지 않고 뷰포트 오프셋(offsetTop)을 측정하여 translateY로 컨테이너를 가시 영역에 1:1 추적시킨다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">인풋 바를 문지를 때 화면이 덜컹거리며 뒤늦게 따라오는 추격 래그 발생</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">인풋 아래 거대한 빈 공간이 노출되고 그 뒤를 화면이 따라가는 이중 스크롤 결함</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">키보드 활성화 시 34px Safe Area Inset 공백 잔존</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">바디 하단 앵커링이 덜컹거리며 흔들림</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">인풋 바를 문지르면 인풋 아래 거대한 빈 공간이 드러난 채 화면이 드르륵거리며 쫓아가고, 포커스 해제 시 밑에서부터 화면이 솟아오르는 등 사후 오프셋 추적 방식의 물리적 한계 확인.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">오프셋 추적 방식을 배제하고, 컨테이너를 상단에 미리 묶어두는 사전 차단 방식(02-B / 02-D)을 최종 방향으로 확정.</p>
+        </div>
+      </section>
+    
+      <section id="exp02-d" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-02-D: 인풋 쉘 touch-action: none 완전 고정</h3>
+          </div>
+          <a href="/#labs?exp=exp02_d" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">인풋 바 영역에 touch-action: none을 적용하면 인풋 바를 문질러도 브라우저가 바깥 스크롤을 시작하지 못할 것이다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">상단 헤더 고정 성공 (스크롤 위치 0 유지)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">인풋 바 드래그 시에도 흔들림 없는 0픽셀 고정 및 단일 스크롤 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">키보드 활성화 시 34px Safe Area Inset 공백 잔존</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">컨테이너 높이 축소 시 바디 하단 앵커링 위치 이동</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">인풋 바를 문질러도 흔들림 없이 안정적으로 고정되는 뷰포트 락 구조 확보.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">Phase 2(뷰포트 락 기반)를 완료하고, 34px 인셋 공백 제거 및 바디 스크롤 앵커링을 구현하는 Phase 3 (EXP-03-A)로 진입.</p>
+        </div>
+      </section>
+    <div class="phase-divider"><h2>Phase 3: 포커스 주도 상태 기계 & 뷰포트 경계 회피 (최종 완성)</h2></div>
+      <section id="exp03-a" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-03-A: Safe Area Inset 0px 축소 & 8px 초밀착</h3>
+          </div>
+          <a href="/#labs?exp=exp03_a" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">키보드 활성화 시점에 Safe Area Inset(34px)을 0px로 축소하면 키보드 윗선에 8px 마진으로 밀착될 것이다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">상단 헤더 고정 성공</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">단일 스크롤로 매끄럽게 통합 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">34px Safe Area Inset 제거 및 8px 초밀착 성공</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">플렉스박스 본문 높이 축소량만큼 하단 읽기 위치가 키보드 뒤로 가려지는 앵커링 붕괴</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">Safe Area Inset을 0px로 축소하여 키보드 위 8px 밀착에 성공함. 그러나 플렉스박스 상단이 고정된 상태에서 컨테이너 높이가 줄어들며, 본문 하단 읽기 영역이 수축된 높이만큼 키보드 뒤로 가려지는 현상 확인.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">본문 높이 수축량을 ResizeObserver로 측정하여 본문 스크롤 위치를 실시간으로 보정하는 EXP-03-B로 연계.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-b" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-03-B: ResizeObserver 바디 하단 스크롤 앵커링</h3>
+          </div>
+          <a href="/#labs?exp=exp03_b" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">닫힘 상태의 기준 스크롤 위치와 높이를 기억하고, 본문이 줄어든 실제 수축량만큼 스크롤 위치를 보정하면 바디 하단 읽기 라인이 0.0px 오차로 유지될 것이다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">상단 헤더 고정 성공</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">단일 스크롤로 매끄럽게 통합 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">8px 초밀착 상태 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">PWA: 0.0px 앵커링 성공. 사파리: 간헐적 유지되나 뷰포트 지연으로 다수 시행 시 앵커링 풀림 관찰</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">포커스 핸드오버 미도입 단계 (EXP-03-C에서 도입 예정)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM 복원 메커니즘 미도입 단계 (EXP-03-D에서 도입 예정)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">PWA에서는 0.0px 앵커링이 매끄럽게 작동하나, 사파리 일반 탭에서는 뷰포트 지연으로 인해 여러 번 시도 시 앵커링이 늦게 풀리거나 풀려버리는 현상 관찰. 또한 본문 폼 입력 시 플로팅 인풋 충돌 결함 확인.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">본문 폼 인풋 터치 시 하단 플로팅 바를 0px로 접어 숨기는 Focus Handover를 구현하는 EXP-03-C로 연계.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-c" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-03-C: 본문 인풋 포커스 핸드오버 & 0px 숨김</h3>
+          </div>
+          <a href="/#labs?exp=exp03_c" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">본문 폼 인풋에 포커스되면 플로팅 바를 0px로 접어 본문 입력 공간을 확보하고, 포커스 해제 시 복원한다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">상단 헤더 고정 성공</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">단일 스크롤로 매끄럽게 통합 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">8px 초밀착 상태 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">사파리 일반 탭에서 앵커링 지연/어긋남 잔존</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">본문 폼 입력 시 플로팅 인풋 0px 자동 숨김 성공</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">사파리 환경에서 본문 포커스 해제 후 키보드가 닫힐 때 순간적인 깜빡임(Flicker) 발생</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">본문 폼 입력 시 플로팅 바 0px 숨김에 성공하여 입력 공간을 확보함. 단, 사파리 뷰포트 지연으로 인한 닫힘 깜빡임과 3B의 앵커링 래그가 여전히 잔존함 확인.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">본문 인풋을 누르면 플로팅 바를 숨기는 데는 성공했지만, 상단 헤더가 여전히 높이가 줄어드는 영역(컨테이너) 안에 갇혀 있어서 키보드가 올라올 때 헤더까지 덜컹거리며 아래로 밀리는 현상이 남았습니다. 또한 [닫힘 / 하단 바 누름 / 본문 누름] 상태가 체계적으로 분기되지 않아 닫힐 때 깜빡임이 발생합니다. 이에 따라 헤더를 컨테이너 밖으로 완전히 물리적으로 분리하고 3가지 입력 상태(FSM)를 관리하는 EXP-03-D로 연계합니다.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-d" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-03-D: 상단 헤더 물리적 격리 & 3-상태 FSM</h3>
+          </div>
+          <a href="/#labs?exp=exp03_d" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">상단 헤더를 높이가 줄어드는 본문 컨테이너 밖으로 완전히 물리적으로 분리하여 최상단에 고정하고, 입력 상태를 [닫힘 / 플로팅 활성 / 본문 활성] 3단계로 명확히 관리(FSM)하면 헤더 흔들림과 깜빡임을 모두 잡을 수 있다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">헤더 물리 격리 및 350ms rAF 락으로 상단 헤더 고정 달성</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">단일 스크롤로 매끄럽게 통합 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Safe Area Inset 제거 및 8px 초밀착 성공</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">PWA: 완벽 작동. 사파리: 뷰포트 리사이즈 전까지 앵커링 해제 지연</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">본문 폼 입력 시 플로팅 인풋 0px 자동 숨김 작동</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">사파리: 본문 포커스 아웃 시 플로팅 인풋이 화면 중간에 먼저 나타난 뒤 바닥으로 떨어지는 2단계 시차 잔존</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">상단 헤더를 물리적으로 분리하여 어떤 상황에서도 헤더가 1픽셀도 흔들리지 않는 고정을 달성했고 PWA에서는 완벽히 동작합니다. 그러나 일반 사파리 탭에서는 사파리가 키보드가 내려가는 0.35초 동안 화면 크기 변경 알림(visualViewport.resize)을 브라우저 툴바 보호를 위해 일부러 지연시킵니다. 이 때문에 키보드가 닫힐 때 플로팅 바가 화면 정중앙(508px 높이)에 먼저 툭 튀어나왔다가 0.35초 뒤 바닥으로 떨어지는 어색한 2단계 시차와 스크롤 늦은 복원이 관찰되었습니다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">사파리의 뒤늦은 알림(0.35초)을 수동적으로 기다리지 않고, 사용자가 입력창 바깥을 터치하여 포커스가 풀리는 0ms 즉시 [화면 전체 100dvh 복원 + 스크롤 원복 + 플로팅 바닥 안착]을 한 번에 일괄 실행하는 Focus-Driven 엔진(EXP-03-E, 최종 완성형)으로 연계합니다.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-e" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-winner">🏆 WINNER (채택)</span>
+            <h3>EXP-03-E: 원자적 뷰포트 복원 & 닫힘 시차 제어 (최종 완성형)</h3>
+          </div>
+          <a href="/#labs?exp=exp03_e" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">사파리 브라우저의 0.35초 지연 알림을 기다리지 않고, 사용자가 포커스를 해제하는 즉각(0ms) 화면 전체 복원과 스크롤 원복, 플로팅 바닥 안착을 단일 프레임에 원자적(Atomic)으로 일괄 실행하면, 화면 중간 뜸과 시차 없이 바닥에 즉시 매끄럽게 안착될 것이다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">헤더 물리 격리 및 350ms rAF 락으로 상단 헤더 고정 달성</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">단일 스크롤로 매끄럽게 통합 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Safe Area Inset 제거 및 8px 초밀착 성공</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">0.0px 오차: PWA 및 사파리 전 환경에서 지연 없는 즉각 스크롤 복원 달성</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">본문 폼 입력 시 플로팅 인풋 0px 자동 숨김 완벽 작동</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">중간 뜸 현상 완전 제거 및 닫힘 시 바닥 즉시 안착 완료</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">상단 헤더 고정, 단일 스크롤, 0.0px 바디 하단 스크롤 앵커링, Safe Area Inset 제거, 사파리 브라우저 탭 및 PWA 전 환경에서 중간 뜸/래그 완전 정복으로 네이티브 앱 수준의 최종 완성 달성.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">react-mobile-keyboard-layout 라이브러리의 최종 공식 프로덕션 엔진으로 채택 및 배포.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-f" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-winner">🏆 WINNER (채택)</span>
+            <h3>EXP-03-F: 뷰포트 경계 회피를 통한 사파리 개입 무력화</h3>
+          </div>
+          <a href="/#labs?exp=exp03_f" class="sandbox-btn" target="_blank">🎮 샌드박스 실행</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 실험 가설</div>
+          <p class="hypothesis-text">본문 최하단 인풋 포커스 시 스크롤 컨테이너 경계 근처의 인풋을 안쪽으로 살짝 정렬(안전 여백 16px, 데드존 2px)하여 사파리가 "이미 잘 보인다"고 판단하게 만들면, 키보드가 솟아오르다 다시 내려가는 충돌을 원천 방지할 수 있다.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 6대 평가 기준 매트릭스</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>평가 항목</th>
+                  <th style="width: 100px; text-align: center;">결과</th>
+                  <th>상세 결과 및 관찰 내용</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. 키보드 활성화 시 상단 헤더 고정</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">상단 헤더 0.0px 완전 고정 달성</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. 키보드 활성화 시 단일 스크롤 유지</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">단일 스크롤로 매끄럽게 통합 유지</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. 키보드 활성화 시 Safe Area Inset 제거</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Safe Area Inset 제거 및 8px 초밀착 성공</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. 키보드 활성화 시 바디 하단 스크롤 앵커링</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">안전 경계 정렬 중에도 스크롤 앵커링 완벽 보존</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. 본문 폼 입력 시 포커스 핸드오버</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">최하단 본문 인풋 포커스 시 키보드 튕김/내려감 현상 완전 차단</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. 본문 포커스 해제 시 깜빡임 없는 복원</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">중간 뜸 현상 완전 제거 및 닫힘 시 바닥 즉시 안착 완료</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 핵심 발견점 (Key Finding)</div>
+          <p class="finding-text">사파리의 개입을 "막는 것"과 "회피하는 것"은 전혀 다른 수단입니다. 앞선 해법들이 사파리의 쓰기를 차단하는 방향(scrollTo(0,0) 락, touch-action: none, preventScroll)이었던 것과 달리, 이번 해법은 사파리가 개입할 조건 자체를 없애는 방향입니다. (중요: 여기 쓰인 16px 경계 여백과 2px 데드존은 브라우저의 물리적 임계값이 아니라 육안으로 어색하지 않게 맞춘 시각적 튜닝 값입니다.)</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ 다음 설계 결정 (Next Decision)</div>
+          <p class="decision-text">core layoutRules의 alignElement 로직으로 공식 채택. 해당 16px/2px 수치는 육안으로 조율된 값이므로 추후 훅 옵션(alignPadding 등)으로 개방하여 사용자가 커스텀할 수 있도록 지원할 예정.</p>
+        </div>
+      </section>
+    </main>
+</body>
+</html>

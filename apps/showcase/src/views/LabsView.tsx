@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { SubpageLayout } from 'react-mobile-keyboard-layout'
 import { LABS_DATA, type LabInfo } from '../data/labsData'
 import { translations, type Language } from '../i18n'
@@ -11,7 +11,25 @@ interface LabsViewProps {
 
 export const LabsView = ({ lang, header }: LabsViewProps) => {
   const t = translations[lang]
-  const [activeLab, setActiveLab] = useState<LabInfo | null>(null)
+  const [activeLab, setActiveLab] = useState<LabInfo | null>(() => {
+    if (typeof window !== 'undefined' && window.location.hash.includes('exp=')) {
+      const expId = window.location.hash.split('exp=')[1]?.split('&')[0]
+      return LABS_DATA.find((l) => l.id === expId) ?? null
+    }
+    return null
+  })
+
+  useEffect(() => {
+    const handleHash = () => {
+      if (window.location.hash.includes('exp=')) {
+        const expId = window.location.hash.split('exp=')[1]?.split('&')[0]
+        const found = LABS_DATA.find((l) => l.id === expId)
+        if (found) setActiveLab(found)
+      }
+    }
+    window.addEventListener('hashchange', handleHash)
+    return () => window.removeEventListener('hashchange', handleHash)
+  }, [])
 
   const getStatusBadge = (status: LabInfo['status']) => {
     switch (status) {
@@ -30,7 +48,12 @@ export const LabsView = ({ lang, header }: LabsViewProps) => {
       <LabSandbox
         lab={activeLab}
         lang={lang}
-        onClose={() => setActiveLab(null)}
+        onClose={() => {
+          setActiveLab(null)
+          if (typeof window !== 'undefined') {
+            window.location.hash = '#labs'
+          }
+        }}
       />
     )
   }
@@ -38,9 +61,36 @@ export const LabsView = ({ lang, header }: LabsViewProps) => {
   return (
     <SubpageLayout header={header} title={t.labsArchiveTitle}>
       <div style={{ padding: '16px 16px 36px' }}>
-        <p style={{ fontSize: '13px', color: '#a1a1aa', marginBottom: '16px', lineHeight: '1.5' }}>
-          {t.labsArchiveSubtitle}
-        </p>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '16px',
+          gap: '10px',
+        }}>
+          <p style={{ fontSize: '13px', color: '#a1a1aa', lineHeight: '1.5', margin: 0 }}>
+            {t.labsArchiveSubtitle}
+          </p>
+          <a
+            href={lang === 'ko' ? '/labs.ko.html' : '/labs.html'}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              backgroundColor: '#272730',
+              border: '1px solid #3f3f4e',
+              color: '#60a5fa',
+              fontSize: '12px',
+              fontWeight: 600,
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+          >
+            📄 {lang === 'ko' ? '전체 문서 보기' : 'View Full Docs'}
+          </a>
+        </div>
 
         {/* Labs List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>react-mobile-keyboard-layout — Research & Experiments Archive</title>
+  <style>
+    :root {
+      --bg: #09090b;
+      --card-bg: #141418;
+      --border: #27272f;
+      --text: #f4f4f5;
+      --text-muted: #a1a1aa;
+      --primary: #3b82f6;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.6;
+      padding-bottom: 60px;
+    }
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(9, 9, 11, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand { display: flex; align-items: center; gap: 8px; }
+    .brand-title { font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 800;
+      background: #27272f;
+      color: #60a5fa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+    .header-actions { display: flex; gap: 10px; align-items: center; }
+    .btn-lang {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      transition: all 0.15s;
+    }
+    .btn-lang:hover { color: #fff; border-color: #52525b; }
+    .btn-primary {
+      background: #2563eb;
+      color: #fff;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .btn-primary:hover { background: #1d4ed8; }
+    .container { max-width: 960px; margin: 0 auto; padding: 30px 20px; }
+    .hero { margin-bottom: 32px; }
+    .hero h1 { font-size: 26px; font-weight: 800; margin-bottom: 10px; letter-spacing: -0.02em; }
+    .subtitle { color: var(--text-muted); font-size: 15px; line-height: 1.6; }
+    .toc-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 40px;
+    }
+    .toc-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+    .toc-grid { display: flex; flex-direction: column; gap: 20px; }
+    .toc-phase h3 { font-size: 14px; font-weight: 600; color: #60a5fa; margin-bottom: 10px; }
+    .toc-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px; }
+    .toc-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: #d4d4d8;
+      font-size: 13px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid transparent;
+      transition: all 0.15s;
+    }
+    .toc-item:hover { background: rgba(255,255,255,0.06); border-color: var(--border); color: #fff; }
+    .phase-divider {
+      margin: 50px 0 24px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .phase-divider h2 { font-size: 20px; font-weight: 700; color: #93c5fd; }
+    .lab-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 28px;
+      scroll-margin-top: 80px;
+    }
+    .lab-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .lab-title-group { display: flex; flex-direction: column; gap: 8px; }
+    .lab-title-group h3 { font-size: 18px; font-weight: 700; color: #fff; }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 9999px;
+      letter-spacing: 0.04em;
+    }
+    .status-winner { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid #22c55e; }
+    .status-progress { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid #3b82f6; }
+    .status-failed { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid #ef4444; }
+    .sandbox-btn {
+      background: #272730;
+      color: #f4f4f5;
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #3f3f4e;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .sandbox-btn:hover { background: #3f3f4e; color: #fff; }
+    .section-block { margin-top: 16px; }
+    .section-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .hypothesis-text {
+      background: #191920;
+      border-left: 3px solid #3b82f6;
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
+      font-size: 14px;
+      color: #e4e4e7;
+    }
+    .finding-text { font-size: 14px; color: #d4d4d8; line-height: 1.6; }
+    .decision-text { font-size: 14px; color: #93c5fd; line-height: 1.6; font-weight: 500; }
+    .table-wrapper { overflow-x: auto; margin-top: 6px; }
+    .eval-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .eval-table th {
+      background: #1a1a22;
+      color: var(--text-muted);
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .eval-table td {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      color: #d4d4d8;
+    }
+    .cell-criterion { font-weight: 600; color: #f4f4f5; }
+    .eval-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 9999px;
+    }
+    .badge-pass { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid #22c55e; }
+    .badge-fail { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid #ef4444; }
+    .badge-na { background: rgba(113, 113, 122, 0.15); color: #a1a1aa; border: 1px solid #52525b; }
+  </style>
+</head>
+<body>
+  
+  <header class="header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-title">react-mobile-keyboard-layout</span>
+        <span class="brand-badge">LABS ARCHIVE</span>
+      </div>
+      <div class="header-actions">
+        <a href="/labs.ko.html" class="btn-lang">한국어</a>
+        <a href="/#labs" class="btn-primary">🎮 Live Interactive Demo</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="hero">
+      <h1>🔬 react-mobile-keyboard-layout — Research & Experiments Archive</h1>
+      <p class="subtitle">
+        A complete historical record of 14 controlled single-variable experiments conducted to achieve zero-shift headers, 0.0px scroll anchoring, and seamless floating inputs on mobile web & iOS Safari/PWA.
+      </p>
+    </div>
+
+    <nav class="toc-card">
+      <h2>📑 Table of Contents</h2>
+      <div class="toc-grid">
+  
+        <div class="toc-phase">
+          <h3>Phase 1: Pure CSS Limits & Fixed Positioning</h3>
+          <div class="toc-list">
+      
+      <a href="#exp01-a" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-01-A: Baseline Standard Fixed</span>
+      </a>
+    
+      <a href="#exp01-b" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-01-B: Dynamic Safe Area Inset</span>
+      </a>
+    
+      <a href="#exp01-c" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-01-C: Document Scroll Lock</span>
+      </a>
+    
+      <a href="#exp01-d" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-01-D: Pure CSS 100dvh In-Flow</span>
+      </a>
+    </div></div>
+        <div class="toc-phase">
+          <h3>Phase 2: Dynamic Viewport & Scroll Coordination</h3>
+          <div class="toc-list">
+      
+      <a href="#exp02-a" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-02-A: Dynamic visualViewport Binding</span>
+      </a>
+    
+      <a href="#exp02-b" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-02-B: Top Anchor & Focus Scroll Lock</span>
+      </a>
+    
+      <a href="#exp02-c" class="toc-item">
+        <span class="badge status-failed">FAILED</span>
+        <span class="toc-label">EXP-02-C: Transform translateY Offset Tracking</span>
+      </a>
+    
+      <a href="#exp02-d" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-02-D: Zero-Jank Input Shell Touch Lock</span>
+      </a>
+    </div></div>
+        <div class="toc-phase">
+          <h3>Phase 3: Focus-Driven State Machine & Boundary Evasion</h3>
+          <div class="toc-list">
+      
+      <a href="#exp03-a" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-03-A: Zero-Gap Inset & Compact Snap</span>
+      </a>
+    
+      <a href="#exp03-b" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-03-B: Body ResizeObserver Scroll Anchoring</span>
+      </a>
+    
+      <a href="#exp03-c" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-03-C: Inline Focus Handover & Floating Suppression</span>
+      </a>
+    
+      <a href="#exp03-d" class="toc-item">
+        <span class="badge status-progress">PROGRESS</span>
+        <span class="toc-label">EXP-03-D: Isolated Fixed Header & 3-State FSM</span>
+      </a>
+    
+      <a href="#exp03-e" class="toc-item">
+        <span class="badge status-winner">WINNER</span>
+        <span class="toc-label">EXP-03-E: Atomic Viewport Restoration & Dismiss Sync (FINAL)</span>
+      </a>
+    
+      <a href="#exp03-f" class="toc-item">
+        <span class="badge status-winner">WINNER</span>
+        <span class="toc-label">EXP-03-F: In-Viewport Boundary Evasion</span>
+      </a>
+    </div></div></div></nav><div class="phase-divider"><h2>Phase 1: Pure CSS Limits & Fixed Positioning</h2></div>
+      <section id="exp01-a" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-01-A: Baseline Standard Fixed</h3>
+          </div>
+          <a href="/#labs?exp=exp01_a" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Standard CSS position: fixed with safe-area padding can anchor the input at the bottom on iOS Safari.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Header pushed off-screen as Safari pans window up</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Dual-scroll occurs when scrolling on input area</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">34px Safe Area Inset gap remains above keyboard</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Safari pans window up, naturally keeping body bottom above input</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">position: fixed structure causes top header loss, dual-scroll collision on input dragging, and leaves an unnecessary 34px Safe Area Inset gap above the keyboard.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Branch into EXP-01-B to try removing the 34px Safe Area Inset gap dynamically while keeping position: fixed.</p>
+        </div>
+      </section>
+    
+      <section id="exp01-b" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-01-B: Dynamic Safe Area Inset</h3>
+          </div>
+          <a href="/#labs?exp=exp01_b" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Detecting keyboard open via visualViewport height contraction and reducing safe-area padding from 34px to 0px will snap input to keyboard.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Header pushed off-screen as Safari pans window up</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Dual-scroll occurs when scrolling on input area</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">34px Safe Area Inset padding remains despite dynamic padding change attempt</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Safari pans window up, naturally keeping body bottom above input</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">In pure position: fixed layout, collapsing safe-area padding dynamically upon viewport contraction fails to eliminate the 34px gap above keyboard.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Branch into EXP-01-C to test locking window scroll at (0,0) on focus to pin the top header.</p>
+        </div>
+      </section>
+    
+      <section id="exp01-c" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-01-C: Document Scroll Lock</h3>
+          </div>
+          <a href="/#labs?exp=exp01_c" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Forcing window scroll to (0,0) on input focus will keep the top header firmly pinned at the top of the screen.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Header stays at (0,0) top position</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Input drops to bottom and is completely covered by keyboard</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Input invisible behind keyboard</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Scroll resets to 0, losing body bottom anchor</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">Locking window scroll to (0,0) preserves the top header but completely buries the fixed input behind the keyboard.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Abandon position: fixed and test modern CSS 100dvh In-Flow Flexbox layout in EXP-01-D.</p>
+        </div>
+      </section>
+    
+      <section id="exp01-d" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-01-D: Pure CSS 100dvh In-Flow</h3>
+          </div>
+          <a href="/#labs?exp=exp01_d" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">CSS 100dvh unit with In-Flow Flexbox will auto-shrink container on keyboard open without JavaScript.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">100dvh ignores virtual keyboard, causing window to pan</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Dual-scroll occurs when scrolling on input area</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Layout clipping on drag</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Body bottom preserved via window shift</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">iOS WebKit specification explicitly restricts 100dvh to browser URL bar changes, completely ignoring virtual keyboard. Pure CSS approach is officially exhausted.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Conclude Phase 1 (Pure CSS). Transition to Phase 2 by binding window.visualViewport height directly to Flex container in EXP-02-A.</p>
+        </div>
+      </section>
+    <div class="phase-divider"><h2>Phase 2: Dynamic Viewport & Scroll Coordination</h2></div>
+      <section id="exp02-a" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-02-A: Dynamic visualViewport Binding</h3>
+          </div>
+          <a href="/#labs?exp=exp02_a" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Injecting measured visualViewport.height directly into Flex container height will fit layout cleanly to visible screen.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">WebKit focus scroll push creates 336px empty gap</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Single unified In-Flow scroll verified</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">336px empty space remains before manual scroll</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Reading anchor displaced by 336px</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">In-Flow Flex 3-section structure is effective, but WebKit focus scroll pushes container up, exposing a 336px gap below input.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Test top: 0 anchor lock (EXP-02-B) vs transform offset tracking (EXP-02-C) to eliminate the 336px bottom gap.</p>
+        </div>
+      </section>
+    
+      <section id="exp02-b" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-02-B: Top Anchor & Focus Scroll Lock</h3>
+          </div>
+          <a href="/#labs?exp=exp02_b" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Pinning container top: 0 and locking window scroll to (0,0) will conceal the 336px gap under the keyboard.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Header firmly pinned to top (window scroll locked at 0)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Single unified scroll maintained cleanly</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">34px Safe Area Inset gap remains</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Reading line jumps on height contraction</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">visualViewport 1:1 binding successfully seats input on keyboard. However, in Safari browser mode, keyboard dismiss follow lag is first observed due to throttled resize events.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Apply touch-action: none on input shell in EXP-02-D to eliminate the touch jitter.</p>
+        </div>
+      </section>
+    
+      <section id="exp02-c" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-failed">❌ FAILED (탈락)</span>
+            <h3>EXP-02-C: Transform translateY Offset Tracking</h3>
+          </div>
+          <a href="/#labs?exp=exp02_c" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Tracking visualViewport offsetTop and applying transform: translateY without locking scroll will keep container aligned with visible area.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Stuttering follow lag: Container jitters and chases offset when rubbing input bar</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Massive empty gap exposed below input as container lags behind</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">34px Safe Area Inset gap remains above keyboard</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Body bottom scroll anchoring jitters during movement</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">Chasing offset post-event exposes a massive bottom gap, causes stuttering follow lag on dragging, and makes container slide up from bottom on dismiss.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Permanently abandon post-event offset tracking and commit to pre-emptive top: 0 anchor lock (02-B / 02-D).</p>
+        </div>
+      </section>
+    
+      <section id="exp02-d" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-02-D: Zero-Jank Input Shell Touch Lock</h3>
+          </div>
+          <a href="/#labs?exp=exp02_d" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Adding touch-action: none on input shell will block the browser from initiating outer scroll gestures.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Header firmly pinned to top (window scroll locked at 0)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">0-pixel motionless lock achieved when dragging input shell</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">34px Safe Area Inset gap remains</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Reading line shifts on container resize</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">Input shell remains 100% motionless even during aggressive dragging, completing the core viewport lock architecture.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Conclude Phase 2. Move to Phase 3 (EXP-03-A) to eliminate the 34px Safe Area Inset gap and implement body scroll anchoring.</p>
+        </div>
+      </section>
+    <div class="phase-divider"><h2>Phase 3: Focus-Driven State Machine & Boundary Evasion</h2></div>
+      <section id="exp03-a" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-03-A: Zero-Gap Inset & Compact Snap</h3>
+          </div>
+          <a href="/#labs?exp=exp03_a" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Collapsing safe-area padding to 0px on keyboard open will snap the input bar with compact 8px margin.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Header firmly pinned to top</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Input perfectly visible with unified scroll</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">34px Safe Area Inset eliminated; snaps with 8px compact margin</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Body shrinks by contraction amount (~300px+), burying bottom reading position behind keyboard</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">Collapsing Safe Area Inset to 0px achieves 8px compact snap. However, with Flexbox top fixed, body height contraction swallows the bottom reading area behind the keyboard.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Measure body height contraction via ResizeObserver and compensate scroll offset in real-time in EXP-03-B.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-b" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-03-B: Body ResizeObserver Scroll Anchoring</h3>
+          </div>
+          <a href="/#labs?exp=exp03_b" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Freezing baseline scroll position and compensating scroll offset by exact body height contraction will keep bottom reading line anchored with 0.0px drift.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Header firmly pinned to top</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Unified single scroll verified</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">8px bottom snap preserved</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">PWA: 0.0px anchor works. Safari: Intermittently maintained, but mostly un-anchored on repeated trials</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">Focus handover not in scope (introduced in EXP-03-C)</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-na">N/A</span></td>
+          <td class="cell-comment">FSM restoration not in scope (introduced in EXP-03-D)</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">PWA achieves clean 0.0px anchoring, but in Safari browser mode, throttled viewport events cause the anchor to unbind late or fail on repeated attempts. Inline body inputs also collide with floating bar.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Implement body form input focus handover and floating suppression (0px collapse) in EXP-03-C.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-c" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-03-C: Inline Focus Handover & Floating Suppression</h3>
+          </div>
+          <a href="/#labs?exp=exp03_c" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Suppressing floating input to 0px when body inline form input is focused will secure body input space, restoring it on blur.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Header firmly pinned to top</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Unified single scroll verified</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">8px snap preserved</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Anchoring latency persists in Safari browser mode</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Floating bar collapses to 0px when typing in body form</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Momentary flicker on keyboard dismiss after body input blur in Safari</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">Body form input suppression succeeds in securing viewport space. However, Safari viewport latency creates dismiss flicker, and shrinking container still tugs header on edge cases.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">While hiding the floating bar on body focus works, the header is still trapped inside the resizing container, bouncing on keyboard pop-up. Also, lack of a 3-state machine causes dismiss flicker. Thus, we isolate the header physically outside the resizing container and introduce a 3-state input FSM in EXP-03-D.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-d" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-progress">🔄 PROGRESS (과도기)</span>
+            <h3>EXP-03-D: Isolated Fixed Header & 3-State FSM</h3>
+          </div>
+          <a href="/#labs?exp=exp03_d" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Decoupling header physically outside resizing container + tracking 3 distinct input states (Closed / Floating / Body) will eliminate header bounce and layout flicker.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Header physically isolated; motionless top-lock achieved</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Single unified scroll with 100% feed reachability</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Safe Area removed on open; snaps with compact margin</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">PWA: Flawless. Safari: Anchoring lags until viewport resize fires</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Floating bar suppresses to 0px seamlessly during body form input</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-fail">FAIL</span></td>
+          <td class="cell-comment">Safari: Floating input appears mid-screen before dropping to bottom on blur</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">Physical header isolation achieves 100% motionless header lock and runs flawlessly in PWA. However, in Safari browser mode, Safari throttles viewport resize events for 350ms on keyboard dismiss, causing the floating bar to pop up mid-screen (at 508px height) before dropping to bottom, along with late scroll un-anchoring.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Abandon passive viewport waiting (waiting for 350ms resize event) and implement Focus-Driven Atomic Teardown in EXP-03-E to restore full-screen height, scroll position, and bottom bar instantaneously at 0ms upon touch.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-e" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-winner">🏆 WINNER (채택)</span>
+            <h3>EXP-03-E: Atomic Viewport Restoration & Dismiss Sync (FINAL)</h3>
+          </div>
+          <a href="/#labs?exp=exp03_e" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">Atomically restoring full-screen height, scroll position, and floating input bottom placement synchronously at 0ms upon blur will eliminate the mid-screen pop and dismiss latency entirely.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Header physically isolated; motionless top-lock achieved</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Single unified scroll with 100% feed reachability</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Safe Area removed on open; snaps with compact margin</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Zero drift: Flawless instant scroll anchor restoration across PWA & Safari</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Floating bar suppresses to 0px seamlessly during body form input</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Zero mid-screen pop; floating bar seats cleanly at bottom on dismiss</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">Native App Parity achieved: Flawless header top-lock, single unified scroll, 0.0px Body Bottom Scroll Anchoring, and zero mid-screen lag during dismissal across iOS Safari & PWA.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Adopted as the core production engine of react-mobile-keyboard-layout library.</p>
+        </div>
+      </section>
+    
+      <section id="exp03-f" class="lab-card">
+        <div class="lab-header">
+          <div class="lab-title-group">
+            <span class="badge status-winner">🏆 WINNER (채택)</span>
+            <h3>EXP-03-F: In-Viewport Boundary Evasion</h3>
+          </div>
+          <a href="/#labs?exp=exp03_f" class="sandbox-btn" target="_blank">🎮 Run Sandbox</a>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">🎯 Hypothesis</div>
+          <p class="hypothesis-text">When a focused body input is near scroll container boundaries, gently nudge it inwards (safe padding 16px, deadzone 2px) so Safari considers it already fully visible, preventing Safari from bouncing the keyboard back down.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">📊 Evaluation Criteria Matrix</div>
+          <div class="table-wrapper">
+            <table class="eval-table">
+              <thead>
+                <tr>
+                  <th>Criterion</th>
+                  <th style="width: 100px; text-align: center;">Status</th>
+                  <th>Observed Details</th>
+                </tr>
+              </thead>
+              <tbody>
+    
+        <tr>
+          <td class="cell-criterion">1-1. Header Pinned on Keyboard Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Header motionless and locked at top</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-2. Single Unified Scroll Maintained</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Single unified scroll with 100% feed reachability</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-3. Safe Area Inset Removed on Open</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Safe Area removed on open; snaps with compact margin</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">1-4. Body Bottom Scroll Anchoring</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Scroll anchor preserved during safe boundary alignment</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">2-1. Inline Form Focus Handover</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Bottom body input stays fully stable without keyboard bounce</td>
+        </tr>
+      
+        <tr>
+          <td class="cell-criterion">3-1. Zero-Flicker Dismiss Restoration</td>
+          <td style="text-align: center;"><span class="eval-badge badge-pass">PASS</span></td>
+          <td class="cell-comment">Zero mid-screen pop; clean dismiss restoration</td>
+        </tr>
+      
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">💡 Key Finding</div>
+          <p class="finding-text">Avoiding Safari intervention is fundamentally different from blocking it. While previous solutions attempted to block Safari writes (scrollTo(0,0) lock, touch-action: none, preventScroll), this solution eliminates the trigger condition itself. Note: The 16px boundary padding and 2px subpixel deadzone are visually tuned ergonomic values for smooth feel, not browser threshold constants.</p>
+        </div>
+
+        <div class="section-block">
+          <div class="section-label">➡️ Next Decision</div>
+          <p class="decision-text">Integrated into core layoutRules alignElement logic. Because the 16px and 2px values were empirically tuned by sight, they should be exposed as customizable options (e.g. alignPadding) in the public hook API.</p>
+        </div>
+      </section>
+    </main>
+</body>
+</html>

@@ -395,4 +395,32 @@ export const LABS_DATA: LabInfo[] = [
       ko: 'react-mobile-keyboard-layout 라이브러리의 최종 공식 프로덕션 엔진으로 채택 및 배포.',
     },
   },
+  {
+    id: 'exp03_f',
+    status: 'winner',
+    title: {
+      en: 'EXP-03-F: In-Viewport Boundary Evasion',
+      ko: 'EXP-03-F: 뷰포트 경계 회피를 통한 사파리 개입 무력화',
+    },
+    hypothesis: {
+      en: 'When a focused body input is near scroll container boundaries, gently nudge it inwards (safe padding 16px, deadzone 2px) so Safari considers it already fully visible, preventing Safari from bouncing the keyboard back down.',
+      ko: '본문 최하단 인풋 포커스 시 스크롤 컨테이너 경계 근처의 인풋을 안쪽으로 살짝 정렬(안전 여백 16px, 데드존 2px)하여 사파리가 "이미 잘 보인다"고 판단하게 만들면, 키보드가 솟아오르다 다시 내려가는 충돌을 원천 방지할 수 있다.',
+    },
+    evaluations: [
+      { id: '1-1', status: 'pass', comment: { en: 'Header motionless and locked at top', ko: '상단 헤더 0.0px 완전 고정 달성' } },
+      { id: '1-2', status: 'pass', comment: { en: 'Single unified scroll with 100% feed reachability', ko: '단일 스크롤로 매끄럽게 통합 유지' } },
+      { id: '1-3', status: 'pass', comment: { en: 'Safe Area removed on open; snaps with compact margin', ko: 'Safe Area Inset 제거 및 8px 초밀착 성공' } },
+      { id: '1-4', status: 'pass', comment: { en: 'Scroll anchor preserved during safe boundary alignment', ko: '안전 경계 정렬 중에도 스크롤 앵커링 완벽 보존' } },
+      { id: '2-1', status: 'pass', comment: { en: 'Bottom body input stays fully stable without keyboard bounce', ko: '최하단 본문 인풋 포커스 시 키보드 튕김/내려감 현상 완전 차단' } },
+      { id: '3-1', status: 'pass', comment: { en: 'Zero mid-screen pop; clean dismiss restoration', ko: '중간 뜸 현상 완전 제거 및 닫힘 시 바닥 즉시 안착 완료' } },
+    ],
+    keyFinding: {
+      en: 'Avoiding Safari intervention is fundamentally different from blocking it. While previous solutions attempted to block Safari writes (scrollTo(0,0) lock, touch-action: none, preventScroll), this solution eliminates the trigger condition itself. Note: The 16px boundary padding and 2px subpixel deadzone are visually tuned ergonomic values for smooth feel, not browser threshold constants.',
+      ko: '사파리의 개입을 "막는 것"과 "회피하는 것"은 전혀 다른 수단입니다. 앞선 해법들이 사파리의 쓰기를 차단하는 방향(scrollTo(0,0) 락, touch-action: none, preventScroll)이었던 것과 달리, 이번 해법은 사파리가 개입할 조건 자체를 없애는 방향입니다. (중요: 여기 쓰인 16px 경계 여백과 2px 데드존은 브라우저의 물리적 임계값이 아니라 육안으로 어색하지 않게 맞춘 시각적 튜닝 값입니다.)',
+    },
+    nextDecision: {
+      en: 'Integrated into core layoutRules alignElement logic. Because the 16px and 2px values were empirically tuned by sight, they should be exposed as customizable options (e.g. alignPadding) in the public hook API.',
+      ko: 'core layoutRules의 alignElement 로직으로 공식 채택. 해당 16px/2px 수치는 육안으로 조율된 값이므로 추후 훅 옵션(alignPadding 등)으로 개방하여 사용자가 커스텀할 수 있도록 지원할 예정.',
+    },
+  },
 ]
