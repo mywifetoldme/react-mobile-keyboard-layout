@@ -181,11 +181,13 @@ export const createDefaultLayoutRules = (keyboardThreshold = 100): LayoutRule<un
               }
 
               if (Math.abs(diff) > 2) {
-                if (typeof bodyEl.scrollTo === 'function') {
-                  bodyEl.scrollTo({ top: bodyEl.scrollTop + diff, behavior: 'smooth' })
-                } else {
-                  bodyEl.scrollTop += diff
-                }
+                ctx.ignoreScrollEventsFor(400, () => {
+                  if (typeof bodyEl.scrollTo === 'function') {
+                    bodyEl.scrollTo({ top: bodyEl.scrollTop + diff, behavior: 'smooth' })
+                  } else {
+                    bodyEl.scrollTop += diff
+                  }
+                })
               }
             }
             if (typeof requestAnimationFrame !== 'undefined') {

@@ -52,6 +52,11 @@ export interface LayoutContext {
   applyScrollOffset: (currHeight: number) => void
   updateClosedScrollTop: (st: number) => void
   updateClosedHeight: (h: number) => void
+  /**
+   * Temporarily suppresses incoming browser `scroll` event baseline synchronization
+   * during smooth / programmatic scroll execution, preventing animation frames from corrupting S_0.
+   */
+  ignoreScrollEventsFor: (durationMs: number, action?: () => void) => void
   setState: (partial: Partial<LayoutState>) => void
 }
 
