@@ -369,10 +369,10 @@ export const LABS_DATA: LabInfo[] = [
   },
   {
     id: 'exp03_e',
-    status: 'winner',
+    status: 'progress',
     title: {
-      en: 'EXP-03-E: Atomic Viewport Restoration & Dismiss Sync (FINAL)',
-      ko: 'EXP-03-E: 원자적 뷰포트 복원 & 닫힘 시차 제어 (최종 완성형)',
+      en: 'EXP-03-E: Atomic Viewport Restoration & Dismiss Sync',
+      ko: 'EXP-03-E: 원자적 뷰포트 복원 & 닫힘 시차 제어',
     },
     hypothesis: {
       en: 'Atomically restoring full-screen height, scroll position, and floating input bottom placement synchronously at 0ms upon blur will eliminate the mid-screen pop and dismiss latency entirely.',
@@ -383,12 +383,40 @@ export const LABS_DATA: LabInfo[] = [
       { id: '1-2', status: 'pass', comment: { en: 'Single unified scroll with 100% feed reachability', ko: '단일 스크롤로 매끄럽게 통합 유지' } },
       { id: '1-3', status: 'pass', comment: { en: 'Safe Area removed on open; snaps with compact margin', ko: 'Safe Area Inset 제거 및 8px 초밀착 성공' } },
       { id: '1-4', status: 'pass', comment: { en: 'Zero drift: Flawless instant scroll anchor restoration across PWA & Safari', ko: '0.0px 오차: PWA 및 사파리 전 환경에서 지연 없는 즉각 스크롤 복원 달성' } },
-      { id: '2-1', status: 'pass', comment: { en: 'Floating bar suppresses to 0px seamlessly during body form input', ko: '본문 폼 입력 시 플로팅 인풋 0px 자동 숨김 완벽 작동' } },
+      { id: '2-1', status: 'fail', comment: { en: 'Bottom inline input triggers Safari viewport compositor collision (keyboard bounce)', ko: '최하단 본문 인풋 터치 시 사파리 C++ 뷰포트 강제 스크롤과 충돌하여 키보드가 솟아오르다 즉시 닫힘' } },
       { id: '3-1', status: 'pass', comment: { en: 'Zero mid-screen pop; floating bar seats cleanly at bottom on dismiss', ko: '중간 뜸 현상 완전 제거 및 닫힘 시 바닥 즉시 안착 완료' } },
     ],
     keyFinding: {
-      en: 'Native App Parity achieved: Flawless header top-lock, single unified scroll, 0.0px Body Bottom Scroll Anchoring, and zero mid-screen lag during dismissal across iOS Safari & PWA.',
-      ko: '상단 헤더 고정, 단일 스크롤, 0.0px 바디 하단 스크롤 앵커링, Safe Area Inset 제거, 사파리 브라우저 탭 및 PWA 전 환경에서 중간 뜸/래그 완전 정복으로 네이티브 앱 수준의 최종 완성 달성.',
+      en: 'Atomic viewport restoration eliminates mid-screen pop and dismiss latency. However, when tapping an inline text input positioned near the bottom edge of the scroll container, Safari WebKit internal viewport heuristics forcibly scroll the window to bring the input into view, conflicting with body contraction and causing the keyboard to immediately bounce back down.',
+      ko: '원자적 복원으로 화면 중간 뜸과 닫힘 시차는 완벽히 해결함. 그러나 본문 최하단에 위치한 폼 인풋을 터치할 경우, 사파리 WebKit의 C++ 뷰포트 강제 스크롤 휴리스틱이 바디 높이 축소와 충돌하여 키보드가 올라오다 도로 닫혀버리는(Bounce & Dismiss) 치명적 결함 발견.',
+    },
+    nextDecision: {
+      en: 'Develop In-Viewport Boundary Evasion in EXP-03-F (FINAL WINNER): Proactively align focused body inputs into the safe visible zone ([topLimit, bottomLimit] with 16px padding), completely neutralizing Safari aggressive compositor scroll heuristics before they can trigger.',
+      ko: '사파리 엔진이 개입할 물리적 조건 자체를 사전에 무력화하기 위해, 포커스된 본문 인풋을 안전 가시 영역([topLimit, bottomLimit] 내 16px 패딩) 안쪽으로 사전 정렬하는 경계 회피 전략(EXP-03-F, 최종 완성형)으로 연계.',
+    },
+  },
+  {
+    id: 'exp03_f',
+    status: 'winner',
+    title: {
+      en: 'EXP-03-F: In-Viewport Boundary Evasion (FINAL WINNER)',
+      ko: 'EXP-03-F: 뷰포트 경계 회피를 통한 사파리 개입 무력화 (최종 완성형)',
+    },
+    hypothesis: {
+      en: 'Proactively aligning focused body elements within [topLimit, bottomLimit] with 16px safe padding will eliminate the trigger condition for Safari aggressive compositor scroll, achieving 100% stable keyboard presentation on bottom inputs.',
+      ko: '포커스된 본문 인풋이 화면 경계(상단 헤더 아래, 하단 키보드 위)에 걸치지 않도록 안전 여백(16px)으로 부드럽게 사전 정렬하면 사파리의 강제 스크롤 개입 조건을 원천 차단하여 최하단 인풋에서도 키보드 튕김 없이 완벽히 동작할 것이다.',
+    },
+    evaluations: [
+      { id: '1-1', status: 'pass', comment: { en: 'Header motionless and locked at top', ko: '상단 헤더 0.0px 완전 고정 달성' } },
+      { id: '1-2', status: 'pass', comment: { en: 'Single unified scroll with 100% feed reachability', ko: '단일 스크롤로 매끄럽게 통합 유지' } },
+      { id: '1-3', status: 'pass', comment: { en: 'Safe Area removed on open; snaps with compact margin', ko: 'Safe Area Inset 제거 및 8px 초밀착 성공' } },
+      { id: '1-4', status: 'pass', comment: { en: 'Scroll anchor preserved during safe boundary alignment', ko: '안전 경계 정렬 중에도 스크롤 앵커링 완벽 보존' } },
+      { id: '2-1', status: 'pass', comment: { en: 'Bottom body input stays fully stable without keyboard bounce', ko: '최하단 본문 인풋 포커스 시 키보드 튕김/내려감 현상 완전 차단' } },
+      { id: '3-1', status: 'pass', comment: { en: 'Zero mid-screen pop; clean dismiss restoration', ko: '중간 뜸 현상 완전 제거 및 닫힘 시 바닥 즉시 안착 완료' } },
+    ],
+    keyFinding: {
+      en: '100% Native App Parity Achieved! Preemptive boundary evasion completely disarms Safari native layout push without fighting browser compositor threads. Combined with declarative FSM and zero-shift scroll restoration, all 6 evaluation criteria pass across iOS Safari and PWA.',
+      ko: '네이티브 앱 수준의 최종 완성 달성! 브라우저와 억지로 싸우는 대신 사파리의 개입 조건 자체를 사전에 소멸시키는 "경계 회피(Evasion)" 전략으로 최하단 인풋 키보드 튕김까지 완벽 정복. 상단 헤더 0.0px 고정, 단일 통합 스크롤, 기준 좌표 무손실 복원까지 6개 평가 항목 100% All Pass 달성.',
     },
     nextDecision: {
       en: 'Adopted as the core production engine of react-mobile-keyboard-layout library.',

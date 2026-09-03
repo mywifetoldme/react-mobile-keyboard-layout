@@ -6,6 +6,14 @@ import {
   FloatingInput,
   useMobileKeyboard,
   isKeyboardTextInput,
+  isTextInput,
+  isInsideFloating,
+  isInsideBody,
+  isNoNextTextInput,
+  hasActiveTextInput,
+  isTouchDevice,
+  isKeyboardClosed,
+  type LayoutRule,
 } from 'react-mobile-keyboard-layout'
 
 interface LabSandboxProps {
@@ -1897,12 +1905,105 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
 }
 
 /* ==========================================================================
-   13. EXP-03-E: FINAL (Atomic Viewport Restoration & Dismiss Sync)
+   13. EXP-03-E: Atomic Viewport Restoration & Dismiss Sync (Bottom Input Collision Defect)
    ========================================================================== */
+
+const exp03ERules: LayoutRule[] = [
+  {
+    on: 'focusin',
+    when: [isTextInput, isInsideFloating],
+    apply: (e, ctx) => {
+      const ev = e as FocusEvent
+      ctx.captureBaselineAnchor()
+      ctx.lockWindowTop()
+      return {
+        focusTarget: { type: 'floating', element: ev.target as HTMLElement },
+      }
+    },
+  },
+  {
+    on: 'focusin',
+    when: [isTextInput, isInsideBody],
+    apply: (e, ctx) => {
+      const ev = e as FocusEvent
+      ctx.lockWindowTop()
+      return {
+        focusTarget: { type: 'body-inline', element: ev.target as HTMLElement },
+      }
+    },
+  },
+  {
+    on: 'focusout',
+    when: [isTextInput, isNoNextTextInput],
+    apply: (_, ctx) => {
+      const wasFloating = ctx.state.focusTarget.type === 'floating'
+      ctx.lockWindowTop()
+      if (wasFloating) {
+        ctx.restoreBaselineScroll()
+      }
+      return {
+        focusTarget: { type: 'none' },
+        isKeyboardOpen: false,
+        vvHeight: null,
+      }
+    },
+  },
+  {
+    on: 'visualViewport.resize',
+    when: [hasActiveTextInput],
+    apply: (_, ctx) => {
+      if (typeof window === 'undefined' || !window.visualViewport) return
+      const vv = window.visualViewport
+      const currentH = vv.height
+      const screenH = window.innerHeight || currentH
+      const open = screenH - currentH > 100 && isTouchDevice()
+
+      ctx.lockWindowTop()
+      if (open && !ctx.state.isKeyboardOpen) {
+        if (ctx.state.focusTarget.type === 'floating') {
+          ctx.captureBaselineAnchor()
+        }
+        // NOTE: In EXP-03-E, there was NO alignElement boundary evasion here!
+      }
+
+      if (open && ctx.state.focusTarget.type === 'floating') {
+        ctx.applyScrollOffset(currentH)
+      }
+
+      return {
+        isKeyboardOpen: open,
+        vvHeight: open ? currentH : null,
+      }
+    },
+  },
+  {
+    on: 'pointerdown',
+    when: [isTextInput],
+    apply: (e, ctx) => {
+      ctx.lockWindowTop()
+      const target = (e as PointerEvent).target as HTMLElement | null
+      if (target && typeof target.focus === 'function') {
+        target.focus({ preventScroll: true })
+      }
+    },
+  },
+  {
+    on: 'scroll',
+    when: [isKeyboardClosed],
+    apply: (_, ctx) => {
+      const el = ctx.refs.bodyRef?.current
+      if (el) {
+        ctx.updateClosedScrollTop(el.scrollTop)
+        ctx.updateClosedHeight(el.clientHeight)
+      }
+    },
+  },
+]
 
 function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [floatingVal, setFloatingVal] = useState('')
   const [bodyVal, setBodyVal] = useState('')
+  const [bottomInputVal, setBottomInputVal] = useState('')
   const [dateVal, setDateVal] = useState('2026-09-01')
   const [messages, setMessages] = useState<string[]>([])
   const [scrollY, setScrollY] = useState(0)
@@ -1914,8 +2015,110 @@ function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // EXP-03-E does NOT have boundary evasion (alignElement), reproducing Safari bottom collision
   const engine = useMobileKeyboard({
     bodyRef,
+    rules: exp03ERules,
+  })
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
+  return (
+    <SubpageLayout
+      keyboardEngine={engine}
+      bodyRef={bodyRef}
+      style={{ zIndex: 300 }}
+      header={<LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />}
+      footer={
+        <FloatingInput
+          value={floatingVal}
+          onChange={setFloatingVal}
+          onSubmit={handleSubmit}
+          placeholder={lang === 'ko' ? 'EXP-03-E: 플로팅 인풋...' : 'EXP-03-E: Floating input...'}
+          {...engine.floatingProps}
+          isSuppressed={engine.isFloatingSuppressed}
+          isKeyboardOpen={engine.isKeyboardOpen}
+        />
+      }
+    >
+      <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <LabHeroSection lab={lab} lang={lang} />
+        <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
+
+        {/* Bottom edge input to demonstrate un-evaded Safari collision in EXP-03-E */}
+        <div style={{
+          padding: '12px',
+          borderRadius: '12px',
+          backgroundColor: 'rgba(239, 68, 68, 0.08)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#f87171' }}>
+            ⚠️ {lang === 'ko' ? '최하단 본문 인풋 (사파리 충돌 결함 재현)' : 'Bottom-Edge Input (Safari Collision Defect)'}
+          </div>
+          <input
+            type="text"
+            value={bottomInputVal}
+            onChange={(e) => setBottomInputVal(e.target.value)}
+            placeholder={lang === 'ko' ? 'EXP-03-E: 터치 시 사파리 충돌(키보드 튕김) 관찰...' : 'EXP-03-E: Notice keyboard bounce on Safari...'}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              minHeight: '40px',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: '1px solid #ef4444',
+              backgroundColor: '#09090b',
+              color: '#f4f4f5',
+              fontSize: '14px',
+              outline: 'none',
+            }}
+          />
+          <div style={{ fontSize: '11px', color: '#fca5a5', lineHeight: '1.4' }}>
+            {lang === 'ko'
+              ? '사파리에서 이 인풋을 터치하면 경계 회피가 없어 사파리 C++ 스크롤과 바디 축소가 충돌하여 키보드가 닫히거나 덜컹거립니다.'
+              : 'Without boundary evasion, Safari compositor scroll collides with body contraction, causing keyboard bounce.'}
+          </div>
+        </div>
+
+        <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
+        <div style={{ height: '40px', flexShrink: 0 }} />
+      </div>
+    </SubpageLayout>
+  )
+}
+
+/* ==========================================================================
+   14. EXP-03-F: FINAL WINNER (In-Viewport Boundary Evasion)
+   ========================================================================== */
+
+function Exp03FSandbox({ lab, lang, onClose }: LabSandboxProps) {
+  const [floatingVal, setFloatingVal] = useState('')
+  const [bodyVal, setBodyVal] = useState('')
+  const [bottomInputVal, setBottomInputVal] = useState('')
+  const [dateVal, setDateVal] = useState('2026-09-01')
+  const [messages, setMessages] = useState<string[]>([])
+  const [scrollY, setScrollY] = useState(0)
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // EXP-03-F: Uses production engine with In-Viewport Boundary Evasion (alignPadding: 16)
+  const engine = useMobileKeyboard({
+    bodyRef,
+    alignPadding: 16,
   })
 
   const handleSubmit = () => {
@@ -1945,6 +2148,45 @@ function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
       <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
+
+        {/* Bottom edge input to demonstrate successful In-Viewport Boundary Evasion in EXP-03-F */}
+        <div style={{
+          padding: '12px',
+          borderRadius: '12px',
+          backgroundColor: 'rgba(34, 197, 94, 0.08)',
+          border: '1px solid rgba(34, 197, 94, 0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+        }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#4ade80' }}>
+            🛡️ {lang === 'ko' ? '최하단 본문 인풋 (경계 회피 성공)' : 'Bottom-Edge Input (Boundary Evasion Success)'}
+          </div>
+          <input
+            type="text"
+            value={bottomInputVal}
+            onChange={(e) => setBottomInputVal(e.target.value)}
+            placeholder={lang === 'ko' ? 'EXP-03-F: 16px 안전 정렬로 부드러운 포커스...' : 'EXP-03-F: Smooth focus with 16px padding...'}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              minHeight: '40px',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              border: '1px solid #22c55e',
+              backgroundColor: '#09090b',
+              color: '#f4f4f5',
+              fontSize: '14px',
+              outline: 'none',
+            }}
+          />
+          <div style={{ fontSize: '11px', color: '#bbf7d0', lineHeight: '1.4' }}>
+            {lang === 'ko'
+              ? '사파리 개입 트리거를 사전에 회피하여, 최하단 인풋 터치 시에도 키보드가 솟아오르며 16px 안전 마진으로 부드럽게 정렬됩니다.'
+              : 'Safely evades Safari heuristics, smoothly nudging the input inside safe zone with 16px padding.'}
+          </div>
+        </div>
+
         <LabEvaluationSection lab={lab} lang={lang} />
         <LabFindingDecisionSection lab={lab} lang={lang} />
         <LabMessagesSection messages={messages} lang={lang} />
@@ -1985,7 +2227,9 @@ export const LabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
     case 'exp03_d':
       return <Exp03DSandbox lab={lab} lang={lang} onClose={onClose} />
     case 'exp03_e':
-    default:
       return <Exp03ESandbox lab={lab} lang={lang} onClose={onClose} />
+    case 'exp03_f':
+    default:
+      return <Exp03FSandbox lab={lab} lang={lang} onClose={onClose} />
   }
 }
