@@ -165,4 +165,57 @@ describe('LayoutEngine Reference-Driven Rule FSM', () => {
     expect(engine.getState().isKeyboardOpen).toBe(false)
     expect(bodyDiv.scrollTop).toBe(100) // S_0 restored!
   })
+
+  it('protects baseline closedScrollTop from being overwritten during programmatic smooth scrolling', () => {
+    vi.useFakeTimers()
+    const bodyDiv = document.createElement('div')
+    bodyDiv.scrollTop = 50
+    Object.defineProperty(bodyDiv, 'clientHeight', { value: 600, configurable: true })
+    Object.defineProperty(bodyDiv, 'scrollHeight', { value: 1200, configurable: true })
+    bodyDiv.scrollTo = vi.fn()
+
+    const engine = new LayoutEngine({
+      refs: { bodyRef: { current: bodyDiv } },
+    })
+    engine.updateClosedScrollTop(50)
+    expect(engine.getAnchor().closedScrollTop).toBe(50)
+
+    // Trigger programmatic scroll with 350ms lock duration
+    engine.ignoreScrollEventsFor(350)
+
+    // Intermediate scroll events during animation should NOT overwrite baseline
+    engine.updateClosedScrollTop(180)
+    expect(engine.getAnchor().closedScrollTop).toBe(50)
+
+    // Fast-forward past 350ms duration
+    vi.advanceTimersByTime(360)
+
+    // Normal user scrolls should now update baseline again
+    engine.updateClosedScrollTop(220)
+    expect(engine.getAnchor().closedScrollTop).toBe(220)
+
+    vi.useRealTimers()
+  })
+
+  it('cleans up programmatic scroll immediately when scrollend event fires', () => {
+    const bodyDiv = document.createElement('div')
+    bodyDiv.scrollTop = 100
+    Object.defineProperty(bodyDiv, 'clientHeight', { value: 600, configurable: true })
+
+    const engine = new LayoutEngine({
+      refs: { bodyRef: { current: bodyDiv } },
+    })
+    engine.updateClosedScrollTop(100)
+
+    engine.ignoreScrollEventsFor(500)
+    engine.updateClosedScrollTop(250)
+    expect(engine.getAnchor().closedScrollTop).toBe(100) // Protected
+
+    // Fire scrollend event
+    bodyDiv.dispatchEvent(new Event('scrollend'))
+
+    // Should immediately unblock
+    engine.updateClosedScrollTop(300)
+    expect(engine.getAnchor().closedScrollTop).toBe(300)
+  })
 })

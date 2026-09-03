@@ -36,6 +36,8 @@ export class LayoutEngine {
   private animationFrameId: number | null = null
   private lockLoopStartTime = 0
   private isProgrammaticScroll = false
+  private programmaticScrollTimer: ReturnType<typeof setTimeout> | null = null
+  private scrollEndCleanup: (() => void) | null = null
 
   constructor(options: LayoutEngineOptions = {}) {
     this.refs = options.refs ?? {}
@@ -105,6 +107,61 @@ export class LayoutEngine {
     }
   }
 
+  /**
+   * Temporarily suppresses incoming browser `scroll` event baseline synchronization
+   * while executing a programmatic / smooth scrolling action.
+   *
+   * **Problem Scenario**:
+   * When calling `scrollTo({ behavior: 'smooth' })` or aligning elements, browsers emit dozens
+   * of asynchronous `scroll` events across multiple animation frames throughout the 300–400ms duration.
+   * If unsuppressed, `updateClosedScrollTop` would misinterpret these intermediate animation frames
+   * as real user touch scrolls and overwrite the baseline anchor (`closedScrollTop` / S_0),
+   * which breaks 0.0px zero-shift scroll restoration when the keyboard is dismissed.
+   *
+   * **Lifecycle & Safety**:
+   * 1. Sets `isProgrammaticScroll = true` to guard baseline snapshots.
+   * 2. Automatically releases the lock when the native browser `scrollend` event fires,
+   *    with a `durationMs` (default: 350ms) timeout fallback for browsers without `scrollend`.
+   * 3. Executes the optional `action` callback immediately under the protection of the guard.
+   */
+  public ignoreScrollEventsFor = (durationMs = 350, action?: () => void) => {
+    if (this.programmaticScrollTimer !== null) {
+      clearTimeout(this.programmaticScrollTimer)
+      this.programmaticScrollTimer = null
+    }
+    if (this.scrollEndCleanup) {
+      this.scrollEndCleanup()
+      this.scrollEndCleanup = null
+    }
+
+    this.isProgrammaticScroll = true
+
+    const bodyEl = this.refs.bodyRef?.current
+
+    const cleanup = () => {
+      this.isProgrammaticScroll = false
+      if (this.programmaticScrollTimer !== null) {
+        clearTimeout(this.programmaticScrollTimer)
+        this.programmaticScrollTimer = null
+      }
+      if (this.scrollEndCleanup) {
+        this.scrollEndCleanup()
+        this.scrollEndCleanup = null
+      }
+    }
+
+    if (bodyEl && typeof window !== 'undefined' && 'onscrollend' in window) {
+      const handleScrollEnd = () => cleanup()
+      bodyEl.addEventListener('scrollend', handleScrollEnd, { once: true })
+      this.scrollEndCleanup = () => bodyEl.removeEventListener('scrollend', handleScrollEnd)
+    }
+
+    // Timeout fallback for browsers without scrollend or smooth animation durations
+    this.programmaticScrollTimer = setTimeout(cleanup, durationMs)
+
+    action?.()
+  }
+
   public applyScrollOffset = (currHeight: number) => {
     const el = this.refs.bodyRef?.current
     if (!el) return
@@ -114,10 +171,8 @@ export class LayoutEngine {
       this.anchor.closedScrollTop,
     )
     if (targetScrollTop !== null) {
-      this.isProgrammaticScroll = true
-      el.scrollTop = targetScrollTop
-      requestAnimationFrame(() => {
-        this.isProgrammaticScroll = false
+      this.ignoreScrollEventsFor(100, () => {
+        el.scrollTop = targetScrollTop
       })
     }
   }
@@ -137,7 +192,9 @@ export class LayoutEngine {
     const maxScroll = Math.max(0, el.scrollHeight - el.clientHeight)
     const closedHeight = this.anchor.closedBodyHeight ?? el.clientHeight
     this.anchor.closedScrollTop = Math.max(0, el.scrollHeight - closedHeight)
-    el.scrollTo({ top: maxScroll, behavior })
+    this.ignoreScrollEventsFor(behavior === 'smooth' ? 400 : 100, () => {
+      el.scrollTo({ top: maxScroll, behavior })
+    })
   }
 
   public destroy() {
@@ -145,10 +202,19 @@ export class LayoutEngine {
       cancelAnimationFrame(this.animationFrameId)
       this.animationFrameId = null
     }
+    if (this.programmaticScrollTimer !== null) {
+      clearTimeout(this.programmaticScrollTimer)
+      this.programmaticScrollTimer = null
+    }
+    if (this.scrollEndCleanup) {
+      this.scrollEndCleanup()
+      this.scrollEndCleanup = null
+    }
   }
 
   /**
    * Dispatches a native browser or DOM event into the declarative rule matrix
+   * Executes with first-match-wins precedence so specific rules take priority.
    */
   public dispatch = (on: EngineEventType, event: unknown) => {
     const ctx: LayoutContext = {
@@ -161,6 +227,7 @@ export class LayoutEngine {
       applyScrollOffset: this.applyScrollOffset,
       updateClosedScrollTop: this.updateClosedScrollTop,
       updateClosedHeight: this.updateClosedHeight,
+      ignoreScrollEventsFor: this.ignoreScrollEventsFor,
       setState: (p) => this.setState(p),
     }
 
@@ -176,6 +243,7 @@ export class LayoutEngine {
         if (nextPartial && typeof nextPartial === 'object') {
           this.setState(nextPartial)
         }
+        break // First-match-wins
       }
     }
   }
