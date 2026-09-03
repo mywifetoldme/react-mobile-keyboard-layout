@@ -71,10 +71,14 @@ export interface UseMobileKeyboardOptions {
   bodyRef?: RefObject<HTMLElement | null>
   /** Threshold in pixels to treat viewport height contraction as keyboard opening. Default: 100 */
   keyboardThreshold?: number
+  /** Padding in pixels for in-body input boundary safe-zone alignment. Default: 16 */
+  alignPadding?: number
   /** Duration in milliseconds for continuous rAF top-lock loop. Default: 350 */
   lockDurationMs?: number
   /** Whether to prevent rubber-banding on non-scrollable background areas. Default: false */
   preventOuterScroll?: boolean
+  /** Custom rules array to override or extend default layout rules */
+  rules?: LayoutRule<unknown>[]
 }
 
 export interface UseMobileKeyboardReturn {

@@ -30,8 +30,10 @@ export type { UseMobileKeyboardOptions, UseMobileKeyboardReturn } from '../core/
 export const useMobileKeyboard = ({
   bodyRef,
   keyboardThreshold = 100,
+  alignPadding = 16,
   lockDurationMs = 350,
   preventOuterScroll = false,
+  rules,
 }: UseMobileKeyboardOptions = {}): UseMobileKeyboardReturn => {
   const floatingRef = useRef<HTMLElement | null>(null)
 
@@ -42,7 +44,9 @@ export const useMobileKeyboard = ({
   if (!engineRef.current) {
     engineRef.current = new LayoutEngine({
       refs: { bodyRef, floatingRef },
+      rules,
       keyboardThreshold,
+      alignPadding,
       lockDurationMs,
       onStateChange: () => setRenderTick((t) => t + 1),
     })
@@ -181,9 +185,7 @@ export const useMobileKeyboard = ({
 
   const state: LayoutState = engine.getState()
 
-  const isFloatingSuppressed =
-    state.focusTarget.type === 'body-inline' &&
-    (state.isKeyboardOpen || (typeof document !== 'undefined' && document.activeElement?.tagName === 'INPUT'))
+  const isFloatingSuppressed = state.focusTarget.type === 'body-inline'
 
   const containerStyle: CSSProperties = state.vvHeight && state.isKeyboardOpen
     ? {

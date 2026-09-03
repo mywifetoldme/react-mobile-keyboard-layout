@@ -9,6 +9,16 @@
 > **Zero-shift header, 0.0px scroll anchoring, and seamless floating input for mobile web and iOS Safari.**
 >
 > 📱 **Live Interactive Demo**: [https://react-mobile-keyboard-layout.pages.dev/](https://react-mobile-keyboard-layout.pages.dev/)
+>
+> ⚠️ **Important**: This library is specifically engineered to eliminate software keyboard layout shift on touch devices (**iOS Safari**, Android Chrome, Mobile PWA). Open on a real phone or touch device emulator to see the layout engine in action.
+
+<p align="center">
+  <a href="https://react-mobile-keyboard-layout.pages.dev/">
+    <img src="./docs/assets/demo-qr.png" alt="Scan QR Code to open Mobile Demo" width="140" height="140" />
+  </a>
+  <br />
+  <sub>📱 Scan with iPhone / Android Camera to Open Live Demo</sub>
+</p>
 
 [English] | [한국어](./README.ko.md)
 

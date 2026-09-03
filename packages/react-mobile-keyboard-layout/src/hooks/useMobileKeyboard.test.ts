@@ -81,4 +81,60 @@ describe('useMobileKeyboard hook', () => {
 
     expect(scrollToSpy).toHaveBeenCalledWith({ top: 600, behavior: 'smooth' })
   })
+
+  it('supports injecting custom declarative layout rules', () => {
+    const customRuleApplied = vi.fn()
+    const customRules = [
+      {
+        on: 'focusin' as const,
+        when: [() => true],
+        apply: () => {
+          customRuleApplied()
+          return { isKeyboardOpen: true }
+        },
+      },
+    ]
+
+    const bodyEl = document.createElement('div')
+    const input = document.createElement('input')
+    bodyEl.appendChild(input)
+
+    const bodyRef = { current: bodyEl }
+    const { result } = renderHook(() =>
+      useMobileKeyboard({
+        bodyRef,
+        rules: customRules,
+        alignPadding: 24,
+      }),
+    )
+
+    act(() => {
+      bodyEl.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    })
+
+    expect(customRuleApplied).toHaveBeenCalled()
+    expect(result.current.isKeyboardOpen).toBe(true)
+  })
+
+  it('reactively updates isFloatingSuppressed based on FSM body-inline state', () => {
+    const bodyEl = document.createElement('div')
+    const input = document.createElement('input')
+    input.type = 'text'
+    bodyEl.appendChild(input)
+    document.body.appendChild(bodyEl)
+
+    const bodyRef = { current: bodyEl }
+    const { result } = renderHook(() => useMobileKeyboard({ bodyRef }))
+
+    expect(result.current.isFloatingSuppressed).toBe(false)
+
+    act(() => {
+      input.dispatchEvent(new FocusEvent('focusin', { bubbles: true }))
+    })
+
+    // Once body inline input receives focus, isFloatingSuppressed becomes true
+    expect(result.current.isFloatingSuppressed).toBe(true)
+
+    document.body.removeChild(bodyEl)
+  })
 })
