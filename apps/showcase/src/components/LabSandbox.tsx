@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type CSSProperties, type RefObject } from 'react'
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type RefObject, type PointerEvent as ReactPointerEvent } from 'react'
 import type { LabInfo, EvaluationItem } from '../data/labsData'
 import type { Language } from '../i18n'
 import {
@@ -6,14 +6,6 @@ import {
   FloatingInput,
   useMobileKeyboard,
   isKeyboardTextInput,
-  isTextInput,
-  isInsideFloating,
-  isInsideBody,
-  isNoNextTextInput,
-  hasActiveTextInput,
-  isTouchDevice,
-  isKeyboardClosed,
-  type LayoutRule,
 } from 'react-mobile-keyboard-layout'
 
 interface LabSandboxProps {
@@ -1905,100 +1897,256 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
 }
 
 /* ==========================================================================
-   13. EXP-03-E: Atomic Viewport Restoration & Dismiss Sync (Bottom Input Collision Defect)
+   13. EXP-03-E: Synchronous Viewport Teardown & Dismiss Sync (Safari Bottom Collision Roadblock)
    ========================================================================== */
 
-const exp03ERules: LayoutRule[] = [
-  {
-    on: 'focusin',
-    when: [isTextInput, isInsideFloating],
-    apply: (e, ctx) => {
-      const ev = e as FocusEvent
-      ctx.captureBaselineAnchor()
-      ctx.lockWindowTop()
-      return {
-        focusTarget: { type: 'floating', element: ev.target as HTMLElement },
+function useExp03EMobileKeyboard(bodyRef: RefObject<HTMLElement | null>) {
+  const [vvHeight, setVvHeight] = useState<number | null>(() => {
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      return window.visualViewport.height
+    }
+    return null
+  })
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState<boolean>(false)
+  const [activeInputType, setActiveInputType] = useState<'none' | 'floating' | 'body'>('none')
+  const activeInputTypeRef = useRef<'none' | 'floating' | 'body'>('none')
+  const [isBodyInputFocused, setIsBodyInputFocused] = useState<boolean>(false)
+
+  const closedScrollTopRef = useRef<number>(0)
+  const closedBodyHeightRef = useRef<number | null>(null)
+  const isKeyboardActiveRef = useRef<boolean>(false)
+  const animationFrameIdRef = useRef<number | null>(null)
+  const lockLoopStartTimeRef = useRef<number>(0)
+
+  const startContinuousLockLoop = useCallback((duration = 350) => {
+    if (typeof window === 'undefined') return
+    if (animationFrameIdRef.current !== null) {
+      cancelAnimationFrame(animationFrameIdRef.current)
+    }
+    lockLoopStartTimeRef.current = performance.now()
+
+    const step = (now: number) => {
+      if (window.scrollY !== 0 || document.documentElement.scrollTop !== 0 || document.body.scrollTop !== 0) {
+        window.scrollTo(0, 0)
+        document.documentElement.scrollTop = 0
+        document.body.scrollTop = 0
       }
-    },
-  },
-  {
-    on: 'focusin',
-    when: [isTextInput, isInsideBody],
-    apply: (e, ctx) => {
-      const ev = e as FocusEvent
-      ctx.lockWindowTop()
-      return {
-        focusTarget: { type: 'body-inline', element: ev.target as HTMLElement },
+      if (now - lockLoopStartTimeRef.current < duration) {
+        animationFrameIdRef.current = requestAnimationFrame(step)
+      } else {
+        animationFrameIdRef.current = null
       }
-    },
-  },
-  {
-    on: 'focusout',
-    when: [isTextInput, isNoNextTextInput],
-    apply: (_, ctx) => {
-      const wasFloating = ctx.state.focusTarget.type === 'floating'
-      ctx.lockWindowTop()
-      if (wasFloating) {
-        ctx.restoreBaselineScroll()
+    }
+    animationFrameIdRef.current = requestAnimationFrame(step)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameIdRef.current !== null) {
+        cancelAnimationFrame(animationFrameIdRef.current)
       }
-      return {
-        focusTarget: { type: 'none' },
-        isKeyboardOpen: false,
-        vvHeight: null,
-      }
-    },
-  },
-  {
-    on: 'visualViewport.resize',
-    when: [hasActiveTextInput],
-    apply: (_, ctx) => {
-      if (typeof window === 'undefined' || !window.visualViewport) return
-      const vv = window.visualViewport
+    }
+  }, [])
+
+  // VisualViewport subscription
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const handleUpdate = () => {
       const currentH = vv.height
       const screenH = window.innerHeight || currentH
-      const open = screenH - currentH > 100 && isTouchDevice()
+      const activeEl = typeof document !== 'undefined' ? document.activeElement : null
+      const hasActiveTextInput = isKeyboardTextInput(activeEl)
+      const open = hasActiveTextInput && screenH - currentH > 100 && (typeof navigator !== 'undefined' && (navigator.maxTouchPoints > 0 || 'ontouchstart' in window))
 
-      ctx.lockWindowTop()
-      if (open && !ctx.state.isKeyboardOpen) {
-        if (ctx.state.focusTarget.type === 'floating') {
-          ctx.captureBaselineAnchor()
+      setVvHeight(currentH)
+      setIsKeyboardOpen(open)
+
+      const el = bodyRef?.current
+      if (open) {
+        if (!isKeyboardActiveRef.current) {
+          isKeyboardActiveRef.current = true
+          if (el) {
+            closedScrollTopRef.current = el.scrollTop
+            closedBodyHeightRef.current = el.clientHeight
+          }
         }
-        // NOTE: In EXP-03-E, there was NO alignElement boundary evasion here!
+        startContinuousLockLoop()
+      } else {
+        if (isKeyboardActiveRef.current) {
+          startContinuousLockLoop()
+          isKeyboardActiveRef.current = false
+          if (el && !isBodyInputFocused) {
+            el.scrollTop = closedScrollTopRef.current
+          }
+        }
       }
+    }
 
-      if (open && ctx.state.focusTarget.type === 'floating') {
-        ctx.applyScrollOffset(currentH)
-      }
+    handleUpdate()
+    vv.addEventListener('resize', handleUpdate)
+    vv.addEventListener('scroll', handleUpdate)
+    return () => {
+      vv.removeEventListener('resize', handleUpdate)
+      vv.removeEventListener('scroll', handleUpdate)
+    }
+  }, [bodyRef, isBodyInputFocused, startContinuousLockLoop])
 
-      return {
-        isKeyboardOpen: open,
-        vvHeight: open ? currentH : null,
+  // ResizeObserver & Coordinate Preservation
+  useEffect(() => {
+    const el = bodyRef?.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+
+    let isProgrammatic = false
+    const handleScroll = () => {
+      if (isProgrammatic || isKeyboardActiveRef.current) return
+      closedScrollTopRef.current = el.scrollTop
+      closedBodyHeightRef.current = el.clientHeight
+    }
+    el.addEventListener('scroll', handleScroll, { passive: true })
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const currHeight = entry.contentRect.height
+        if (currHeight <= 0) continue
+
+        if (!isKeyboardActiveRef.current) {
+          closedBodyHeightRef.current = currHeight
+          closedScrollTopRef.current = el.scrollTop
+        } else {
+          // In 2cae8f7 (EXP-03-E): Body input focus preserves natural scroll position without boundary evasion
+          if (isBodyInputFocused) {
+            return
+          }
+          if (closedBodyHeightRef.current !== null && closedBodyHeightRef.current > currHeight) {
+            const deltaH = closedBodyHeightRef.current - currHeight
+            isProgrammatic = true
+            el.scrollTop = closedScrollTopRef.current + deltaH
+            requestAnimationFrame(() => {
+              isProgrammatic = false
+            })
+          }
+        }
       }
-    },
-  },
-  {
-    on: 'pointerdown',
-    when: [isTextInput],
-    apply: (e, ctx) => {
-      ctx.lockWindowTop()
-      const target = (e as PointerEvent).target as HTMLElement | null
-      if (target && typeof target.focus === 'function') {
+    })
+
+    ro.observe(el)
+    return () => {
+      el.removeEventListener('scroll', handleScroll)
+      ro.disconnect()
+    }
+  }, [bodyRef, isBodyInputFocused])
+
+  // Focus Handover FSM
+  useEffect(() => {
+    const el = bodyRef?.current
+    const handleFocusIn = (e: FocusEvent) => {
+      if (isKeyboardTextInput(e.target)) {
+        activeInputTypeRef.current = 'body'
+        setActiveInputType('body')
+        setIsBodyInputFocused(true)
+        startContinuousLockLoop()
+      }
+    }
+    const handleFocusOut = (e: FocusEvent) => {
+      if (isKeyboardTextInput(e.target)) {
+        startContinuousLockLoop()
+      }
+    }
+
+    if (el) {
+      el.addEventListener('focusin', handleFocusIn)
+      el.addEventListener('focusout', handleFocusOut)
+    }
+
+    const handleGlobalFocusOut = (e: FocusEvent) => {
+      if (isKeyboardTextInput(e.target)) {
+        queueMicrotask(() => {
+          const active = document.activeElement
+          if (!active || active === document.body || !isKeyboardTextInput(active)) {
+            const wasFloating = activeInputTypeRef.current === 'floating'
+            activeInputTypeRef.current = 'none'
+            setActiveInputType('none')
+            setIsBodyInputFocused(false)
+            if (isKeyboardActiveRef.current) {
+              isKeyboardActiveRef.current = false
+              setVvHeight(null)
+              setIsKeyboardOpen(false)
+              startContinuousLockLoop()
+              if (wasFloating && bodyRef?.current) {
+                bodyRef.current.scrollTop = closedScrollTopRef.current
+              }
+            }
+          }
+        })
+      }
+    }
+
+    window.addEventListener('focusout', handleGlobalFocusOut)
+    return () => {
+      if (el) {
+        el.removeEventListener('focusin', handleFocusIn)
+        el.removeEventListener('focusout', handleFocusOut)
+      }
+      window.removeEventListener('focusout', handleGlobalFocusOut)
+    }
+  }, [bodyRef, startContinuousLockLoop])
+
+  const handleFloatingFocus = useCallback(() => {
+    activeInputTypeRef.current = 'floating'
+    setActiveInputType('floating')
+    setIsBodyInputFocused(false)
+    startContinuousLockLoop()
+  }, [startContinuousLockLoop])
+
+  const handleFloatingBlur = useCallback(() => {
+    startContinuousLockLoop()
+  }, [startContinuousLockLoop])
+
+  const handleFloatingPointerDown = useCallback(() => {
+    startContinuousLockLoop()
+  }, [startContinuousLockLoop])
+
+  const handleBodyPointerDown = useCallback(
+    (e: ReactPointerEvent<HTMLElement> | PointerEvent) => {
+      const target = e.target as HTMLElement | null
+      if (target && isKeyboardTextInput(target)) {
+        e.stopPropagation()
+        startContinuousLockLoop()
         target.focus({ preventScroll: true })
       }
     },
-  },
-  {
-    on: 'scroll',
-    when: [isKeyboardClosed],
-    apply: (_, ctx) => {
-      const el = ctx.refs.bodyRef?.current
-      if (el) {
-        ctx.updateClosedScrollTop(el.scrollTop)
-        ctx.updateClosedHeight(el.clientHeight)
+    [startContinuousLockLoop],
+  )
+
+  const isFloatingSuppressed =
+    activeInputType === 'body' && (isBodyInputFocused || isKeyboardOpen)
+
+  const containerStyle: CSSProperties = vvHeight && isKeyboardOpen
+    ? {
+        height: `${vvHeight}px`,
+        maxHeight: `${vvHeight}px`,
       }
+    : {
+        height: '100dvh',
+        maxHeight: '100dvh',
+      }
+
+  return {
+    containerStyle,
+    isKeyboardOpen,
+    isFloatingSuppressed,
+    floatingProps: {
+      onFocus: handleFloatingFocus,
+      onBlur: handleFloatingBlur,
+      onPointerDown: handleFloatingPointerDown,
     },
-  },
-]
+    bodyProps: {
+      onPointerDown: handleBodyPointerDown,
+    },
+    scrollToBottom: () => {},
+  }
+}
 
 function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
   const [floatingVal, setFloatingVal] = useState('')
@@ -2015,11 +2163,8 @@ function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // EXP-03-E does NOT have boundary evasion (alignElement), reproducing Safari bottom collision
-  const engine = useMobileKeyboard({
-    bodyRef,
-    rules: exp03ERules,
-  })
+  // Uses the exact 2cae8f7 (PR #10) engine without boundary evasion
+  const engine = useExp03EMobileKeyboard(bodyRef)
 
   const handleSubmit = () => {
     if (!floatingVal.trim()) return
@@ -2038,58 +2183,66 @@ function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
           value={floatingVal}
           onChange={setFloatingVal}
           onSubmit={handleSubmit}
-          placeholder={lang === 'ko' ? 'EXP-03-E: 플로팅 인풋...' : 'EXP-03-E: Floating input...'}
+          placeholder={lang === 'ko' ? 'Zero-Shift 키보드 테스트...' : 'Test zero-shift keyboard input...'}
           {...engine.floatingProps}
           isSuppressed={engine.isFloatingSuppressed}
           isKeyboardOpen={engine.isKeyboardOpen}
+          style={engine.isFloatingSuppressed ? { display: 'none' } : {}}
         />
       }
     >
       <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <LabHeroSection lab={lab} lang={lang} />
-        <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
+        <LabFormSection
+          lang={lang}
+          bodyVal={bodyVal}
+          setBodyVal={setBodyVal}
+          dateVal={dateVal}
+          setDateVal={setDateVal}
+        />
+        <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
 
-        {/* Bottom edge input to demonstrate un-evaded Safari collision in EXP-03-E */}
+        {/* Bottom edge input placed at the very end of the scroll container */}
         <div style={{
-          padding: '12px',
+          padding: '14px',
           borderRadius: '12px',
-          backgroundColor: 'rgba(239, 68, 68, 0.08)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
+          backgroundColor: 'rgba(239, 68, 68, 0.12)',
+          border: '2px solid rgba(239, 68, 68, 0.5)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '10px',
+          marginTop: '10px',
         }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#f87171' }}>
-            ⚠️ {lang === 'ko' ? '최하단 본문 인풋 (사파리 충돌 결함 재현)' : 'Bottom-Edge Input (Safari Collision Defect)'}
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#f87171' }}>
+            ⚠️ {lang === 'ko' ? '페이지 최하단 본문 인풋 (사파리 뷰포트 충돌 결함 재현)' : 'Very Bottom Page Input (Safari Collision Defect)'}
           </div>
           <input
             type="text"
             value={bottomInputVal}
             onChange={(e) => setBottomInputVal(e.target.value)}
-            placeholder={lang === 'ko' ? 'EXP-03-E: 터치 시 사파리 충돌(키보드 튕김) 관찰...' : 'EXP-03-E: Notice keyboard bounce on Safari...'}
+            placeholder={lang === 'ko' ? '스크롤 맨 아래에서 터치해보세요...' : 'Tap here at the bottom of the page...'}
             style={{
               width: '100%',
               boxSizing: 'border-box',
-              minHeight: '40px',
-              padding: '8px 12px',
+              minHeight: '44px',
+              padding: '10px 14px',
               borderRadius: '8px',
-              border: '1px solid #ef4444',
+              border: '2px solid #ef4444',
               backgroundColor: '#09090b',
               color: '#f4f4f5',
-              fontSize: '14px',
+              fontSize: '15px',
               outline: 'none',
             }}
           />
-          <div style={{ fontSize: '11px', color: '#fca5a5', lineHeight: '1.4' }}>
+          <div style={{ fontSize: '11.5px', color: '#fca5a5', lineHeight: '1.4' }}>
             {lang === 'ko'
-              ? '사파리에서 이 인풋을 터치하면 경계 회피가 없어 사파리 C++ 스크롤과 바디 축소가 충돌하여 키보드가 닫히거나 덜컹거립니다.'
-              : 'Without boundary evasion, Safari compositor scroll collides with body contraction, causing keyboard bounce.'}
+              ? '플로팅 바 1단계 즉시 증발(display:none)에 의한 순간 리플로우와 16px 안전 여백 부재로 사파리 WebKit의 터치 정렬이 깨져 키보드가 올라오다 도로 닫혀버리는 현상입니다.'
+              : '1-step immediate suppression (display: none) sudden reflow and missing 16px boundary safe margin breaks Safari touch hit-testing, causing keyboard bounce.'}
           </div>
         </div>
 
-        <LabEvaluationSection lab={lab} lang={lang} />
-        <LabFindingDecisionSection lab={lab} lang={lang} />
-        <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </div>
     </SubpageLayout>
@@ -2148,49 +2301,50 @@ function Exp03FSandbox({ lab, lang, onClose }: LabSandboxProps) {
       <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
         <LabHeroSection lab={lab} lang={lang} />
         <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
+        <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
 
-        {/* Bottom edge input to demonstrate successful In-Viewport Boundary Evasion in EXP-03-F */}
+        {/* Bottom edge input placed at the very end of the scroll container to demonstrate successful In-Viewport Boundary Evasion in EXP-03-F */}
         <div style={{
-          padding: '12px',
+          padding: '14px',
           borderRadius: '12px',
-          backgroundColor: 'rgba(34, 197, 94, 0.08)',
-          border: '1px solid rgba(34, 197, 94, 0.3)',
+          backgroundColor: 'rgba(34, 197, 94, 0.12)',
+          border: '2px solid rgba(34, 197, 94, 0.5)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '10px',
+          marginTop: '16px',
         }}>
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#4ade80' }}>
-            🛡️ {lang === 'ko' ? '최하단 본문 인풋 (경계 회피 성공)' : 'Bottom-Edge Input (Boundary Evasion Success)'}
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#4ade80' }}>
+            🛡️ {lang === 'ko' ? '페이지 최하단 본문 인풋 (경계 회피 성공)' : 'Very Bottom Page Input (Boundary Evasion Success)'}
           </div>
           <input
             type="text"
             value={bottomInputVal}
             onChange={(e) => setBottomInputVal(e.target.value)}
-            placeholder={lang === 'ko' ? 'EXP-03-F: 16px 안전 정렬로 부드러운 포커스...' : 'EXP-03-F: Smooth focus with 16px padding...'}
+            placeholder={lang === 'ko' ? '스크롤 맨 끝에서 터치 ➔ 16px 안전 안착...' : 'Tap at the bottom -> Smooth 16px alignment...'}
             style={{
               width: '100%',
               boxSizing: 'border-box',
-              minHeight: '40px',
-              padding: '8px 12px',
+              minHeight: '44px',
+              padding: '10px 14px',
               borderRadius: '8px',
-              border: '1px solid #22c55e',
+              border: '2px solid #22c55e',
               backgroundColor: '#09090b',
               color: '#f4f4f5',
-              fontSize: '14px',
+              fontSize: '15px',
               outline: 'none',
             }}
           />
-          <div style={{ fontSize: '11px', color: '#bbf7d0', lineHeight: '1.4' }}>
+          <div style={{ fontSize: '11.5px', color: '#bbf7d0', lineHeight: '1.4' }}>
             {lang === 'ko'
-              ? '사파리 개입 트리거를 사전에 회피하여, 최하단 인풋 터치 시에도 키보드가 솟아오르며 16px 안전 마진으로 부드럽게 정렬됩니다.'
-              : 'Safely evades Safari heuristics, smoothly nudging the input inside safe zone with 16px padding.'}
+              ? '스크롤을 맨 아래로 내린 뒤 이 인풋을 터치해도, 16px 안전 마진 정렬로 사파리 강제 스크롤을 사전에 회피하여 키보드가 안정적으로 열립니다.'
+              : 'Scroll all the way down and tap this input. Safely evades Safari heuristics, smoothly nudging the input inside safe zone with 16px padding.'}
           </div>
         </div>
 
-        <LabEvaluationSection lab={lab} lang={lang} />
-        <LabFindingDecisionSection lab={lab} lang={lang} />
-        <LabMessagesSection messages={messages} lang={lang} />
-        <div style={{ height: '40px', flexShrink: 0 }} />
+        <div style={{ height: '60px', flexShrink: 0 }} />
       </div>
     </SubpageLayout>
   )
