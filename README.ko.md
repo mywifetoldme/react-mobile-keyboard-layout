@@ -45,7 +45,7 @@
 - **되돌리기 대신 탭 가로채기**:
   텍스트 입력은 `pointerdown`에서 `preventScroll: true`로 직접 포커스해, iOS가 창을 밀어 올리기 전에 끝낸다. 350ms rAF 탑락은 보험으로만 남는다. iOS 26에서 영상을 프레임 단위로 재보면, 밀린 뒤 되돌리는 방식은 항상 약 240ms 헤더 튐이 남는다.
 - **키보드 높이는 CSS 변수로**:
-  CSS가 읽을 수 없는 유일한 값인 키보드 높이를 `--rmkl-kb`로 내보낸다(Safari는 `innerHeight - visualViewport.height`, layout viewport 자체가 줄어드는 Chrome for iOS·Android는 `innerHeight` 감소분). 그중 layout viewport가 가려진 만큼은 `--rmkl-kb-inset`으로 내보내 아래 여백으로 잡는다. 블러 시엔 지연되는 `visualViewport` resize를 기다리지 않고 `:not(:focus-within)`으로 즉시 되돌아간다.
+  CSS가 읽을 수 없는 유일한 값인 키보드 높이를 `--rmkl-kb`로 내보낸다(브라우저는 키보드를 두 방식 중 하나로 알립니다. visual viewport만 줄이는 쪽은 `innerHeight - visualViewport.height`, layout viewport 자체가 줄어드는 쪽은 `innerHeight` 감소분입니다. 둘 다 읽으며, 어느 브라우저의 어느 버전이 어느 쪽인지는 단정하지 말고 재봐야 합니다 — 실제로 재본 iOS Safari·Android Chrome 133·WKWebView는 셋 다 visual viewport 축소였습니다). 그중 layout viewport가 가려진 만큼은 `--rmkl-kb-inset`으로 내보내 아래 여백으로 잡는다. 블러 시엔 지연되는 `visualViewport` resize를 기다리지 않고 `:not(:focus-within)`으로 즉시 되돌아간다.
 - **읽던 위치는 브라우저가 유지**:
   본문은 아래에서부터 스크롤한다(`flex-direction: column-reverse`, 자식은 DOM 순서 그대로). 컨테이너가 줄어도 읽던 메시지가 그 자리에 있다.
 - **포커스된 본문 입력은 제자리에**:
@@ -125,7 +125,7 @@ export default function ChatScreen() {
 
 ## 📱 테스트 환경 및 피드백
 
-- **검증 환경**: CSS-first 레이아웃은 iOS 26 시뮬레이터(Mobile Safari)에서 영상을 프레임 단위로 재서 확인했습니다. Chrome for iOS와 Android Chrome은 아직 유닛테스트로만 덮었습니다(하드웨어 키보드 설정의 Android 에뮬레이터는 IME에 뷰포트를 줄이지 않아 실기기를 대신할 수 없습니다). 이전 엔진 기반 버전은 iOS 26 및 27 beta 실기기(Mobile Safari, PWA Standalone Mode, iOS Chrome), Android Chrome, 데스크톱 Chrome/Safari에서 확인됐으며, 실기기 재검증 제보를 환영합니다.
+- **검증 환경**: CSS-first 레이아웃은 iOS 26 시뮬레이터(Mobile Safari)에서 영상을 프레임 단위로 재서 확인했고, Android 16 에뮬레이터의 Android Chrome 133에서 소프트 키보드(Gboard)로 다시 쟀습니다 — AVD를 `hw.keyboard=no`로 콜드 부팅해야 IME 인셋이 나옵니다. Chrome for iOS는 시뮬레이터에 설치할 수 없어, Chrome이 쓸 수밖에 없는 엔진(WKWebView)만 띄운 최소 앱으로 대리 측정했습니다(Chrome 자체 툴바·제스처는 이 대리 측정에 빠져 있고, 실기 Chrome for iOS 앱은 아직 미검증입니다). 세 환경 모두에서 하단 입력바와 본문 맨 아래 입력이 정상적으로 열리고 닫혔으며 포커스 전 위치로 돌아왔습니다. 이전 엔진 기반 버전은 iOS 26 및 27 beta 실기기(Mobile Safari, PWA Standalone Mode, iOS Chrome), Android Chrome, 데스크톱 Chrome/Safari에서 확인됐으며, 실기기 재검증 제보를 환영합니다.
 - **브라우저 지원**: CSS `:has()`가 필요합니다(Safari 15.4+, Chrome 105+, Firefox 121+).
 - **참고사항**: 서드파티 키보드 앱이나 특수한 스플릿 뷰 환경에서는 동작 차이가 있을 수 있습니다. 다양한 기기에서의 테스트 피드백과 이슈 제보는 언제나 환영합니다.
 
