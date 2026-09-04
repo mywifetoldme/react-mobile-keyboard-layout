@@ -44,10 +44,12 @@ On mobile browsers—especially **iOS Safari / WebKit**—virtual software keybo
   The header sits outside the resizing body container, preventing layout reflow jitter when the keyboard opens and closes.
 - **Tap interception instead of scroll correction**:
   Text inputs are focused with `preventScroll: true` on `pointerdown`, before iOS pans the window to reveal them. A short rAF top-lock (350ms) only remains as a fallback: frame-by-frame video measurement on iOS 26 showed that undoing the pan afterwards always leaves a ~240ms header jump.
-- **Keyboard height as a CSS variable**:
-  The one value CSS cannot read, `innerHeight - visualViewport.height`, is published as `--rmkl-kb` and reserved as bottom padding. On blur the layout snaps back synchronously through `:not(:focus-within)`, without waiting for the delayed `visualViewport` resize event.
+- **Keyboard height as CSS variables**:
+  The one value CSS cannot read, the keyboard height, is published as `--rmkl-kb` (Safari: `innerHeight - visualViewport.height`; browsers that shrink the layout viewport itself, such as Chrome for iOS and Android: the drop in `innerHeight`). The part of the layout viewport the keyboard covers is published as `--rmkl-kb-inset` and reserved as bottom padding. On blur the layout snaps back synchronously through `:not(:focus-within)`, without waiting for the delayed `visualViewport` resize event.
 - **Reading position kept by the browser**:
   The body scrolls from the bottom (`flex-direction: column-reverse`, children stay in DOM order), so shrinking it keeps the message you were reading in place.
+- **A focused body input stays put**:
+  A bottom-anchored body would push a focused form field up when the keyboard takes space. The hook watches the body with a `ResizeObserver`, shifts the scroll offset so the field keeps its screen position (or reveals it when the keyboard would hide it), and puts it back where it was when the keyboard leaves.
 - **Native Picker Passthrough**:
   Differentiates virtual keyboard text inputs from native modal sheets (`<input type="date">`, `<input type="time">`, `<select>`), allowing system pickers to open naturally.
 
@@ -143,7 +145,7 @@ export default function ChatScreen() {
 
 ## 📱 Tested Environments & Limitations
 
-- **Verified On**: the CSS-first layout was measured frame by frame on an iOS 26 Simulator (Mobile Safari). Earlier, engine-based versions were verified on physical devices running iOS 26 / iOS 27 beta (Mobile Safari, PWA Standalone Mode, Chrome iOS), Android Chrome, and Desktop Chrome/Safari; re-verification reports are welcome.
+- **Verified On**: the CSS-first layout was measured frame by frame on an iOS 26 Simulator (Mobile Safari). Chrome for iOS and Android Chrome are covered by unit tests only so far (an Android emulator with a hardware-keyboard AVD does not shrink either viewport for the IME, so it cannot stand in for a phone). Earlier, engine-based versions were verified on physical devices running iOS 26 / iOS 27 beta (Mobile Safari, PWA Standalone Mode, Chrome iOS), Android Chrome, and Desktop Chrome/Safari; re-verification reports are welcome.
 - **Browser support**: relies on CSS `:has()` (Safari 15.4+, Chrome 105+, Firefox 121+).
 - **Known Considerations**:
   - Focus and viewport behavior can vary with third-party virtual keyboards (e.g. custom IME extensions) and iPad multi-window split views.

@@ -3,8 +3,10 @@
      :focus-within          an input is focused  → the keyboard is opening / open
      :has(<body text input>) the focused input is in the body, not in the floating bar
      :has(<picker>)          a native picker is focused (iOS does not resize the viewport for it)
-     --rmkl-kb               keyboard-covered height in px, set by useMobileKeyboard —
-                             the one value CSS cannot read by itself
+     --rmkl-kb               keyboard height in px, set by useMobileKeyboard — the one value CSS
+                             cannot read by itself
+     --rmkl-kb-inset         the part of the layout viewport the keyboard covers: equal to --rmkl-kb
+                             on Safari, 0 on browsers that shrink the layout viewport (Chrome, Android)
    ------------------------------------------------------------------------------------------------ */
 
 :root {
@@ -108,9 +110,9 @@
   width: 100%;
   height: 100dvh;
   padding-top: calc(var(--rmkl-header-height, 56px) + env(safe-area-inset-top, 0px));
-  /* window.innerHeight does not shrink while taps are intercepted, so the keyboard-covered
-     height is reserved here instead of measuring the container in JS */
-  padding-bottom: var(--rmkl-kb, 0px);
+  /* Safari keeps the layout viewport while the keyboard is up, so the covered part is reserved
+     here; browsers that shrink the viewport themselves report an inset of 0 */
+  padding-bottom: var(--rmkl-kb-inset, 0px);
   box-sizing: border-box;
   overflow: hidden;
   touch-action: none;

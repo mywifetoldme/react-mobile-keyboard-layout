@@ -1,6 +1,7 @@
 export {
   useMobileKeyboard,
   KEYBOARD_HEIGHT_CSS_VAR,
+  KEYBOARD_INSET_CSS_VAR,
   type UseMobileKeyboardOptions,
   type UseMobileKeyboardReturn,
 } from './hooks/useMobileKeyboard'

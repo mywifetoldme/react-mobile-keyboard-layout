@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useRef,
   type ReactNode,
   type HTMLAttributes,
   type ComponentPropsWithoutRef,
@@ -42,7 +43,11 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
   footerProps,
   ...rest
 }, ref) => {
-  const internalEngine = useMobileKeyboard({ bodyRef })
+  // the hook needs the body element to keep a focused body input still; give it one even when the
+  // caller did not pass a ref
+  const ownBodyRef = useRef<HTMLDivElement | null>(null)
+  const resolvedBodyRef = bodyRef ?? ownBodyRef
+  const internalEngine = useMobileKeyboard({ bodyRef: resolvedBodyRef })
   const engine = keyboardEngine ?? internalEngine
 
   // The consumer's handler runs first and is never overwritten; it can opt out with preventDefault()
@@ -77,7 +82,7 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
       <div className="rmkl-subpage-body-container">
         <main
           role="main"
-          ref={bodyRef}
+          ref={resolvedBodyRef}
           {...bodyProps}
           onPointerDown={handleBodyPointerDown}
           className={`rmkl-subpage-body ${bodyProps?.className ?? ''}`.trim()}
