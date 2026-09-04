@@ -95,7 +95,6 @@ export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
           onSubmit={handleSend}
           placeholder={t.demoInputPlaceholder}
           {...engine.floatingProps}
-          isSuppressed={engine.isFloatingSuppressed}
           isKeyboardOpen={engine.isKeyboardOpen}
         />
       }

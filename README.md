@@ -32,22 +32,24 @@ On mobile browsers—especially **iOS Safari / WebKit**—virtual software keybo
 3. **The 34px Ghost Gap**: Fixed bottom input bars often leave an empty gap above the home indicator bar.
 4. **Picker Invalidation**: Heavy programmatic scroll locking can cause native date/time pickers (`<input type="date">`, `<select>`) to dismiss immediately upon opening.
 
-`react-mobile-keyboard-layout` addresses these layout challenges using standard W3C APIs (`visualViewport`, `ResizeObserver`, `preventScroll`) with **zero external dependencies**.
+`react-mobile-keyboard-layout` addresses these layout challenges with CSS (`:has()`, `:focus-within`) plus two standard APIs (`visualViewport`, `preventScroll`), with **zero external dependencies**.
 
 ---
 
 ## 🎯 Architecture & Approach
 
-- **0.0px Coordinate Preservation Formula**:
-  $$\Delta H = H_{\text{closed}} - H_{\text{current}}$$
-  $$S_{\text{new}} = S_0 + \Delta H$$
-  As the container contracts, adding $\Delta H$ to `scrollTop` maintains your reading position with minimal visual shift.
+- **CSS decides the keyboard state**:
+  Whether the keyboard is open, whether the focused input sits in the body or in the floating bar, and whether a native picker is open are all read from selectors (`:focus-within`, `:has()`) in the stylesheet. There is no JavaScript state machine that can drift out of sync.
 - **Physically Isolated Static Header**:
   The header sits outside the resizing body container, preventing layout reflow jitter when the keyboard opens and closes.
-- **120Hz rAF Continuous Window Top-Lock**:
-  Clamps `window.scrollY = 0` during the 350ms keyboard animation to reduce background rubberbanding.
-- **3-State Focus Handover State Machine**:
-  Smoothly transfers focus between inline form inputs and the bottom floating bar (`none` | `floating` | `body`).
+- **Tap interception instead of scroll correction**:
+  Text inputs are focused with `preventScroll: true` on `pointerdown`, before iOS pans the window to reveal them. A short rAF top-lock (350ms) only remains as a fallback: frame-by-frame video measurement on iOS 26 showed that undoing the pan afterwards always leaves a ~240ms header jump.
+- **Keyboard height as CSS variables**:
+  The one value CSS cannot read, the keyboard height, is published as `--rmkl-kb` (browsers report the keyboard in one of two ways: some shrink only the visual viewport, so the height is `innerHeight - visualViewport.height`; others shrink the layout viewport itself, so it is the drop in `innerHeight`. Both are read, and which one a given browser and version uses has to be measured rather than assumed — iOS Safari, Android Chrome 133 and WKWebView all took the visual-viewport path when measured). The part of the layout viewport the keyboard covers is published as `--rmkl-kb-inset` and reserved as bottom padding. On blur the layout snaps back synchronously through `:not(:focus-within)`, without waiting for the delayed `visualViewport` resize event.
+- **Reading position kept by the browser**:
+  The body scrolls from the bottom (`flex-direction: column-reverse`, children stay in DOM order), so shrinking it keeps the message you were reading in place.
+- **A focused body input stays put**:
+  A bottom-anchored body would push a focused form field up when the keyboard takes space. The hook watches the body with a `ResizeObserver`, shifts the scroll offset so the field keeps its screen position (or reveals it when the keyboard would hide it), and puts it back where it was when the keyboard leaves.
 - **Native Picker Passthrough**:
   Differentiates virtual keyboard text inputs from native modal sheets (`<input type="date">`, `<input type="time">`, `<select>`), allowing system pickers to open naturally.
 
@@ -103,9 +105,7 @@ export default function ChatScreen() {
           onChange={setText}
           onSubmit={handleSend}
           placeholder="Write a message..."
-          onFocus={engine.handleFloatingFocus}
-          onBlur={engine.handleFloatingBlur}
-          isSuppressed={engine.isFloatingSuppressed}
+          {...engine.floatingProps}
         />
       }
     >
@@ -145,7 +145,8 @@ export default function ChatScreen() {
 
 ## 📱 Tested Environments & Limitations
 
-- **Verified On**: Physical devices running iOS 26 and iOS 27 beta (Mobile Safari, PWA Standalone Mode, Chrome iOS), Android Chrome, and Desktop Chrome/Safari.
+- **Verified On**: the CSS-first layout was measured frame by frame on an iOS 26 Simulator (Mobile Safari), and again on an Android 16 emulator running Android Chrome 133 with the soft keyboard (Gboard) — the AVD has to be cold-booted with `hw.keyboard=no`, otherwise no IME insets are produced at all. Chrome for iOS cannot be installed on a simulator, so it was measured by proxy through a minimal WKWebView app (the engine Chrome for iOS has to use); Chrome's own toolbar and gestures are not covered by that proxy, and the physical Chrome for iOS app is still unverified. In all three, the bottom input bar and a body input at the very bottom opened and closed correctly and returned to their pre-focus position. Earlier, engine-based versions were verified on physical devices running iOS 26 / iOS 27 beta (Mobile Safari, PWA Standalone Mode, Chrome iOS), Android Chrome, and Desktop Chrome/Safari; re-verification reports are welcome.
+- **Browser support**: relies on CSS `:has()` (Safari 15.4+, Chrome 105+, Firefox 121+).
 - **Known Considerations**:
   - Focus and viewport behavior can vary with third-party virtual keyboards (e.g. custom IME extensions) and iPad multi-window split views.
   - Feedback and issues from different device/OS combinations are warmly appreciated.

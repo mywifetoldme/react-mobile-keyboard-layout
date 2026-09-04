@@ -423,4 +423,36 @@ export const LABS_DATA: LabInfo[] = [
       ko: 'react-mobile-keyboard-layout 라이브러리의 최종 공식 프로덕션 엔진으로 채택 및 배포.',
     },
   },
+
+  /* ==========================================================================
+     PHASE 4: CSS-First Consolidation (개념 정리와 CSS 이관)
+     ========================================================================== */
+  {
+    id: 'exp04_a',
+    status: 'winner',
+    title: {
+      en: 'EXP-04-A: CSS-First Consolidation (CURRENT)',
+      ko: 'EXP-04-A: 개념 정리와 CSS 이관 (현재 버전)',
+    },
+    hypothesis: {
+      en: 'Everything EXP-01 through EXP-03-F uncovered - physical header isolation, tap interception, 2-step suppression, scroll anchoring, native picker pass-through, keyboard height - can be restated as CSS state selectors, leaving JavaScript only the values CSS cannot read. If that holds, the layout engine, its rule matrix and its FSM can be deleted without losing behaviour.',
+      ko: '01~03-F에서 나온 개념(헤더 물리 격리·탭 가로채기·2단계 서프레션·스크롤 앵커·네이티브 피커 통과·키보드 높이)을 CSS 상태 셀렉터로 다시 적으면, JS에는 CSS가 읽을 수 없는 값만 남길 수 있다. 그렇다면 레이아웃 엔진과 룰 매트릭스·FSM을 지워도 동작은 그대로일 것이다.',
+    },
+    evaluations: [
+      { id: '1-1', status: 'pass', comment: { en: 'Header stays locked at top; tap interception is the part that had to stay in JS', ko: '상단 헤더 고정 유지 — 이 중 JS에 남겨야 했던 것은 탭 가로채기뿐' } },
+      { id: '1-2', status: 'pass', comment: { en: 'Single unified scroll; the body anchor is now CSS column-reverse', ko: '단일 통합 스크롤 유지 — 본문 앵커는 CSS column-reverse가 대신함' } },
+      { id: '1-3', status: 'pass', comment: { en: 'Safe-area handled by --rmkl-kb-inset as bottom padding, without class toggling', ko: 'Safe Area는 --rmkl-kb-inset을 아래 여백으로 잡아 처리 — 클래스 토글 없음' } },
+      { id: '1-4', status: 'pass', comment: { en: 'Reading position of the body preserved on both keyboard open and close', ko: '본문 스크롤(읽던 위치) 유지 — 열림·닫힘 양쪽' } },
+      { id: '2-1', status: 'pass', comment: { en: 'Bottom body input stays usable; the hook returns it to the reading position and reveals it above the keyboard', ko: '최하단 본문 인풋 사용 가능 — 훅이 읽던 위치로 되돌리고 키보드 위로 드러냄' } },
+      { id: '3-1', status: 'pass', comment: { en: 'Dismiss restores synchronously through :not(:focus-within), without waiting for the delayed resize event', ko: '닫힘은 :not(:focus-within)으로 동기 복귀 — 지연되는 resize 이벤트를 기다리지 않음' } },
+    ],
+    keyFinding: {
+      en: 'Moved to CSS: state resolution (:focus-within), input-bar suppression and native picker pass-through (:has()), body anchoring (column-reverse). Left in JS: publishing --rmkl-kb / --rmkl-kb-inset, tap interception with preventScroll focus, an insurance rAF top-lock, and keeping a focused body input in its reading position. With that split the whole src/core layer - layout engine, rule matrix, FSM - was deleted and all six criteria still pass.',
+      ko: 'CSS로 옮긴 것: 상태 판정(:focus-within), 입력바 서프레션과 네이티브 피커 통과(:has()), 본문 앵커(column-reverse). JS에 남은 것: --rmkl-kb / --rmkl-kb-inset 갱신, preventScroll 포커스로 하는 탭 가로채기, 보험용 rAF 탑락, 포커스된 본문 입력의 읽던 위치 유지. 이 갈래로 src/core(레이아웃 엔진·룰 매트릭스·FSM)를 통째로 지우고도 6개 항목이 그대로 통과했다.',
+    },
+    nextDecision: {
+      en: 'Adopted as the default behaviour of the current package. EXP-03-F is kept as-is on an isolated copy of the v0.2.0 engine (apps/showcase/src/labs/engine-v0.2/).',
+      ko: '현재 패키지의 기본 동작으로 채택. EXP-03-F는 v0.2.0 엔진 사본(apps/showcase/src/labs/engine-v0.2/)으로 격리해 그대로 남긴다.',
+    },
+  },
 ]

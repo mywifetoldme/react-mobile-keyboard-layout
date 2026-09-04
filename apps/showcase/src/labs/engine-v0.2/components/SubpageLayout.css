@@ -1,0 +1,111 @@
+:root {
+  --rmkl-v02-bg: #ffffff;
+  --rmkl-v02-text: #18181b;
+  --rmkl-v02-border: #e4e4e7;
+  --rmkl-v02-header-height: 56px;
+  --rmkl-v02-header-bg: rgba(255, 255, 255, 0.85);
+  --rmkl-v02-header-border: #e4e4e7;
+  --rmkl-v02-input-bg: #f4f4f5;
+  --rmkl-v02-input-text: #18181b;
+  --rmkl-v02-input-border: #e4e4e7;
+  --rmkl-v02-primary: #2563eb;
+  --rmkl-v02-primary-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rmkl-v02-bg: #09090b;
+    --rmkl-v02-text: #f4f4f5;
+    --rmkl-v02-border: #27272a;
+    --rmkl-v02-header-bg: rgba(9, 9, 11, 0.85);
+    --rmkl-v02-header-border: #27272a;
+    --rmkl-v02-input-bg: #18181b;
+    --rmkl-v02-input-text: #f4f4f5;
+    --rmkl-v02-input-border: #27272a;
+    --rmkl-v02-primary: #3b82f6;
+    --rmkl-v02-primary-text: #ffffff;
+  }
+}
+
+.rmkl-v02-subpage-root {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--rmkl-v02-bg);
+  color: var(--rmkl-v02-text);
+  touch-action: none;
+}
+
+.rmkl-v02-subpage-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--rmkl-v02-header-height, 56px);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
+  background-color: var(--rmkl-v02-header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rmkl-v02-header-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 16px;
+  padding-right: 16px;
+  z-index: 50;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+.rmkl-v02-header-left,
+.rmkl-v02-header-right {
+  display: flex;
+  align-items: center;
+  min-width: 40px;
+}
+
+.rmkl-v02-header-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+
+.rmkl-v02-subpage-body-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  padding-top: calc(var(--rmkl-v02-header-height, 56px) + env(safe-area-inset-top, 0px));
+  box-sizing: border-box;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.rmkl-v02-subpage-body {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
+.rmkl-v02-subpage-footer {
+  position: relative;
+  z-index: 40;
+  flex-shrink: 0;
+}
