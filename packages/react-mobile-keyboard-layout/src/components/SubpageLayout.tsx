@@ -2,9 +2,12 @@
 
 import {
   forwardRef,
+  useRef,
   type ReactNode,
   type HTMLAttributes,
   type ComponentPropsWithoutRef,
+  type PointerEvent as ReactPointerEvent,
+  type RefObject,
 } from 'react'
 import { useMobileKeyboard, type UseMobileKeyboardReturn } from '../hooks/useMobileKeyboard'
 import './SubpageLayout.css'
@@ -16,7 +19,8 @@ export interface SubpageLayoutProps extends Omit<HTMLAttributes<HTMLDivElement>,
   header?: ReactNode
   footer?: ReactNode
   children: ReactNode
-  bodyRef?: React.RefObject<HTMLDivElement | null>
+  bodyRef?: RefObject<HTMLDivElement | null>
+  /** Share the caller's hook instance (e.g. to read isKeyboardOpen). Defaults to an internal one. */
   keyboardEngine?: UseMobileKeyboardReturn
   headerProps?: ComponentPropsWithoutRef<'header'>
   bodyProps?: ComponentPropsWithoutRef<'main'>
@@ -33,14 +37,24 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
   bodyRef,
   className = '',
   style,
-  keyboardEngine: externalEngine,
+  keyboardEngine,
   headerProps,
   bodyProps,
   footerProps,
   ...rest
 }, ref) => {
-  const internalEngine = useMobileKeyboard({ bodyRef })
-  const engine = externalEngine ?? internalEngine
+  // the hook needs the body element to keep a focused body input still; give it one even when the
+  // caller did not pass a ref
+  const ownBodyRef = useRef<HTMLDivElement | null>(null)
+  const resolvedBodyRef = bodyRef ?? ownBodyRef
+  const internalEngine = useMobileKeyboard({ bodyRef: resolvedBodyRef })
+  const engine = keyboardEngine ?? internalEngine
+
+  // The consumer's handler runs first and is never overwritten; it can opt out with preventDefault()
+  const handleBodyPointerDown = (e: ReactPointerEvent<HTMLElement>) => {
+    bodyProps?.onPointerDown?.(e)
+    if (!e.defaultPrevented) engine.bodyProps.onPointerDown(e)
+  }
 
   return (
     <div
@@ -49,17 +63,14 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
       style={style}
       {...rest}
     >
-      {/* 1. Physically Isolated Header - Untouched by dynamic body resizing */}
+      {/* 1. Header outside the resizing flow (position: absolute, see SubpageLayout.css) */}
       {header ? (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 60 }}>
-          {header}
-        </div>
+        <div className="rmkl-subpage-header-slot">{header}</div>
       ) : (
         <header
           role="banner"
           {...headerProps}
           className={`rmkl-subpage-header ${headerProps?.className ?? ''}`.trim()}
-          style={headerProps?.style}
         >
           <div className="rmkl-header-left">{headerLeft}</div>
           <h1 className="rmkl-header-title">{title}</h1>
@@ -67,20 +78,16 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
         </header>
       )}
 
-      {/* 2. Responsive Viewport Body Container */}
-      <div
-        className="rmkl-subpage-body-container"
-        style={engine.containerStyle}
-      >
+      {/* 2. Body: CSS reserves the keyboard height (--rmkl-kb) and keeps the reading position (column-reverse) */}
+      <div className="rmkl-subpage-body-container">
         <main
           role="main"
-          ref={bodyRef}
+          ref={resolvedBodyRef}
           {...bodyProps}
-          {...engine.bodyProps}
+          onPointerDown={handleBodyPointerDown}
           className={`rmkl-subpage-body ${bodyProps?.className ?? ''}`.trim()}
-          style={bodyProps?.style}
         >
-          {children}
+          <div className="rmkl-subpage-body-inner">{children}</div>
         </main>
 
         {footer && (
@@ -88,7 +95,6 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
             role="contentinfo"
             {...footerProps}
             className={`rmkl-subpage-footer ${footerProps?.className ?? ''}`.trim()}
-            style={footerProps?.style}
           >
             {footer}
           </footer>

@@ -24,6 +24,14 @@ interface HudOverlayProps {
   lang: Language
 }
 
+// Which input holds the focus is decided by CSS selectors in the library; the HUD reads it from the DOM
+const activeInputLabel = () => {
+  const el = typeof document !== 'undefined' ? document.activeElement : null
+  if (el?.closest('.rmkl-floating-input-wrapper')) return 'FLOATING'
+  if (el?.closest('.rmkl-subpage-body')) return 'BODY'
+  return 'NONE'
+}
+
 export const HudOverlay = ({ engine, lang }: HudOverlayProps) => {
   const [scrollY, setScrollY] = useState(0)
   const [maxHeaderDev, setMaxHeaderDev] = useState(0)
@@ -149,7 +157,7 @@ export const HudOverlay = ({ engine, lang }: HudOverlayProps) => {
       <div>
         <div style={{ color: '#a1a1aa', fontSize: '10px' }}>{t.hudActiveInput}</div>
         <div style={{ fontWeight: 600, color: '#c084fc' }}>
-          {engine.isFloatingSuppressed ? 'BODY' : engine.isKeyboardOpen ? 'FLOATING' : 'NONE'}
+          {activeInputLabel()}
         </div>
       </div>
       <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>

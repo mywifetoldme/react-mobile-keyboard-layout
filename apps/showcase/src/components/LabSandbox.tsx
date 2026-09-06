@@ -8,6 +8,14 @@ import {
   isKeyboardTextInput,
 } from 'react-mobile-keyboard-layout'
 
+// EXP-03-F is frozen at v0.2.0 (03c867d0). It runs on an isolated copy of the old
+// engine under ../labs/engine-v0.2 so the current package can evolve freely.
+import {
+  SubpageLayout as SubpageLayoutV02,
+  FloatingInput as FloatingInputV02,
+  useMobileKeyboard as useMobileKeyboardV02,
+} from '../labs/engine-v0.2'
+
 interface LabSandboxProps {
   lab: LabInfo
   lang: Language
@@ -2268,8 +2276,8 @@ function Exp03FSandbox({ lab, lang, onClose }: LabSandboxProps) {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // EXP-03-F: Uses production engine with In-Viewport Boundary Evasion (alignPadding: 16)
-  const engine = useMobileKeyboard({
+  // EXP-03-F: Uses the v0.2.0 engine copy with In-Viewport Boundary Evasion (alignPadding: 16)
+  const engine = useMobileKeyboardV02({
     bodyRef,
     alignPadding: 16,
   })
@@ -2281,13 +2289,13 @@ function Exp03FSandbox({ lab, lang, onClose }: LabSandboxProps) {
   }
 
   return (
-    <SubpageLayout
+    <SubpageLayoutV02
       keyboardEngine={engine}
       bodyRef={bodyRef}
       style={{ zIndex: 300 }}
       header={<LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />}
       footer={
-        <FloatingInput
+        <FloatingInputV02
           value={floatingVal}
           onChange={setFloatingVal}
           onSubmit={handleSubmit}
@@ -2346,6 +2354,100 @@ function Exp03FSandbox({ lab, lang, onClose }: LabSandboxProps) {
 
         <div style={{ height: '60px', flexShrink: 0 }} />
       </div>
+    </SubpageLayoutV02>
+  )
+}
+
+function Exp04ASandbox({ lab, lang, onClose }: LabSandboxProps) {
+  const [floatingVal, setFloatingVal] = useState('')
+  const [bodyVal, setBodyVal] = useState('')
+  const [bottomInputVal, setBottomInputVal] = useState('')
+  const [dateVal, setDateVal] = useState('2026-09-01')
+  const [messages, setMessages] = useState<string[]>([])
+  const [scrollY, setScrollY] = useState(0)
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  // EXP-04-A: Uses the current CSS-first package. State lives in SubpageLayout.css; the hook only
+  // keeps a focused body input in the reading position while the keyboard opens and closes.
+  const engine = useMobileKeyboard({ bodyRef })
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+  }
+
+  return (
+    <SubpageLayout
+      keyboardEngine={engine}
+      bodyRef={bodyRef}
+      style={{ zIndex: 300 }}
+      header={<LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />}
+      footer={
+        <FloatingInput
+          value={floatingVal}
+          onChange={setFloatingVal}
+          onSubmit={handleSubmit}
+          placeholder={lang === 'ko' ? 'Zero-Shift 키보드 테스트...' : 'Test zero-shift keyboard input...'}
+          {...engine.floatingProps}
+          isKeyboardOpen={engine.isKeyboardOpen}
+        />
+      }
+    >
+      <div style={{ padding: '14px 16px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <LabHeroSection lab={lab} lang={lang} />
+        <LabFormSection lang={lang} bodyVal={bodyVal} setBodyVal={setBodyVal} dateVal={dateVal} setDateVal={setDateVal} />
+        <LabEvaluationSection lab={lab} lang={lang} />
+        <LabFindingDecisionSection lab={lab} lang={lang} />
+        <LabMessagesSection messages={messages} lang={lang} />
+
+        {/* Bottom edge input placed at the very end of the scroll container to demonstrate that the reading position is preserved in EXP-04-A */}
+        <div style={{
+          padding: '14px',
+          borderRadius: '12px',
+          backgroundColor: 'rgba(34, 197, 94, 0.12)',
+          border: '2px solid rgba(34, 197, 94, 0.5)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+          marginTop: '16px',
+        }}>
+          <div style={{ fontSize: '13px', fontWeight: 800, color: '#4ade80' }}>
+            🛡️ {lang === 'ko' ? '페이지 최하단 본문 인풋 (읽던 위치 유지)' : 'Very Bottom Page Input (Reading Position Preserved)'}
+          </div>
+          <input
+            type="text"
+            value={bottomInputVal}
+            onChange={(e) => setBottomInputVal(e.target.value)}
+            placeholder={lang === 'ko' ? '스크롤 맨 끝에서 터치 ➔ 읽던 위치 그대로...' : 'Tap at the bottom -> your reading position stays put...'}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              minHeight: '44px',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              border: '2px solid #22c55e',
+              backgroundColor: '#09090b',
+              color: '#f4f4f5',
+              fontSize: '15px',
+              outline: 'none',
+            }}
+          />
+          <div style={{ fontSize: '11.5px', color: '#bbf7d0', lineHeight: '1.4' }}>
+            {lang === 'ko'
+              ? '스크롤을 맨 아래로 내린 뒤 이 인풋을 터치해도, 키보드가 열리고 닫히는 동안 읽던 위치가 그대로 유지됩니다.'
+              : 'Scroll all the way down and tap this input. Your reading position stays put while the keyboard opens and closes.'}
+          </div>
+        </div>
+
+        <div style={{ height: '60px', flexShrink: 0 }} />
+      </div>
     </SubpageLayout>
   )
 }
@@ -2383,7 +2485,9 @@ export const LabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
     case 'exp03_e':
       return <Exp03ESandbox lab={lab} lang={lang} onClose={onClose} />
     case 'exp03_f':
-    default:
       return <Exp03FSandbox lab={lab} lang={lang} onClose={onClose} />
+    case 'exp04_a':
+    default:
+      return <Exp04ASandbox lab={lab} lang={lang} onClose={onClose} />
   }
 }

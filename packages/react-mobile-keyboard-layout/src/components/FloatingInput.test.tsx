@@ -44,6 +44,18 @@ describe('FloatingInput', () => {
     expect(handleSubmit).toHaveBeenCalledTimes(1)
   })
 
+  it('textarea pointerdown is intercepted: preventDefault (no native window pan) and focus({ preventScroll: true })', () => {
+    render(<FloatingInput value="" onChange={vi.fn()} onSubmit={vi.fn()} />)
+
+    const textarea = screen.getByRole('textbox')
+    const focusSpy = vi.spyOn(textarea, 'focus')
+    const event = new Event('pointerdown', { cancelable: true, bubbles: true })
+    textarea.dispatchEvent(event)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
   it('applies 2-step suppression (visibility: hidden initially, display: none when keyboard open)', () => {
     // Step 1: Suppressed while keyboard not yet open (ghost state holding 60px slot)
     const { container, rerender } = render(
