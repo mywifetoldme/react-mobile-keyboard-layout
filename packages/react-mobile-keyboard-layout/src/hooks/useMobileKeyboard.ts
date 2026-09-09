@@ -168,8 +168,10 @@ export const useMobileKeyboard = ({
       if (!changed || !isBottomAnchored(body)) return
       // The anchor outlives its input's blur (the grace window needs it), so "no anchor" is not
       // the test for the bar's turn -- "the anchored input is neither focused nor just blurred" is.
+      // And the grace window is for that input's own close: once the bar has the focus, the turn
+      // is the bar's, or the anchor would rewind the shell to where the body input had been.
       const focused = !!anchor && document.activeElement === anchor.el
-      const justBlurred = !!anchor && performance.now() - bodyInputBlurredAtRef.current < BLUR_GRACE_MS
+      const justBlurred = !!anchor && !floatingHasFocus() && performance.now() - bodyInputBlurredAtRef.current < BLUR_GRACE_MS
       if (!anchor || (!focused && !justBlurred)) {
         // the bar's turn: hold the bottom edge by putting back the offset from before the change
         if (floatingHasFocus()) body.scrollTop = lastScrollTop
@@ -180,9 +182,17 @@ export const useMobileKeyboard = ({
       // in a column-reverse box a smaller scrollTop moves the content down
       body.scrollTop -= anchor.top - top
       // the box got shorter: reveal the input if the keyboard now hides it (a no-op when visible).
-      // Smoothly -- the keyboard itself animates in, and an instant jump under a finger that
-      // just tapped the bottom of the page reads as the page bouncing.
-      if (shrank && focused) anchor.el.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+      // The body alone is scrolled -- scrollIntoView would also scroll any ancestor, including a
+      // document that a layout has frozen, and take the header with it. Smoothly: the keyboard
+      // itself animates in, and an instant jump under a finger that just tapped reads as a bounce.
+      if (shrank && focused) {
+        const box = body.getBoundingClientRect()
+        const rect = anchor.el.getBoundingClientRect()
+        const below = rect.bottom - box.bottom
+        const above = box.top - rect.top
+        if (below > 0) body.scrollBy?.({ top: below, behavior: 'smooth' })
+        else if (above > 0) body.scrollBy?.({ top: -above, behavior: 'smooth' })
+      }
       remember()
     })
     body.addEventListener('focusin', handleFocusIn)

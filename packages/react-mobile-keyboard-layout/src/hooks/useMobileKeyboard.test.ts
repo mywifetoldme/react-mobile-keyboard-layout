@@ -77,10 +77,12 @@ const makeBody = (height: number) => {
   let scrollTop = 0
   Object.defineProperty(body, 'clientHeight', { get: () => clientHeight, configurable: true })
   Object.defineProperty(body, 'scrollTop', { get: () => scrollTop, set: (v: number) => (scrollTop = v), configurable: true })
+  body.getBoundingClientRect = () => ({ top: 0, bottom: clientHeight, height: clientHeight }) as DOMRect
+  body.scrollBy = vi.fn() as unknown as typeof body.scrollBy
   const input = document.createElement('input')
   input.type = 'text'
   input.scrollIntoView = vi.fn()
-  input.getBoundingClientRect = () => ({ top: clientHeight - 400 - scrollTop }) as DOMRect
+  input.getBoundingClientRect = () => ({ top: clientHeight - 400 - scrollTop, bottom: clientHeight - 400 - scrollTop + 40 }) as DOMRect
   body.appendChild(input)
   document.body.appendChild(body)
   const setHeight = (px: number) => {
@@ -175,7 +177,7 @@ describe('useMobileKeyboard hook', () => {
     expect(result.current.isKeyboardOpen).toBe(false)
   })
 
-  it('keeps a focused body input still when the body shrinks or grows, and reveals it (scrollIntoView block: nearest) when it shrinks', () => {
+  it('keeps a focused body input still when the body shrinks or grows, and reveals it by scrolling the body only when it shrinks', () => {
     installViewport(700, 700)
     const { body, input, sizeBody, inputTop } = makeBody(600)
     renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
@@ -187,7 +189,10 @@ describe('useMobileKeyboard hook', () => {
     sizeBody(263) // keyboard: the body lost 337px at the bottom; bottom-anchoring moved the input up
     expect(inputTop()).toBe(400) // …and it was put back
     expect(body.scrollTop).toBe(-537)
-    expect(input.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' })
+    // the input (400..440) now sits below the box (263): the body scrolls it in, smoothly, and
+    // nothing else -- scrollIntoView could scroll the document too and take the header with it
+    expect(body.scrollBy).toHaveBeenCalledWith({ top: 177, behavior: 'smooth' })
+    expect(input.scrollIntoView).not.toHaveBeenCalled()
 
     input.blur()
     sizeBody(600) // the body got its space back right after the blur
@@ -305,6 +310,29 @@ describe('useMobileKeyboard hook', () => {
     input.focus()
     input.blur()
     now = 5000 // well past the blur grace window
+
+    body.scrollTop = -200
+    floating.focus()
+    setHeight(263)
+    body.scrollTop = -200 - 337
+    notifyResize()
+
+    expect(body.scrollTop).toBe(-200)
+  })
+
+  it('gives the bar its turn even inside the blur grace window of a body input', () => {
+    // bottom input tapped, dismissed, and the composer tapped right away (within BLUR_GRACE_MS):
+    // the grace window is for the body input's own close, not for a new lock -- on device the
+    // anchor path rewound the shell to where the body input had been
+    installViewport(700, 700)
+    const { body, input, setHeight, notifyResize } = makeBody(600)
+    const floating = document.createElement('textarea')
+    document.body.appendChild(floating)
+    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+
+    input.focus()
+    input.blur()
+    now = 500 // still inside the grace window
 
     body.scrollTop = -200
     floating.focus()
