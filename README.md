@@ -46,8 +46,8 @@ On mobile browsers—especially **iOS Safari / WebKit**—virtual software keybo
   Text inputs are focused with `preventScroll: true` on `pointerdown`, before iOS pans the window to reveal them. A short rAF top-lock (350ms) only remains as a fallback: frame-by-frame video measurement on iOS 26 showed that undoing the pan afterwards always leaves a ~240ms header jump.
 - **Keyboard height as CSS variables**:
   The one value CSS cannot read, the keyboard height, is published as `--rmkl-kb` (browsers report the keyboard in one of two ways: some shrink only the visual viewport, so the height is `innerHeight - visualViewport.height`; others shrink the layout viewport itself, so it is the drop in `innerHeight`. Both are read, and which one a given browser and version uses has to be measured rather than assumed — iOS Safari, Android Chrome 133 and WKWebView all took the visual-viewport path when measured). The part of the layout viewport the keyboard covers is published as `--rmkl-kb-inset` and reserved as bottom padding. On blur the layout snaps back synchronously through `:not(:focus-within)`, without waiting for the delayed `visualViewport` resize event.
-- **Reading position kept by the browser**:
-  The body scrolls from the bottom (`flex-direction: column-reverse`, children stay in DOM order), so shrinking it keeps the message you were reading in place.
+- **Reading position kept**:
+  The body scrolls from the bottom (`flex-direction: column-reverse`, children stay in DOM order). At the end of the feed the browser keeps the newest message in place by itself; scrolled up, WebKit keeps the top-based offset instead, so the hook puts the bottom edge back when the box changes while the floating bar has the focus.
 - **A focused body input stays put**:
   A bottom-anchored body would push a focused form field up when the keyboard takes space. The hook watches the body with a `ResizeObserver`, shifts the scroll offset so the field keeps its screen position (or reveals it when the keyboard would hide it), and puts it back where it was when the keyboard leaves.
 - **Native Picker Passthrough**:

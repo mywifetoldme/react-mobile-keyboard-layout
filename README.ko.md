@@ -46,8 +46,8 @@
   텍스트 입력은 `pointerdown`에서 `preventScroll: true`로 직접 포커스해, iOS가 창을 밀어 올리기 전에 끝낸다. 350ms rAF 탑락은 보험으로만 남는다. iOS 26에서 영상을 프레임 단위로 재보면, 밀린 뒤 되돌리는 방식은 항상 약 240ms 헤더 튐이 남는다.
 - **키보드 높이는 CSS 변수로**:
   CSS가 읽을 수 없는 유일한 값인 키보드 높이를 `--rmkl-kb`로 내보낸다(브라우저는 키보드를 두 방식 중 하나로 알립니다. visual viewport만 줄이는 쪽은 `innerHeight - visualViewport.height`, layout viewport 자체가 줄어드는 쪽은 `innerHeight` 감소분입니다. 둘 다 읽으며, 어느 브라우저의 어느 버전이 어느 쪽인지는 단정하지 말고 재봐야 합니다 — 실제로 재본 iOS Safari·Android Chrome 133·WKWebView는 셋 다 visual viewport 축소였습니다). 그중 layout viewport가 가려진 만큼은 `--rmkl-kb-inset`으로 내보내 아래 여백으로 잡는다. 블러 시엔 지연되는 `visualViewport` resize를 기다리지 않고 `:not(:focus-within)`으로 즉시 되돌아간다.
-- **읽던 위치는 브라우저가 유지**:
-  본문은 아래에서부터 스크롤한다(`flex-direction: column-reverse`, 자식은 DOM 순서 그대로). 컨테이너가 줄어도 읽던 메시지가 그 자리에 있다.
+- **읽던 위치 유지**:
+  본문은 아래에서부터 스크롤한다(`flex-direction: column-reverse`, 자식은 DOM 순서 그대로). 피드 끝에서는 브라우저가 최신 메시지를 스스로 그 자리에 둔다. 위로 스크롤한 상태에서는 WebKit이 위쪽 기준 오프셋을 유지하므로, 플로팅 바가 포커스인 채 상자가 바뀌면 훅이 하단 가장자리를 되돌린다.
 - **포커스된 본문 입력은 제자리에**:
   아래 끝이 앵커인 본문은 키보드가 자리를 차지하면 포커스된 폼 필드를 위로 밀어 올린다. 훅이 `ResizeObserver`로 본문을 지켜보다가 스크롤 오프셋을 옮겨 필드의 화면 위치를 지키고(키보드에 가려지면 드러내고), 키보드가 내려가면 원래 자리로 되돌린다.
 - **네이티브 피커 분기 (Picker Passthrough)**:
