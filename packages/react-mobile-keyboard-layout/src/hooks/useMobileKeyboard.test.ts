@@ -144,6 +144,32 @@ describe('useMobileKeyboard hook', () => {
     expect(result.current.isKeyboardOpen).toBe(false)
   })
 
+  it('re-measures when innerHeight comes back on a scroll, not a resize -- iOS restores the layout viewport silently', () => {
+    // device: as the keyboard opens Safari shrinks innerHeight 735 -> 400 with the visual viewport at
+    // 392 (inset 8); a layout's guard scrolls the window back and innerHeight returns to 735 with only
+    // scroll events fired. Measured only on resize, the inset stayed 8px and the composer sat 335px
+    // behind the keyboard.
+    const vv = installViewport(735, 735)
+    const input = document.createElement('input')
+    input.type = 'text'
+    document.body.appendChild(input)
+    renderHook(() => useMobileKeyboard())
+    input.focus()
+    act(() => {
+      setInnerHeight(400)
+      vv.height = 392
+      vv.dispatchEvent(new Event('resize'))
+    })
+    expect(insetVar()).toBe('8px')
+    act(() => {
+      setInnerHeight(735)
+      vv.dispatchEvent(new Event('scroll'))
+    })
+    expect(insetVar()).toBe('343px')
+    expect(kbVar()).toBe('343px')
+    input.remove()
+  })
+
   it('reads the keyboard height from the layout viewport shrinking (Chrome for iOS, Android) — nothing is covered, so the inset stays 0', () => {
     const vv = installViewport(700, 700)
     const { result } = renderHook(() => useMobileKeyboard())
