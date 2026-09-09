@@ -174,6 +174,15 @@ describe('EXP-04-B: mode is decided by focus, in CSS', () => {
     expect(css()).not.toMatch(/tap-pending/)
   })
 
+  it('keeps a drag on the composer from chaining into the frozen document', () => {
+    // the textarea is a scroll container of its own; when its content ends, iOS chains the
+    // gesture to the next scroller -- the document, which overflow: hidden does not protect from
+    // touch -- and two things scroll at once
+    renderSandbox()
+    expect(ruleFor('.rmkl-exp04b-root:focus-within .rmkl-exp04b-footer textarea')).toMatch(/overscroll-behavior:\s*contain/)
+    expect(ruleFor('.rmkl-exp04b-root:focus-within .rmkl-exp04b-footer')).toMatch(/touch-action:\s*none/)
+  })
+
   it('keeps the shell body bottom-anchored so the engine can hold a focused body input', () => {
     const { main } = renderSandbox()
     expect(getComputedStyle(main).flexDirection).toBe('column-reverse')

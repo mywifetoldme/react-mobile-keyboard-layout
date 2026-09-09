@@ -266,22 +266,92 @@ describe('useMobileKeyboard hook', () => {
     expect(body.scrollTop).toBe(-337)
   })
 
-  it('leaves the bottom-anchoring alone while the floating bar (outside the body) has the focus', () => {
+  it('keeps the bottom edge in view while the floating bar (outside the body) has the focus', () => {
+    // WebKit keeps the TOP-based offset when a column-reverse box changes height: a body scrolled
+    // up by 200px and shrunk by 337px lands at -537, and the newest 337px slide behind the
+    // keyboard (measured on iPhone: -2347 -> -2690 for a 343px inset). Only at scrollTop 0 does it
+    // look bottom-anchored, which is why a chat sitting at its end never showed this.
     installViewport(700, 700)
-    const { body, sizeBody } = makeBody(600)
+    const { body, setHeight, notifyResize } = makeBody(600)
     const floating = document.createElement('textarea')
     document.body.appendChild(floating)
     renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
 
     body.scrollTop = -200
+    body.dispatchEvent(new Event('scroll'))
     floating.focus()
-    sizeBody(263)
-    expect(body.scrollTop).toBe(-200) // the browser keeps the bottom edge; nothing to correct
 
-    floating.blur()
-    now = 5000
-    sizeBody(600)
+    setHeight(263)
+    body.scrollTop = -200 - 337 // what the browser did before the observer ran
+    notifyResize()
+    expect(body.scrollTop).toBe(-200) // the same content sits above the keyboard as before
+
+    setHeight(600)
+    body.scrollTop = -200 + 337
+    notifyResize()
     expect(body.scrollTop).toBe(-200)
+  })
+
+  it('holds the bottom edge for the floating bar even after a body input was used earlier', () => {
+    // the body-input anchor stays set after that input blurs (its grace window needs it); it must
+    // not keep the floating bar's turn from ever running -- on device the fix was dead code until
+    // the page was reloaded
+    installViewport(700, 700)
+    const { body, input, setHeight, notifyResize } = makeBody(600)
+    const floating = document.createElement('textarea')
+    document.body.appendChild(floating)
+    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+
+    input.focus()
+    input.blur()
+    now = 5000 // well past the blur grace window
+
+    body.scrollTop = -200
+    floating.focus()
+    setHeight(263)
+    body.scrollTop = -200 - 337
+    notifyResize()
+
+    expect(body.scrollTop).toBe(-200)
+  })
+
+  it('takes the offset at the moment the floating bar gains focus as the one to hold', () => {
+    // a caller may move the body right before focusing the bar (EXP-04-B hands the document's
+    // reading position over in a capture-phase focusin); no scroll event has been delivered yet
+    installViewport(700, 700)
+    const { body, setHeight, notifyResize } = makeBody(600)
+    const floating = document.createElement('textarea')
+    document.body.appendChild(floating)
+    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+
+    body.scrollTop = -1500 // set synchronously, no scroll event
+    floating.focus()
+    setHeight(263)
+    body.scrollTop = -1500 - 337
+    notifyResize()
+
+    expect(body.scrollTop).toBe(-1500)
+  })
+
+  it('does not fight the user scrolling the body while the floating bar has the focus', () => {
+    installViewport(700, 700)
+    const { body, setHeight, notifyResize } = makeBody(600)
+    const floating = document.createElement('textarea')
+    document.body.appendChild(floating)
+    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+
+    floating.focus()
+    setHeight(263)
+    body.scrollTop = -337
+    notifyResize()
+    expect(body.scrollTop).toBe(0) // opened at the end: still at the end
+
+    body.scrollTop = -500 // the user scrolls up while typing
+    body.dispatchEvent(new Event('scroll'))
+    setHeight(600)
+    body.scrollTop = -500 + 337
+    notifyResize()
+    expect(body.scrollTop).toBe(-500) // the position they chose survives the keyboard leaving
   })
 
   it('removes --rmkl-kb and --rmkl-kb-inset and stops listening to visualViewport on unmount', () => {

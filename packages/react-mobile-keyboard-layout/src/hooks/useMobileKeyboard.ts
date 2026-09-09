@@ -119,27 +119,41 @@ export const useMobileKeyboard = ({
     }
   }, [keyboardThreshold])
 
-  // 2. Keep a body input where it is. A column-reverse body is bottom-anchored, which is right while
-  //    the floating bar has the focus (a chat keeps the newest message in view) but wrong while a
-  //    body input has it: the input must not move. So the input's screen position is remembered on
-  //    focus (and whenever the user scrolls), and whenever the body's box changes — our padding on
-  //    Safari, the layout viewport on Chrome/Android, the floating bar collapsing — the scroll offset
-  //    is shifted so the input is back where it was. Positions are compared, not sizes, because the
-  //    browser may already have clamped the offset when the box grew. ResizeObserver callbacks run
-  //    after layout and before paint, so nothing flashes.
+  // 2. Keep the reading position when the body's box changes — our padding on Safari, the layout
+  //    viewport on Chrome/Android, the floating bar collapsing. Two cases:
+  //    - the floating bar has the focus: a chat keeps the newest message in view, i.e. the bottom
+  //      edge holds. A column-reverse body only does that by itself at scrollTop 0; scrolled up,
+  //      WebKit keeps the top-based offset and the newest content slides behind the keyboard
+  //      (measured on iPhone). So the offset from before the change is put back.
+  //    - a body input has the focus: the input must not move. Its screen position is remembered on
+  //      focus (and whenever the user scrolls) and the offset is shifted so it is back where it was.
+  //      Positions are compared, not sizes, because the browser may already have clamped the offset.
+  //    ResizeObserver callbacks run after layout and before paint, so nothing flashes.
   useEffect(() => {
     const body = bodyRef?.current
     if (!body || typeof ResizeObserver === 'undefined' || keptBodies.has(body)) return
     keptBodies.add(body)
     let anchor: { el: HTMLElement; top: number } | null = null
     let lastHeight = body.clientHeight
+    let lastScrollTop = body.scrollTop
     const remember = () => {
       if (anchor) anchor.top = anchor.el.getBoundingClientRect().top
+      lastScrollTop = body.scrollTop
+    }
+    const floatingHasFocus = () => {
+      const active = document.activeElement
+      return isKeyboardTextInput(active) && !body.contains(active)
     }
     const handleFocusIn = (e: FocusEvent) => {
       if (!isFocusedBodyInput(body, e.target)) return
       anchor = { el: e.target as HTMLElement, top: 0 }
       remember()
+    }
+    // The bar's focusin does not pass through the body. The offset at that moment is the one to
+    // hold: a caller may have just moved the body (before any scroll event is delivered), and the
+    // scroll handler below ignores events that arrive while the box is changing.
+    const handleWindowFocusIn = (e: FocusEvent) => {
+      if (isKeyboardTextInput(e.target) && !body.contains(e.target as Node)) lastScrollTop = body.scrollTop
     }
     // A scroll event that arrives after the box changed but before the observer ran is the browser
     // clamping the offset to the new range, not the user scrolling: the remembered position survives it.
@@ -151,10 +165,17 @@ export const useMobileKeyboard = ({
       const changed = height !== lastHeight
       const shrank = height < lastHeight
       lastHeight = height
-      if (!changed || !anchor || !isBottomAnchored(body)) return
-      const focused = document.activeElement === anchor.el
-      const justBlurred = performance.now() - bodyInputBlurredAtRef.current < BLUR_GRACE_MS
-      if (!focused && !justBlurred) return
+      if (!changed || !isBottomAnchored(body)) return
+      // The anchor outlives its input's blur (the grace window needs it), so "no anchor" is not
+      // the test for the bar's turn -- "the anchored input is neither focused nor just blurred" is.
+      const focused = !!anchor && document.activeElement === anchor.el
+      const justBlurred = !!anchor && performance.now() - bodyInputBlurredAtRef.current < BLUR_GRACE_MS
+      if (!anchor || (!focused && !justBlurred)) {
+        // the bar's turn: hold the bottom edge by putting back the offset from before the change
+        if (floatingHasFocus()) body.scrollTop = lastScrollTop
+        lastScrollTop = body.scrollTop
+        return
+      }
       const top = anchor.el.getBoundingClientRect().top
       // in a column-reverse box a smaller scrollTop moves the content down
       body.scrollTop -= anchor.top - top
@@ -163,11 +184,13 @@ export const useMobileKeyboard = ({
       remember()
     })
     body.addEventListener('focusin', handleFocusIn)
+    window.addEventListener('focusin', handleWindowFocusIn)
     body.addEventListener('scroll', handleScroll, { passive: true })
     observer.observe(body)
     return () => {
       observer.disconnect()
       body.removeEventListener('focusin', handleFocusIn)
+      window.removeEventListener('focusin', handleWindowFocusIn)
       body.removeEventListener('scroll', handleScroll)
       keptBodies.delete(body)
     }

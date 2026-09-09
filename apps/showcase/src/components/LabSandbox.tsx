@@ -2571,7 +2571,11 @@ const EXP04B_CSS = `
   .rmkl-exp04b-root:focus-within .rmkl-exp04b-footer {
     position: relative; z-index: 40; flex-shrink: 0; background: rgba(9, 9, 11, 0.96);
     -webkit-backdrop-filter: none; backdrop-filter: none;
+    /* a drag on the bar must not become a document scroll: overflow: hidden does not stop touch */
+    touch-action: none;
   }
+  /* the textarea scrolls its own lines; when they end, the gesture must not chain into the document */
+  .rmkl-exp04b-root:focus-within .rmkl-exp04b-footer textarea { touch-action: pan-y; overscroll-behavior: contain; }
   /* a focused body input owns the shell; the composer steps aside (04-A) */
   .rmkl-exp04b-root:has(.rmkl-exp04b-body :is(input, textarea):focus) .rmkl-exp04b-footer { display: none; }
 
