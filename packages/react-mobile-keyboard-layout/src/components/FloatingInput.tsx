@@ -66,6 +66,7 @@ export const FloatingInput = ({
 }: FloatingInputProps) => {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const isComposingRef = useRef(false)
+  const tapArmedRef = useRef(false)
 
   // Auto-grow textarea height up to maxHeight
   useEffect(() => {
@@ -139,8 +140,20 @@ export const FloatingInput = ({
           onPointerDown={(e) => {
             restTextareaProps.onPointerDown?.(e)
             onPointerDown?.(e)
-            // Prevent Safari's native window pan scroll and focus with preventScroll: true
+            // No native default for this touch (iOS would focus at click and pan the window);
+            // the tap is armed here and focused at pointerup, so a drag that starts on the bar
+            // never focuses -- iOS cancels the pointer when a drag begins.
             e.preventDefault()
+            tapArmedRef.current = true
+          }}
+          onPointerCancel={(e) => {
+            restTextareaProps.onPointerCancel?.(e)
+            tapArmedRef.current = false
+          }}
+          onPointerUp={(e) => {
+            restTextareaProps.onPointerUp?.(e)
+            if (!tapArmedRef.current) return
+            tapArmedRef.current = false
             textareaRef.current?.focus({ preventScroll: true })
           }}
           onFocus={(e) => {

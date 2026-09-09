@@ -44,16 +44,29 @@ describe('FloatingInput', () => {
     expect(handleSubmit).toHaveBeenCalledTimes(1)
   })
 
-  it('textarea pointerdown is intercepted: preventDefault (no native window pan) and focus({ preventScroll: true })', () => {
-    render(<FloatingInput value="" onChange={vi.fn()} onSubmit={vi.fn()} />)
-
-    const textarea = screen.getByRole('textbox')
+  it('the tap focuses the textarea: pointerdown prevents the native default, pointerup focuses with preventScroll', () => {
+    render(<FloatingInput value="" onChange={() => {}} onSubmit={() => {}} />)
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement
     const focusSpy = vi.spyOn(textarea, 'focus')
-    const event = new Event('pointerdown', { cancelable: true, bubbles: true })
-    textarea.dispatchEvent(event)
 
-    expect(event.defaultPrevented).toBe(true)
+    const down = new Event('pointerdown', { cancelable: true, bubbles: true })
+    textarea.dispatchEvent(down)
+    expect(down.defaultPrevented).toBe(true)
+    expect(focusSpy).not.toHaveBeenCalled() // a drag that starts on the bar must not focus
+
+    textarea.dispatchEvent(new Event('pointerup', { bubbles: true }))
     expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
+  it('a cancelled pointer (the touch became a scroll) does not focus the textarea', () => {
+    render(<FloatingInput value="" onChange={() => {}} onSubmit={() => {}} />)
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement
+    const focusSpy = vi.spyOn(textarea, 'focus')
+
+    textarea.dispatchEvent(new Event('pointerdown', { cancelable: true, bubbles: true }))
+    textarea.dispatchEvent(new Event('pointercancel', { bubbles: true }))
+    textarea.dispatchEvent(new Event('pointerup', { bubbles: true }))
+    expect(focusSpy).not.toHaveBeenCalled()
   })
 
   it('applies 2-step suppression (visibility: hidden initially, display: none when keyboard open)', () => {
