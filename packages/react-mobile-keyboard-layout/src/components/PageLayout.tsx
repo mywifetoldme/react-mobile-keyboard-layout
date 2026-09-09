@@ -106,11 +106,24 @@ const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: Ref
     const root = rootRef.current
     if (!root || typeof window === 'undefined') return
     // only the offset: the viewport half of the cap is CSS's 100%, which follows Safari's resizes
+    let lockY = 0
     const publishOffset = () => {
-      document.documentElement.style.setProperty(PAGE_LOCK_Y_CSS_VAR, `${Math.round(window.scrollY)}px`)
+      lockY = Math.round(window.scrollY)
+      document.documentElement.style.setProperty(PAGE_LOCK_Y_CSS_VAR, `${lockY}px`)
     }
+    // The cap declares the document frozen; iOS Safari's caret reveal does not ask -- it pans
+    // the window past the document's own maximum (measured offset + 94, + 299) and the fixed
+    // shell rides up with it. So the declaration is enforced: while the shell is up, the
+    // offset is the published one. (EXP-04-A's engine does the same at 0 on a timer.)
     const onScroll = () => {
       if (!focusedInputInside(root)) publishOffset()
+      else if (Math.round(window.scrollY) !== lockY) window.scrollTo(0, lockY)
+    }
+    // The same pan without the window moving: the visual viewport slides over the layout
+    // viewport (measured 40px after the URL bar was pulled open). Asking for the offset we
+    // already have is how the layout viewport is put back under it.
+    const onViewportScroll = () => {
+      if (focusedInputInside(root) && window.visualViewport && window.visualViewport.offsetTop !== 0) window.scrollTo(0, lockY)
     }
     const onFocusIn = (e: FocusEvent) => {
       if (!isKeyboardTextInput(e.target)) return
@@ -125,9 +138,11 @@ const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: Ref
 
     publishOffset()
     window.addEventListener('scroll', onScroll, { passive: true })
+    window.visualViewport?.addEventListener('scroll', onViewportScroll)
     root.addEventListener('focusin', onFocusIn, { capture: true })
     return () => {
       window.removeEventListener('scroll', onScroll)
+      window.visualViewport?.removeEventListener('scroll', onViewportScroll)
       root.removeEventListener('focusin', onFocusIn, { capture: true })
       document.documentElement.style.removeProperty(PAGE_LOCK_Y_CSS_VAR)
     }

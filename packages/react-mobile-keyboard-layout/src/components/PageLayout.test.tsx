@@ -151,7 +151,7 @@ describe('PageLayout: the one JS job -- carry the position into the shell, once'
     expect(main.scrollTop).toBe(600 - MAX_SCROLL)
   })
 
-  it('never moves the document -- not on entry, not on exit', () => {
+  it('never moves the document itself -- not on entry, not on exit', () => {
     renderPage()
     windowScroll.set(600)
     tap(composer())
@@ -160,6 +160,30 @@ describe('PageLayout: the one JS job -- carry the position into the shell, once'
     })
     expect(scrollToSpy).not.toHaveBeenCalled()
     expect(window.scrollY).toBe(600)
+  })
+
+  it('puts the document back if the browser pans it while it is frozen', () => {
+    // iOS Safari's caret reveal scrolls past the document's own maximum (measured y = offset + 94,
+    // + 299) and takes the fixed shell with it; the cap cannot stop it, so the declaration is
+    // enforced: while a keyboard input inside holds the focus, the offset is the published one
+    renderPage()
+    windowScroll.set(600)
+    tap(bodyInput())
+    windowScroll.set(899)
+    expect(scrollToSpy).toHaveBeenCalledWith(0, 600)
+  })
+
+  it('leaves the reader\'s own scrolling alone while idle and after the shell closes', () => {
+    renderPage()
+    windowScroll.set(600)
+    windowScroll.set(700)
+    tap(bodyInput())
+    act(() => {
+      ;(document.activeElement as HTMLElement).blur()
+    })
+    windowScroll.set(150)
+    expect(scrollToSpy).not.toHaveBeenCalled()
+    expect(lockY()).toBe('150px')
   })
 
   it('does not re-enter when focus moves between inputs inside the shell', () => {
