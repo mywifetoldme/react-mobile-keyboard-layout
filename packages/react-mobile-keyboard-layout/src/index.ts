@@ -16,7 +16,7 @@ export {
 
 export {
   PageLayout,
-  PAGE_LOCK_HEIGHT_CSS_VAR,
+  PAGE_LOCK_Y_CSS_VAR,
   type PageLayoutProps,
 } from './components/PageLayout'
 

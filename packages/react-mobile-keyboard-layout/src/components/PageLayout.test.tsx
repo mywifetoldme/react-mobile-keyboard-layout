@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, act, cleanup, screen } from '@testing-library/react'
-import { PageLayout, PAGE_LOCK_HEIGHT_CSS_VAR } from './PageLayout'
+import { PageLayout, PAGE_LOCK_Y_CSS_VAR } from './PageLayout'
 import { FloatingInput } from './FloatingInput'
 import css from './PageLayout.css?raw'
 
@@ -85,7 +85,7 @@ const tap = (el: HTMLElement) => {
 }
 const bodyInput = () => screen.getByPlaceholderText('Body input')
 const composer = () => screen.getByPlaceholderText('Write')
-const lockHeight = () => document.documentElement.style.getPropertyValue(PAGE_LOCK_HEIGHT_CSS_VAR)
+const lockY = () => document.documentElement.style.getPropertyValue(PAGE_LOCK_Y_CSS_VAR)
 
 describe('PageLayout: the mode is decided by focus, in CSS', () => {
   it('hands the document to the browser while idle and pins header and footer in flow', () => {
@@ -98,7 +98,12 @@ describe('PageLayout: the mode is decided by focus, in CSS', () => {
 
   it('caps and freezes the document, never position: fixed, while a keyboard input has the focus', () => {
     const lock = ruleContaining('body:has(.rmkl-page-root textarea:focus)')
-    expect(lock).toMatch(/height:\s*var\(--rmkl-page-lock-height\)/)
+    // the cap is "offset + the live layout viewport", not a snapshot: iOS Safari may shrink
+    // innerHeight by (part of) the keyboard height as the keyboard opens (measured 695 -> 601 and
+    // 695 -> 396), and a cap frozen in px would leave it that much room to scroll the window into
+    expect(lock).toMatch(/height:\s*calc\(var\(--rmkl-page-lock-y, 0px\) \+ 100%\)/)
+    // 100% of the body needs a definite html height
+    expect(ruleContaining('html:has(.rmkl-page-root textarea:focus)')).toMatch(/height:\s*100%/)
     expect(lock).toMatch(/overflow:\s*hidden/)
     // fixing the body resets its offset and makes Safari re-expand its URL bar under the finger
     expect(lock).not.toMatch(/position:\s*fixed/)
@@ -123,10 +128,19 @@ describe('PageLayout: the mode is decided by focus, in CSS', () => {
 })
 
 describe('PageLayout: the one JS job -- carry the position into the shell, once', () => {
-  it('publishes the cap as "offset + viewport" while the document scrolls, so it is in place before the flip', () => {
+  it('publishes the document offset while it scrolls, so the cap is in place before the flip', () => {
     renderPage()
     windowScroll.set(600)
-    expect(lockHeight()).toBe(`${600 + VIEWPORT_HEIGHT}px`)
+    expect(lockY()).toBe('600px')
+  })
+
+  it('publishes nothing that depends on the viewport height -- Safari changes it under the lock', () => {
+    renderPage()
+    windowScroll.set(600)
+    tap(bodyInput())
+    Object.defineProperty(window, 'innerHeight', { value: VIEWPORT_HEIGHT - 299, configurable: true, writable: true })
+    window.dispatchEvent(new Event('resize'))
+    expect(lockY()).toBe('600px')
   })
 
   it('transfers the reading position into the column-reverse scroller on entry', () => {
