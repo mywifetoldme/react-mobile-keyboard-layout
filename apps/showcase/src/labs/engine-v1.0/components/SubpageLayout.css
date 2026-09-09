@@ -1,0 +1,174 @@
+/* ------------------------------------------------------------------------------------------------
+   Keyboard state lives in selectors, not in JavaScript:
+     :focus-within          an input is focused  → the keyboard is opening / open
+     :has(<body text input>) the focused input is in the body, not in the floating bar
+     :has(<picker>)          a native picker is focused (iOS does not resize the viewport for it)
+     --rmkl-v10-kb               keyboard height in px, set by useMobileKeyboard — the one value CSS
+                             cannot read by itself
+     --rmkl-v10-kb-inset         the part of the layout viewport the keyboard covers: equal to --rmkl-v10-kb
+                             on Safari, 0 on browsers that shrink the layout viewport (Chrome, Android)
+   ------------------------------------------------------------------------------------------------ */
+
+:root {
+  --rmkl-v10-bg: #ffffff;
+  --rmkl-v10-text: #18181b;
+  --rmkl-v10-border: #e4e4e7;
+  --rmkl-v10-header-height: 56px;
+  --rmkl-v10-header-bg: rgba(255, 255, 255, 0.85);
+  --rmkl-v10-header-border: #e4e4e7;
+  --rmkl-v10-input-bg: #f4f4f5;
+  --rmkl-v10-input-text: #18181b;
+  --rmkl-v10-input-border: #e4e4e7;
+  --rmkl-v10-primary: #2563eb;
+  --rmkl-v10-primary-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rmkl-v10-bg: #09090b;
+    --rmkl-v10-text: #f4f4f5;
+    --rmkl-v10-border: #27272a;
+    --rmkl-v10-header-bg: rgba(9, 9, 11, 0.85);
+    --rmkl-v10-header-border: #27272a;
+    --rmkl-v10-input-bg: #18181b;
+    --rmkl-v10-input-text: #f4f4f5;
+    --rmkl-v10-input-border: #27272a;
+    --rmkl-v10-primary: #3b82f6;
+    --rmkl-v10-primary-text: #ffffff;
+  }
+}
+
+.rmkl-v10-subpage-root {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--rmkl-v10-bg);
+  color: var(--rmkl-v10-text);
+  touch-action: none;
+}
+
+/* 1. The header sits outside the flow that the keyboard resizes */
+.rmkl-v10-subpage-header-slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+}
+
+.rmkl-v10-subpage-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--rmkl-v10-header-height, 56px);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
+  background-color: var(--rmkl-v10-header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rmkl-v10-header-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 16px;
+  padding-right: 16px;
+  z-index: 50;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+.rmkl-v10-header-left,
+.rmkl-v10-header-right {
+  display: flex;
+  align-items: center;
+  min-width: 40px;
+}
+
+.rmkl-v10-header-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px;
+}
+
+/* 2. Body container: full layout viewport, minus the header on top and the keyboard at the bottom */
+.rmkl-v10-subpage-body-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  padding-top: calc(var(--rmkl-v10-header-height, 56px) + env(safe-area-inset-top, 0px));
+  /* Safari keeps the layout viewport while the keyboard is up, so the covered part is reserved
+     here; browsers that shrink the viewport themselves report an inset of 0 */
+  padding-bottom: var(--rmkl-v10-kb-inset, 0px);
+  box-sizing: border-box;
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* Closing: :focus-within flips synchronously on blur, while iOS delays visualViewport.resize
+   by ~450ms. Without this rule the floating bar hangs in mid-air until --rmkl-v10-kb is cleared. */
+.rmkl-v10-subpage-root:not(:focus-within) .rmkl-v10-subpage-body-container {
+  padding-bottom: 0;
+}
+
+/* Native pickers do not raise the keyboard: ignore any leftover --rmkl-v10-kb while one is focused */
+.rmkl-v10-subpage-root:has(:is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"], select):focus) .rmkl-v10-subpage-body-container {
+  padding-bottom: 0;
+}
+
+/* 3. Scrollable body. The scroll origin sits at the bottom (column-reverse), so when the box
+   shrinks the browser keeps the bottom edge — what you were reading — in place. Children keep
+   their DOM order because they live in one wrapper. */
+.rmkl-v10-subpage-body {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.rmkl-v10-subpage-body-inner {
+  /* short content stays at the top (the auto margin takes the free space); tall content
+     overflows upwards and scrolls */
+  margin-bottom: auto;
+  flex-shrink: 0;
+}
+
+.rmkl-v10-subpage-footer {
+  position: relative;
+  z-index: 40;
+  flex-shrink: 0;
+}
+
+/* 4. A text input in the body has the focus → the floating bar is suppressed.
+   Step 1 (keyboard not up yet, --rmkl-v10-kb is 0): keep the bar's slot, only hide it — nothing jumps.
+   Step 2 (--rmkl-v10-kb > 0): collapse the slot so the body gets the space back.
+   --rmkl-v10-floating-slot only has to be larger than the bar's height.
+   The four :has() selectors mirror isKeyboardTextInput(): textarea, contentEditable, and the
+   input types that raise the keyboard (a typeless <input> is a text input). */
+.rmkl-v10-subpage-root:has(.rmkl-v10-subpage-body textarea:focus) .rmkl-v10-floating-input-wrapper,
+.rmkl-v10-subpage-root:has(.rmkl-v10-subpage-body [contenteditable]:not([contenteditable="false"]):focus) .rmkl-v10-floating-input-wrapper,
+.rmkl-v10-subpage-root:has(.rmkl-v10-subpage-body input:not([type]):focus) .rmkl-v10-floating-input-wrapper,
+.rmkl-v10-subpage-root:has(.rmkl-v10-subpage-body input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-v10-floating-input-wrapper {
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  max-height: max(0px, calc(var(--rmkl-v10-floating-slot, 240px) - var(--rmkl-v10-kb, 0px)));
+}

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, act, cleanup, screen } from '@testing-library/react'
-import { LabSandbox } from './LabSandbox'
+import { LabSandbox } from '../components/LabSandbox'
 import { LABS_DATA } from '../data/labsData'
+import { KEYBOARD_INSET_CSS_VAR } from './engine-v1.0'
 
 /**
  * EXP-04-B: the document scrolls while the keyboard is closed (4B) and a fixed shell takes over
@@ -170,7 +171,7 @@ describe('EXP-04-B: mode is decided by focus, in CSS', () => {
     // keyboard for ~35ms -- long enough for Safari to pan the visual viewport itself (vvTop 96)
     // and drop the click on the wrong element
     renderSandbox()
-    expect(ruleFor('.rmkl-exp04b-root:focus-within .rmkl-exp04b-body-container')).toMatch(/padding-bottom:\s*var\(--rmkl-kb-inset/)
+    expect(ruleFor('.rmkl-exp04b-root:focus-within .rmkl-exp04b-body-container')).toContain(`padding-bottom: var(${KEYBOARD_INSET_CSS_VAR}`)
     expect(css()).not.toMatch(/tap-pending/)
   })
 
@@ -190,12 +191,13 @@ describe('EXP-04-B: mode is decided by focus, in CSS', () => {
 })
 
 describe('EXP-04-B: the one JS job -- carry the position into the shell, once', () => {
-  it('publishes the lock height as "scroll position + viewport" before the layout flips', () => {
+  it('keeps the cap published as "scroll position + viewport" while the document scrolls, so it is in place before the flip', () => {
     renderSandbox()
+
     windowScroll.set(600)
+    expect(lockHeight()).toBe(`${600 + VIEWPORT_HEIGHT}px`)
 
     tap(floatingInput())
-
     expect(lockHeight()).toBe(`${600 + VIEWPORT_HEIGHT}px`)
   })
 
@@ -294,8 +296,9 @@ describe('EXP-04-B: the tap, not the touch, locks the shell', () => {
       bodyInput().dispatchEvent(new Event('pointerdown', { bubbles: true }))
     })
 
-    expect(lockHeight()).toBe('')
+    // locked means focused: the cap variable is published as the document scrolls regardless
     expect(document.activeElement).not.toBe(bodyInput())
+    expect(document.body.matches(':has(.rmkl-exp04b-root:focus-within)')).toBe(false)
   })
 
   it('never locks from a touch that turned into a scroll', () => {
@@ -308,7 +311,6 @@ describe('EXP-04-B: the tap, not the touch, locks the shell', () => {
       bodyInput().dispatchEvent(new Event('pointerup', { bubbles: true }))
     })
 
-    expect(lockHeight()).toBe('')
     expect(document.activeElement).not.toBe(bodyInput())
   })
 
