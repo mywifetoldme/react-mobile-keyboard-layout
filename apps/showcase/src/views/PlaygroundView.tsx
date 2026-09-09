@@ -1,6 +1,6 @@
 import { useState, useRef, type CSSProperties, type ReactNode } from 'react'
 import {
-  PageLayout,
+  SubpageLayout,
   FloatingInput,
   useMobileKeyboard,
 } from 'react-mobile-keyboard-layout'
@@ -38,9 +38,8 @@ const inputStyle: CSSProperties = {
 export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
   const t = translations[lang]
   const bodyRef = useRef<HTMLDivElement | null>(null)
-  // The page scrolls like a document until an input is tapped (PageLayout). The layout keeps the
-  // window where the reader left it, so the hook's top-lock -- which scrolls it to 0 -- is off.
-  const engine = useMobileKeyboard({ bodyRef, lockDurationMs: 0 })
+  // 4A (SubpageLayout): Official production winner with pure declarative CSS flexbox & zero shift
+  const engine = useMobileKeyboard({ bodyRef })
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -85,7 +84,7 @@ export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
   }
 
   return (
-    <PageLayout
+    <SubpageLayout
       bodyRef={bodyRef}
       keyboardEngine={engine}
       header={header}
@@ -97,6 +96,7 @@ export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
           onSubmit={handleSend}
           placeholder={t.demoInputPlaceholder}
           isKeyboardOpen={engine.isKeyboardOpen}
+          {...engine.floatingProps}
         />
       }
     >
@@ -221,6 +221,6 @@ export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
           </div>
         </div>
       </div>
-    </PageLayout>
+    </SubpageLayout>
   )
 }

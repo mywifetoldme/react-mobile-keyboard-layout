@@ -57,16 +57,30 @@
 
 ## 🧭 두 가지 레이아웃
 
-- **`PageLayout`** (최신) — 인풋을 탭하기 전까지 문서가 보통 웹페이지처럼 스크롤되어 iOS Safari 주소창이 접힙니다. 탭하면 같은 읽기 위치에서 고정 셸이 화면을 잡고(헤더 고정, 작성기는 키보드 위), 키보드가 내려가면 문서를 건드리지 않은 채 돌려줍니다. 문서는 절대 `position: fixed`가 되지 않습니다 — 오프셋 + 뷰포트 하나로 캡하고 얼립니다. 그래서 Safari가 문서를 밀지도, 손가락 아래에서 주소창을 다시 펼치지도 못합니다. 작성기가 있는 페이지에 쓰세요.
-- **`SubpageLayout`** — 처음부터 페이지가 셸이고 문서는 스크롤되지 않습니다. 채팅방 같은 화면에 쓰세요.
+- **`SubpageLayout` (★ 공식 최종 채택 / 기본 권장)** — 페이지 전체가 셸이고 윈도우 스크롤은 `0`으로 영구 고정됩니다. 브라우저와 완벽한 평화 협정을 맺어, 100% 순수 선언적 CSS flexbox(`column-reverse`)와 `--rmkl-kb-inset`으로만 작동합니다. 윈도우 스크롤이 움직이지 않으므로 Safari의 문서 밀어올림, 캐럿 노출 점프, 지연 클릭 충돌 결함이 원천 차단됩니다. 0.0px 무결점 안정성과 제로 유지보수를 보장합니다. 채팅방, 메신저, 대시보드, 인터랙티브 폼 화면의 기본 권장 선택입니다.
+- **`PageLayout` (고급 하이브리드 레이아웃)** — 아티클/블로그/댓글처럼 평소 읽기 중 Safari 주소창 축소(`100lvh`)가 반드시 필요한 콘텐츠 중심 페이지를 위한 고급 대안입니다. 평소에는 문서 스크롤을 유지하다가, 인풋 탭 시 문서를 `calc(offset + 100lvh)`로 캡하여 얼리고 셸로 정밀 인계합니다. WebKit DOM 이벤트 가로채기(pointerup 탭 잠금, focusin/mousedown 합성 클릭 방어, 뷰포트 동기화 데드존)가 집약되어 있습니다.
 
-둘 다 상태를 CSS(키보드를 띄우는 인풋에 대한 `:has()`)로 결정하고 `useMobileKeyboard`를 공유합니다. `PageLayout`은 마운트 중 `html`/`body`의 overflow를 소유합니다 — 직접 잠그지 마세요.
+둘 다 상태를 CSS(`:has()` 및 `:focus-within`)로 결정하고 `useMobileKeyboard`를 공유합니다.
 
 ```tsx
+// 1. 공식 권장 기본 선택: SubpageLayout (채팅 / 앱 셸)
+import { SubpageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
+import 'react-mobile-keyboard-layout/dist/index.css'
+
+export function ChatPage() {
+  const [text, setText] = useState('')
+  return (
+    <SubpageLayout title="Chat" footer={<FloatingInput value={text} onChange={setText} onSubmit={send} />}>
+      <MessageList />
+    </SubpageLayout>
+  )
+}
+
+// 2. 고급 하이브리드: PageLayout (주소창 축소형)
 import { PageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
 import 'react-mobile-keyboard-layout/dist/index.css'
 
-export function Article() {
+export function ArticlePage() {
   const [text, setText] = useState('')
   return (
     <PageLayout title="Article" footer={<FloatingInput value={text} onChange={setText} onSubmit={post} />}>

@@ -133,7 +133,8 @@ export const DocsView = ({ lang, header }: { lang: Language; header?: ReactNode 
                 {copied ? t.copied : t.copy}
               </button>
             </div>
-            <Code>{`import { SubpageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
+            <Code>{`// 1. Primary Recommendation (Official Winner): SubpageLayout (App Shell)
+import { SubpageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
 import 'react-mobile-keyboard-layout/dist/index.css'
 
 export function ChatPage() {
@@ -148,6 +149,25 @@ export function ChatPage() {
     >
       <MessageList />
     </SubpageLayout>
+  )
+}`}</Code>
+            <Code color="#93c5fd">{`// 2. Advanced Hybrid: PageLayout (Collapsible Address Bar)
+import { PageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
+import 'react-mobile-keyboard-layout/dist/index.css'
+
+export function ArticlePage() {
+  const [text, setText] = useState('')
+  const bodyRef = useRef<HTMLDivElement>(null)
+
+  return (
+    <PageLayout
+      bodyRef={bodyRef}
+      title="Article"
+      footer={<FloatingInput value={text} onChange={setText} onSubmit={handleSend} />}
+    >
+      <ArticleContent />
+      <Comments />
+    </PageLayout>
   )
 }`}</Code>
             <Code color="#a1a1aa">{`/* ${t.themeCustomizationTitle} */

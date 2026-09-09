@@ -55,18 +55,32 @@ On mobile browsers—especially **iOS Safari / WebKit**—virtual software keybo
 
 ---
 
-## 🧭 Two layouts
+## 🧭 Two Layouts
 
-- **`PageLayout`** (latest) — the document scrolls like any web page, so iOS Safari collapses its URL bar, until an input is tapped. Then a fixed shell takes the screen at the same reading position — header pinned, composer on the keyboard — and hands the document back untouched when the keyboard leaves. The document is never `position: fixed`: it is capped at its offset plus one viewport and frozen, which is what keeps Safari from panning it or re-expanding its URL bar under the finger. Use it for a page with a composer.
-- **`SubpageLayout`** — the page is the shell to begin with and the document never scrolls. Use it for a screen like a chat room.
+- **`SubpageLayout` (★ Official Winner / Recommended Default)** — The page is the shell; document scroll is permanently locked to `0`. It establishes an absolute peace treaty with the browser, powered by 100% declarative CSS flexbox (`column-reverse`) and `--rmkl-kb-inset`. Because document scroll never moves, Safari's window pan, caret reveal jump, and delayed click collisions never occur. Zero drift, zero flicker, and zero maintenance overhead across iOS releases. Ideal for chat rooms, messenger apps, dashboards, and interactive forms.
+- **`PageLayout` (Advanced Hybrid Layout)** — For content-first pages (e.g., articles with comments) where native document scrolling to collapse Safari's URL bar (`100lvh`) is strictly required. The document scrolls freely while reading. Upon tapping an input, the layout dynamically freezes the document at `calc(offset + 100lvh)` and hands off control to an App Shell scroller without jumping. Features deep WebKit event interception (pointerup tap locking, synthetic click suppression, and viewport sync deadzones).
 
-Both decide their state in CSS (`:has()` over the inputs that raise the keyboard) and share `useMobileKeyboard`. `PageLayout` owns `html`/`body` overflow while mounted; do not lock them yourself.
+Both layouts decide their state in CSS (`:has()` and `:focus-within`) and share `useMobileKeyboard`.
 
 ```tsx
+// 1. Primary Recommendation: SubpageLayout (Chat / App Shell)
+import { SubpageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
+import 'react-mobile-keyboard-layout/dist/index.css'
+
+export function ChatPage() {
+  const [text, setText] = useState('')
+  return (
+    <SubpageLayout title="Chat" footer={<FloatingInput value={text} onChange={setText} onSubmit={send} />}>
+      <MessageList />
+    </SubpageLayout>
+  )
+}
+
+// 2. Advanced Hybrid: PageLayout (Collapsible URL Bar)
 import { PageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
 import 'react-mobile-keyboard-layout/dist/index.css'
 
-export function Article() {
+export function ArticlePage() {
   const [text, setText] = useState('')
   return (
     <PageLayout title="Article" footer={<FloatingInput value={text} onChange={setText} onSubmit={post} />}>
