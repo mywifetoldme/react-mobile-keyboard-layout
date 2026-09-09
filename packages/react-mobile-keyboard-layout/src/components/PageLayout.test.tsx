@@ -174,6 +174,24 @@ describe('PageLayout: the one JS job -- carry the position into the shell, once'
     expect(scrollToSpy).toHaveBeenCalledWith(0, 600)
   })
 
+  it('nudges the window when the visual viewport is left offset with the window already in place -- at most twice', () => {
+    // Safari's pan animates the visual viewport past the layout viewport after the guard has put
+    // the window back (measured offsetTop 127 with y == lockY); a real 1px scroll re-syncs the two
+    // and the guard returns the offset. Bounded, so a viewport that will not re-sync cannot loop.
+    const vv = Object.assign(new EventTarget(), { offsetTop: 0 })
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true, writable: true })
+    renderPage()
+    windowScroll.set(600)
+    tap(bodyInput())
+    vv.offsetTop = 127
+    act(() => { vv.dispatchEvent(new Event('scroll')) })
+    expect(scrollToSpy).toHaveBeenLastCalledWith(0, 599)
+    act(() => { vv.dispatchEvent(new Event('scroll')) })
+    act(() => { vv.dispatchEvent(new Event('scroll')) })
+    expect(scrollToSpy.mock.calls.filter(([, y]) => y === 599)).toHaveLength(2)
+    Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true, writable: true })
+  })
+
   it('leaves the reader\'s own scrolling alone while idle and after the shell closes', () => {
     renderPage()
     windowScroll.set(600)

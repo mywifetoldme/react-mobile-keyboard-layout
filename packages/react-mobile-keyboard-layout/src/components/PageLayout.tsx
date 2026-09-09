@@ -119,16 +119,22 @@ const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: Ref
       if (!focusedInputInside(root)) publishOffset()
       else if (Math.round(window.scrollY) !== lockY) window.scrollTo(0, lockY)
     }
-    // The same pan without the window moving: the visual viewport slides over the layout
-    // viewport (measured 40px after the URL bar was pulled open). Asking for the offset we
-    // already have is how the layout viewport is put back under it.
+    // Safari's pan animates the visual viewport on past the layout viewport after the window
+    // has been put back (measured offsetTop 127 with the window already at the offset). The two
+    // re-sync on a real scroll: the window is asked to move 1px, and the guard above returns it.
+    // Bounded, so a viewport that will not re-sync cannot keep it busy.
+    let nudges = 0
     const onViewportScroll = () => {
-      if (focusedInputInside(root) && window.visualViewport && window.visualViewport.offsetTop !== 0) window.scrollTo(0, lockY)
+      if (!focusedInputInside(root) || !window.visualViewport || window.visualViewport.offsetTop === 0) return
+      if (Math.round(window.scrollY) !== lockY || nudges >= 2) return
+      nudges += 1
+      window.scrollTo(0, lockY > 0 ? lockY - 1 : lockY + 1)
     }
     const onFocusIn = (e: FocusEvent) => {
       if (!isKeyboardTextInput(e.target)) return
       const from = e.relatedTarget
       if (from instanceof Node && root.contains(from) && isKeyboardTextInput(from)) return
+      nudges = 0
       publishOffset()
       const main = bodyRef.current
       if (!main) return
