@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type CSSProperties, type RefObject, type PointerEvent as ReactPointerEvent, type Dispatch, type SetStateAction } from 'react'
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type RefObject, type PointerEvent as ReactPointerEvent } from 'react'
 import type { LabInfo, EvaluationItem } from '../data/labsData'
 import type { Language } from '../i18n'
 import {
@@ -2467,6 +2467,9 @@ function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   ])
 
   const savedScrollYRef = useRef(0)
+  // Where the inner <main> sat when 4A opened. The document and the inner container are two
+  // different scroll spaces with different extents, so only the *delta* travels between them.
+  const bodyEnterScrollTopRef = useRef(0)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const bodyContainerRef = useRef<HTMLDivElement | null>(null)
   const bodyRef = useRef<HTMLDivElement | null>(null)
@@ -2550,7 +2553,11 @@ function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     }
 
     if (bodyEl) {
+      // read back: the container clamps to its own scrollHeight, which is shorter than the document
       bodyEl.scrollTop = y
+      bodyEnterScrollTopRef.current = Math.round(bodyEl.scrollTop)
+    } else {
+      bodyEnterScrollTopRef.current = 0
     }
 
     setIs4AActive(true)
@@ -2561,7 +2568,10 @@ function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     if (!is4AActiveRef.current) return
     is4AActiveRef.current = false
     const bodyEl = bodyRef.current
-    const currentY = bodyEl ? Math.round(bodyEl.scrollTop) : savedScrollYRef.current
+    // Never adopt the container's scrollTop as a window coordinate: it is clamped to a shorter
+    // extent, so copying it would drag the reading position toward the top (often all the way to 0).
+    const innerDelta = bodyEl ? Math.round(bodyEl.scrollTop) - bodyEnterScrollTopRef.current : 0
+    const currentY = Math.max(0, savedScrollYRef.current + innerDelta)
     savedScrollYRef.current = currentY
 
     const html = document.documentElement
@@ -2597,36 +2607,10 @@ function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
       if (!isKeyboardTextInput(target)) return
       const input = target as HTMLElement
 
-      // Synchronously lock document to 4A App-Shell before WebKit evaluates layout scroll
-      if (!is4AActiveRef.current) {
-        is4AActiveRef.current = true
-        const y = Math.round(window.scrollY)
-        savedScrollYRef.current = y
-
-        const html = document.documentElement
-        const body = document.body
-        const root = document.getElementById('root')
-        const bodyEl = bodyRef.current
-
-        html.style.cssText =
-          'height: 100% !important; overflow: hidden !important; background: #09090b !important;'
-        body.style.cssText =
-          'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
-        if (root) {
-          root.style.cssText =
-            'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
-        }
-        window.scrollTo(0, 0)
-
-        container.classList.remove('rmkl-mode-4b')
-        container.classList.add('rmkl-mode-4a')
-
-        if (bodyEl) {
-          bodyEl.scrollTop = y
-        }
-
-        setIs4AActive(true)
-      }
+      // Synchronously lock document to 4A App-Shell before WebKit evaluates layout scroll.
+      // activate4A is synchronous and self-guarding, so this is the same lock the focusin path
+      // takes -- keeping one implementation is what keeps the two scroll spaces in agreement.
+      activate4A()
 
       // Explicitly tell WebKit: DO NOT run your native scroll-into-view animation
       input.focus({ preventScroll: true })
