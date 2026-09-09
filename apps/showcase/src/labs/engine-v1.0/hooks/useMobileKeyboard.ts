@@ -94,6 +94,7 @@ export const useMobileKeyboard = ({
     const vv = window.visualViewport
     const root = document.documentElement
     let closedInnerHeight = window.innerHeight
+    let published = { height: -1, inset: -1 }
 
     const update = () => {
       // with no keyboard input focused the current height is the closed one (toolbars, rotation)
@@ -103,17 +104,26 @@ export const useMobileKeyboard = ({
       const measured = Math.max(inset, shrink)
       const height = measured >= keyboardThreshold ? measured : 0
       const coveredInset = height > 0 ? inset : 0
+      if (published.height === height && published.inset === coveredInset) return
+      published = { height, inset: coveredInset }
       root.style.setProperty(KEYBOARD_HEIGHT_CSS_VAR, `${height}px`)
       root.style.setProperty(KEYBOARD_INSET_CSS_VAR, `${coveredInset}px`)
       setKeyboard((prev) => (prev.height === height && prev.inset === coveredInset ? prev : { height, inset: coveredInset }))
     }
 
+    // Measured on scroll as well: iOS Safari shrinks innerHeight as the keyboard opens and restores
+    // it later without a resize event -- only scroll events mark the restoration (measured on
+    // device: innerHeight 400 -> 735, inset left at 8px until the next resize). Writes only on change.
     vv?.addEventListener('resize', update)
+    vv?.addEventListener('scroll', update)
     window.addEventListener('resize', update)
+    window.addEventListener('scroll', update, { passive: true })
     update()
     return () => {
       vv?.removeEventListener('resize', update)
+      vv?.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
+      window.removeEventListener('scroll', update)
       root.style.removeProperty(KEYBOARD_HEIGHT_CSS_VAR)
       root.style.removeProperty(KEYBOARD_INSET_CSS_VAR)
     }
