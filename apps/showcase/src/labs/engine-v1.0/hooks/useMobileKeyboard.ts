@@ -179,8 +179,10 @@ export const useMobileKeyboard = ({
       const top = anchor.el.getBoundingClientRect().top
       // in a column-reverse box a smaller scrollTop moves the content down
       body.scrollTop -= anchor.top - top
-      // the box got shorter: reveal the input if the keyboard now hides it (a no-op when visible)
-      if (shrank && focused) anchor.el.scrollIntoView?.({ block: 'nearest' })
+      // the box got shorter: reveal the input if the keyboard now hides it (a no-op when visible).
+      // Smoothly -- the keyboard itself animates in, and an instant jump under a finger that
+      // just tapped the bottom of the page reads as the page bouncing.
+      if (shrank && focused) anchor.el.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
       remember()
     })
     body.addEventListener('focusin', handleFocusIn)

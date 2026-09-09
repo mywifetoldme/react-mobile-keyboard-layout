@@ -7,9 +7,10 @@ EXP-04-A(CSS-first 통합)와 EXP-04-B(윈도우 스크롤 개방)는 이 시점
 
 ## 출처
 
-- 커밋: `3c0f62d` (v1.0.0에 PR #23의 `useMobileKeyboard` 수정 둘을 더한 상태)
+- 커밋: `dd70b85` (v1.0.0에 PR #23의 `useMobileKeyboard` 수정 셋을 더한 상태)
   - `lockDurationMs: 0`이 보험용 탑락을 완전히 끔
   - 플로팅 바 포커스 중 column-reverse 본문의 하단 가장자리를 붙잡음 (WebKit은 scrollTop 0에서만 하단 고정)
+  - 키보드에 가려진 본문 인풋을 드러낼 때 즉시 점프하지 않고 부드럽게 스크롤
 - 원본 경로: `packages/react-mobile-keyboard-layout/src/`
 - 복사한 파일: `components/SubpageLayout.tsx` `components/SubpageLayout.css`
   `components/FloatingInput.tsx` `components/FloatingInput.css`
@@ -29,7 +30,7 @@ EXP-04-A(CSS-first 통합)와 EXP-04-B(윈도우 스크롤 개방)는 이 시점
 for p in components/SubpageLayout.tsx components/SubpageLayout.css \
          components/FloatingInput.tsx components/FloatingInput.css \
          hooks/useMobileKeyboard.ts utils/isKeyboardTextInput.ts index.ts; do
-  git show "3c0f62d:packages/react-mobile-keyboard-layout/src/$p" \
+  git show "dd70b85:packages/react-mobile-keyboard-layout/src/$p" \
     | sed 's/rmkl-/rmkl-v10-/g' | diff -q - "apps/showcase/src/labs/engine-v1.0/$p"
 done
 ```

@@ -11,7 +11,8 @@ export interface EvaluationItem {
 
 export interface LabInfo {
   id: string
-  status: 'failed' | 'progress' | 'winner'
+  /** winner = the FINAL of the series (exactly one); passed = every criterion met, superseded since */
+  status: 'failed' | 'progress' | 'passed' | 'winner'
   title: LocalizedString
   hypothesis: LocalizedString
   evaluations: EvaluationItem[]
@@ -391,16 +392,16 @@ export const LABS_DATA: LabInfo[] = [
       ko: '동기적 복원으로 화면 중간 뜸과 닫힘 시차는 해결함. 그러나 본문 폼 인풋을 터치할 때 플로팅 바가 1단계 즉각 증발(display: none)하면서 손가락 아래에서 순간적인 60px 높이 리플로우가 발생하고, 16px 안전 여백(Boundary Margin) 부재로 인해 사파리 WebKit의 터치 히트 테스팅 및 뷰포트 정렬 휴리스틱이 깨져 키보드가 올라오다 도로 닫혀버리는(Bounce & Dismiss) 결함 발생. 단순한 DOM 강제 은닉이나 억제 방식으로는 해결할 수 없어 거의 포기할 뻔했던 최대의 난관 지점.',
     },
     nextDecision: {
-      en: 'Develop 2-step suppression (visibility: hidden -> display: none upon keyboard open) and In-Viewport Boundary Evasion in EXP-03-F (FINAL WINNER): Preserve 60px slot geometry during touch while proactively aligning focused body inputs into the safe visible zone ([topLimit, bottomLimit] with 16px padding).',
-      ko: '터치 순간에는 60px 레이아웃 높이를 그대로 보존하는 2단계 서프레션(visibility: hidden ➔ 키보드 완전히 열린 후 display: none)과, 포커스된 인풋을 안전 가시 영역(16px 패딩) 안쪽으로 부드럽게 사전 정렬하는 경계 회피 전략(EXP-03-F, 최종 완성형)으로 연계.',
+      en: 'Develop 2-step suppression (visibility: hidden -> display: none upon keyboard open) and In-Viewport Boundary Evasion in EXP-03-F: Preserve 60px slot geometry during touch while proactively aligning focused body inputs into the safe visible zone ([topLimit, bottomLimit] with 16px padding).',
+      ko: '터치 순간에는 60px 레이아웃 높이를 그대로 보존하는 2단계 서프레션(visibility: hidden ➔ 키보드 완전히 열린 후 display: none)과, 포커스된 인풋을 안전 가시 영역(16px 패딩) 안쪽으로 부드럽게 사전 정렬하는 경계 회피 전략(EXP-03-F)으로 연계.',
     },
   },
   {
     id: 'exp03_f',
-    status: 'winner',
+    status: 'passed',
     title: {
-      en: 'EXP-03-F: In-Viewport Boundary Evasion (FINAL WINNER)',
-      ko: 'EXP-03-F: 뷰포트 경계 회피를 통한 사파리 개입 무력화 (최종 완성형)',
+      en: 'EXP-03-F: In-Viewport Boundary Evasion',
+      ko: 'EXP-03-F: 뷰포트 경계 회피를 통한 사파리 개입 무력화',
     },
     hypothesis: {
       en: 'Proactively aligning focused body elements within [topLimit, bottomLimit] with 16px safe padding and 2-step suppression will eliminate the trigger condition for Safari aggressive compositor scroll, achieving 100% stable keyboard presentation on bottom inputs.',
@@ -419,8 +420,8 @@ export const LABS_DATA: LabInfo[] = [
       ko: '네이티브 앱 수준의 최종 완성 달성! 브라우저와 억지로 싸우는 대신 사파리의 개입 조건 자체를 사전에 소멸시키는 16px 경계 회피(Boundary Evasion)와 터치 지오메트리를 보존하는 2단계 서프레션(60px 슬롯 보존)으로 키보드 튕김까지 완벽 정복. 상단 헤더 0.0px 고정, 단일 통합 스크롤, 기준 좌표 무손실 복원까지 6개 평가 항목 100% All Pass 달성.',
     },
     nextDecision: {
-      en: 'Adopted as the core production engine of react-mobile-keyboard-layout library.',
-      ko: 'react-mobile-keyboard-layout 라이브러리의 최종 공식 프로덕션 엔진으로 채택 및 배포.',
+      en: 'Adopted as the production engine of react-mobile-keyboard-layout v0.2.0; superseded by the CSS-first consolidation (EXP-04-A). Kept as-is on engine-v0.2/.',
+      ko: 'react-mobile-keyboard-layout v0.2.0의 프로덕션 엔진으로 채택·배포. 이후 CSS-first 통합(EXP-04-A)이 대체했고, engine-v0.2/에 그대로 보존.',
     },
   },
 
@@ -429,10 +430,10 @@ export const LABS_DATA: LabInfo[] = [
      ========================================================================== */
   {
     id: 'exp04_a',
-    status: 'winner',
+    status: 'passed',
     title: {
-      en: 'EXP-04-A: CSS-First Consolidation (CURRENT)',
-      ko: 'EXP-04-A: 개념 정리와 CSS 이관 (현재 버전)',
+      en: 'EXP-04-A: CSS-First Consolidation',
+      ko: 'EXP-04-A: 개념 정리와 CSS 이관',
     },
     hypothesis: {
       en: 'Everything EXP-01 through EXP-03-F uncovered - physical header isolation, tap interception, 2-step suppression, scroll anchoring, native picker pass-through, keyboard height - can be restated as CSS state selectors, leaving JavaScript only the values CSS cannot read. If that holds, the layout engine, its rule matrix and its FSM can be deleted without losing behaviour.',

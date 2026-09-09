@@ -17,6 +17,8 @@ export const LabsView = ({ lang, header }: LabsViewProps) => {
     switch (status) {
       case 'winner':
         return { text: t.badgeWinner, bg: '#22c55e', color: '#052e16' }
+      case 'passed':
+        return { text: t.badgePassed, bg: '#0f766e', color: '#ccfbf1' }
       case 'progress':
         return { text: t.badgeProgress, bg: '#3b82f6', color: '#ffffff' }
       case 'failed':

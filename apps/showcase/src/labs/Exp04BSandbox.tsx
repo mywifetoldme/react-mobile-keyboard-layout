@@ -7,9 +7,9 @@
 
    STATE       decided by            layout (CSS below)                        JS
    ─────────── ───────────────────── ───────────────────────────────────────── ───────────────────────────────
-   4B  idle    :not(:focus-within)   document scrolls; header and composer     publish --rmkl-lock-height =
+   4B  idle    no keyboard input focused document scrolls; header and composer     publish --rmkl-lock-height =
                                      are fixed overlays (z-index)              scrollY + innerHeight as it moves
-   4A  locked  :focus-within         body capped + frozen; the shell takes     on entry: republish the cap from
+   4A  locked  :has(<kbd input>:focus) body capped + frozen; the shell takes     on entry: republish the cap from
                                      the screen; <main> scrolls; the composer  the live offset, hand that offset
                                      sits on the keyboard inset                to <main> once (useDocumentHandoff)
 
@@ -81,6 +81,27 @@ const EXP04B_TEXT = {
   },
 } as const
 
+/**
+ * The inputs that bring up the keyboard, mirroring isKeyboardTextInput() the way SubpageLayout.css
+ * does. A native picker (date, time, select) must not flip the shell: iOS does not resize the
+ * viewport for it, and no position was handed over -- the shell would open at the end of the
+ * content and the page would seem to jump.
+ */
+const KEYBOARD_INPUTS = [
+  'textarea',
+  '[contenteditable]:not([contenteditable="false"])',
+  'input:not([type])',
+  'input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"])',
+]
+const focusedIn = (scope: string) => KEYBOARD_INPUTS.map((input) => `${scope} ${input}:focus`).join(', ')
+/** The root while a keyboard input inside it has the focus -- the shell (4A). */
+export const EXP04B_SHELL = `.rmkl-exp04b-root:has(${KEYBOARD_INPUTS.map((input) => `${input}:focus`).join(', ')})`
+/** The document while the shell is up: capped and frozen. */
+export const EXP04B_LOCKED_BODY = `body:has(${focusedIn('.rmkl-exp04b-root')})`
+const EXP04B_LOCKED_HTML = `html:has(${focusedIn('.rmkl-exp04b-root')})`
+/** A body input has the focus: the composer steps aside (04-A). */
+const EXP04B_BODY_INPUT_FOCUSED = `.rmkl-exp04b-root:has(${focusedIn('.rmkl-exp04b-body')})`
+
 const EXP04B_CSS = `
   /* The showcase locks html/body/#root for every other lab; this one hands the document to the browser. */
   html:has(.rmkl-exp04b-root) { height: auto; min-height: 100%; overflow-y: auto; overflow-x: hidden; }
@@ -90,8 +111,8 @@ const EXP04B_CSS = `
   /* 4A lock. The cap is exactly "scroll position + one viewport" (published by JS at tap time), so the
      document keeps its offset yet has no room left for Safari's keyboard pan. Not position: fixed:
      that resets the offset and makes Safari re-expand its URL bar under the finger. */
-  html:has(.rmkl-exp04b-root:focus-within) { overflow: hidden; }
-  body:has(.rmkl-exp04b-root:focus-within) { height: var(--rmkl-lock-height); min-height: 0; overflow: hidden; }
+  ${EXP04B_LOCKED_HTML} { overflow: hidden; }
+  ${EXP04B_LOCKED_BODY} { height: var(--rmkl-lock-height); min-height: 0; overflow: hidden; }
 
   /* ---------------- 4B: document flow, fixed overlays ---------------- */
   .rmkl-exp04b-root {
@@ -104,7 +125,8 @@ const EXP04B_CSS = `
   .rmkl-exp04b-body-container {
     position: relative; width: 100%; box-sizing: border-box;
     padding-top: calc(53px + env(safe-area-inset-top, 0px));
-    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 24px);
+    /* exactly the room the in-flow composer takes in the shell, so the flip is pixel-identical at the end */
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   }
   /* column-reverse: the end of the content is the scroll origin, so the keyboard inset keeps the
      newest content in view for free and the engine can hold a focused body input in place (04-A) */
@@ -120,36 +142,36 @@ const EXP04B_CSS = `
   }
 
   /* ---------------- 4A: the shell, while an input inside has the focus ---------------- */
-  .rmkl-exp04b-root:focus-within {
+  ${EXP04B_SHELL} {
     position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none; z-index: 200;
   }
-  .rmkl-exp04b-root:focus-within .rmkl-exp04b-header { position: absolute; }
-  .rmkl-exp04b-root:focus-within .rmkl-exp04b-body-container {
+  ${EXP04B_SHELL} .rmkl-exp04b-header { position: absolute; }
+  ${EXP04B_SHELL} .rmkl-exp04b-body-container {
     position: absolute; inset: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden;
     touch-action: none; padding-bottom: var(${KEYBOARD_INSET_CSS_VAR}, 0px);
   }
-  .rmkl-exp04b-root:focus-within .rmkl-exp04b-body {
+  ${EXP04B_SHELL} .rmkl-exp04b-body {
     flex: 1 1 0%; min-height: 0; overflow-y: auto; overflow-x: hidden;
     -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; touch-action: pan-y;
   }
-  .rmkl-exp04b-root:focus-within .rmkl-exp04b-footer {
+  ${EXP04B_SHELL} .rmkl-exp04b-footer {
     position: relative; z-index: 40; flex-shrink: 0; background: rgba(9, 9, 11, 0.96);
     -webkit-backdrop-filter: none; backdrop-filter: none;
     /* a drag on the bar must not become a document scroll: overflow: hidden does not stop touch */
     touch-action: none;
   }
   /* the textarea scrolls its own lines; when they end, the gesture must not chain into the document */
-  .rmkl-exp04b-root:focus-within .rmkl-exp04b-footer textarea { touch-action: pan-y; overscroll-behavior: contain; }
+  ${EXP04B_SHELL} .rmkl-exp04b-footer textarea { touch-action: pan-y; overscroll-behavior: contain; }
   /* a focused body input owns the shell; the composer steps aside (04-A) */
-  .rmkl-exp04b-root:has(.rmkl-exp04b-body :is(input, textarea):focus) .rmkl-exp04b-footer { display: none; }
+  ${EXP04B_BODY_INPUT_FOCUSED} .rmkl-exp04b-footer { display: none; }
 
   /* Mode copy lives in CSS too. Both variants are always in the DOM and take the same room, so
      switching never changes the content height under the scroller. */
   .rmkl-exp04b-only-4a { display: none; }
-  .rmkl-exp04b-root:focus-within .rmkl-exp04b-only-4a { display: inline; }
-  .rmkl-exp04b-root:focus-within .rmkl-exp04b-only-4b { display: none; }
+  ${EXP04B_SHELL} .rmkl-exp04b-only-4a { display: inline; }
+  ${EXP04B_SHELL} .rmkl-exp04b-only-4b { display: none; }
   .rmkl-exp04b-hud { --rmkl-exp04b-accent: 96, 165, 250; --rmkl-exp04b-tint: 59, 130, 246; }
-  .rmkl-exp04b-root:focus-within .rmkl-exp04b-hud { --rmkl-exp04b-accent: 74, 222, 128; --rmkl-exp04b-tint: 34, 197, 94; }
+  ${EXP04B_SHELL} .rmkl-exp04b-hud { --rmkl-exp04b-accent: 74, 222, 128; --rmkl-exp04b-tint: 34, 197, 94; }
   .rmkl-exp04b-hud-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rmkl-exp04b-hud-status { min-height: 2.9em; }
 `

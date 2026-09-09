@@ -11,6 +11,15 @@ export interface LabSandboxProps {
    Shared Evaluation Badge & Section Components
    ========================================================================== */
 
+/** Every criterion met -- the FINAL of the series or a winner of its era (superseded since). */
+const passedAll = (lab: LabInfo) => lab.status === 'winner' || lab.status === 'passed'
+const STATUS_BADGE: Record<LabInfo['status'], { text: string; bg: string }> = {
+  winner: { text: 'FINAL', bg: '#22c55e' },
+  passed: { text: 'PASSED', bg: '#0f766e' },
+  progress: { text: 'PROGRESS', bg: '#3b82f6' },
+  failed: { text: 'FAILED', bg: '#ef4444' },
+}
+
 export const StatusBadge = ({ status, lang }: { status: EvaluationItem['status']; lang: Language }) => {
   const isPass = status === 'pass'
   const isFail = status === 'fail'
@@ -148,8 +157,8 @@ export const LabFindingDecisionSection = ({ lab, lang }: { lab: LabInfo; lang: L
     <div style={{
       padding: '12px',
       borderRadius: '12px',
-      backgroundColor: lab.status === 'winner' ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-      border: `1px solid ${lab.status === 'winner' ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+      backgroundColor: passedAll(lab) ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
+      border: `1px solid ${passedAll(lab) ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
       display: 'flex',
       flexDirection: 'column',
       gap: '6px',
@@ -157,7 +166,7 @@ export const LabFindingDecisionSection = ({ lab, lang }: { lab: LabInfo; lang: L
       <div style={{
         fontSize: '11px',
         fontWeight: 700,
-        color: lab.status === 'winner' ? '#4ade80' : '#f87171',
+        color: passedAll(lab) ? '#4ade80' : '#f87171',
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
@@ -165,7 +174,7 @@ export const LabFindingDecisionSection = ({ lab, lang }: { lab: LabInfo; lang: L
       </div>
       <div style={{
         fontSize: '12px',
-        color: lab.status === 'winner' ? '#bbf7d0' : '#fca5a5',
+        color: passedAll(lab) ? '#bbf7d0' : '#fca5a5',
         lineHeight: '1.5',
       }}>
         {lab.keyFinding[lang]}
@@ -271,12 +280,12 @@ export const LabHeader = ({ lab, lang, onClose, windowScrollY }: { lab: LabInfo;
     <span style={{
       padding: '3px 8px',
       borderRadius: '6px',
-      backgroundColor: lab.status === 'winner' ? '#22c55e' : lab.status === 'progress' ? '#3b82f6' : '#ef4444',
+      backgroundColor: STATUS_BADGE[lab.status].bg,
       color: '#ffffff',
       fontSize: '11px',
       fontWeight: 700,
     }}>
-      {lab.status === 'winner' ? 'FINAL' : lab.status.toUpperCase()}
+      {STATUS_BADGE[lab.status].text}
     </span>
   </header>
 )

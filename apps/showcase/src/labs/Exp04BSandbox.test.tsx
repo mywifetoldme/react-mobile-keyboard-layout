@@ -3,6 +3,7 @@ import { render, act, cleanup, screen } from '@testing-library/react'
 import { LabSandbox } from '../components/LabSandbox'
 import { LABS_DATA } from '../data/labsData'
 import { KEYBOARD_INSET_CSS_VAR } from './engine-v1.0'
+import { EXP04B_SHELL, EXP04B_LOCKED_BODY } from './Exp04BSandbox'
 
 /**
  * EXP-04-B: the document scrolls while the keyboard is closed (4B) and a fixed shell takes over
@@ -156,14 +157,14 @@ describe('EXP-04-B: mode is decided by focus, in CSS', () => {
 
   it('caps and freezes the document, in CSS, the moment an input inside has focus', () => {
     renderSandbox()
-    const lock = ruleFor('body:has(.rmkl-exp04b-root:focus-within)')
+    const lock = ruleFor(EXP04B_LOCKED_BODY)
     expect(lock).toMatch(/height:\s*var\(--rmkl-lock-height\)/)
     expect(lock).toMatch(/overflow:\s*hidden/)
     // never position: fixed on the document: that resets the offset and makes Safari re-expand its
     // URL bar under the finger -- 3/3 taps died that way on device (spike B), and every cycle
     // came back 40px off
     expect(lock).not.toMatch(/position:\s*fixed/)
-    expect(ruleFor('.rmkl-exp04b-root:focus-within')).toMatch(/position:\s*fixed/)
+    expect(ruleFor(EXP04B_SHELL)).toMatch(/position:\s*fixed/)
   })
 
   it('reserves the keyboard inset in the shell right away, so the focused input is never left behind the keyboard', () => {
@@ -171,7 +172,7 @@ describe('EXP-04-B: mode is decided by focus, in CSS', () => {
     // keyboard for ~35ms -- long enough for Safari to pan the visual viewport itself (vvTop 96)
     // and drop the click on the wrong element
     renderSandbox()
-    expect(ruleFor('.rmkl-exp04b-root:focus-within .rmkl-exp04b-body-container')).toContain(`padding-bottom: var(${KEYBOARD_INSET_CSS_VAR}`)
+    expect(ruleFor(`${EXP04B_SHELL} .rmkl-exp04b-body-container`)).toContain(`padding-bottom: var(${KEYBOARD_INSET_CSS_VAR}`)
     expect(css()).not.toMatch(/tap-pending/)
   })
 
@@ -180,8 +181,22 @@ describe('EXP-04-B: mode is decided by focus, in CSS', () => {
     // gesture to the next scroller -- the document, which overflow: hidden does not protect from
     // touch -- and two things scroll at once
     renderSandbox()
-    expect(ruleFor('.rmkl-exp04b-root:focus-within .rmkl-exp04b-footer textarea')).toMatch(/overscroll-behavior:\s*contain/)
-    expect(ruleFor('.rmkl-exp04b-root:focus-within .rmkl-exp04b-footer')).toMatch(/touch-action:\s*none/)
+    expect(ruleFor(`${EXP04B_SHELL} .rmkl-exp04b-footer textarea`)).toMatch(/overscroll-behavior:\s*contain/)
+    expect(ruleFor(`${EXP04B_SHELL} .rmkl-exp04b-footer`)).toMatch(/touch-action:\s*none/)
+  })
+
+  it('lets a native picker open without flipping the shell', () => {
+    // iOS does not resize the viewport for a date picker and no position is handed over for it,
+    // so a shell opened by one would show the end of the content: the page seemed to jump
+    // jsdom cannot evaluate :is() inside :has(), so the selector is checked as text: it names the
+    // keyboard inputs (the same list SubpageLayout.css uses) and nothing that opens a picker
+    renderSandbox()
+    expect(EXP04B_SHELL).not.toMatch(/:focus-within/)
+    expect(EXP04B_SHELL).toMatch(/textarea:focus/)
+    expect(EXP04B_SHELL).toMatch(/\[type="text"\]/)
+    expect(EXP04B_SHELL).not.toMatch(/date|time|select/)
+    expect(EXP04B_LOCKED_BODY.startsWith('body:has(.rmkl-exp04b-root ')).toBe(true)
+    expect(css()).not.toMatch(/:focus-within/)
   })
 
   it('keeps the shell body bottom-anchored so the engine can hold a focused body input', () => {
@@ -296,9 +311,8 @@ describe('EXP-04-B: the tap, not the touch, locks the shell', () => {
       bodyInput().dispatchEvent(new Event('pointerdown', { bubbles: true }))
     })
 
-    // locked means focused: the cap variable is published as the document scrolls regardless
+    // locked means a keyboard input is focused: the cap variable is published as the document scrolls regardless
     expect(document.activeElement).not.toBe(bodyInput())
-    expect(document.body.matches(':has(.rmkl-exp04b-root:focus-within)')).toBe(false)
   })
 
   it('never locks from a touch that turned into a scroll', () => {
