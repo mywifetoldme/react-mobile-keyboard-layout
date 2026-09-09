@@ -19,15 +19,15 @@ const Section = ({ title, children }: { title: string; children: ReactNode }) =>
   </section>
 )
 
-const Steps = ({ items, tint }: { items: string[]; tint: string }) => (
-  <ol style={{ ...card, margin: 0, paddingLeft: '32px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-    {items.map((item) => (
-      <li key={item} style={{ color: '#d4d4d8' }}>
-        <span style={{ color: tint }}>{item.split(' — ')[0]}</span>
-        {item.includes(' — ') ? ` — ${item.split(' — ').slice(1).join(' — ')}` : ''}
-      </li>
-    ))}
-  </ol>
+/** One phase of the story: what was tried, what broke, and the sentence that led to the next phase. */
+const Chapter = ({ title, body, bridgeLabel, bridge }: { title: string; body: string; bridgeLabel: string; bridge: string }) => (
+  <article style={{ ...card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#f4f4f5' }}>{title}</h4>
+    <p style={{ margin: 0 }}>{body}</p>
+    <p style={{ margin: 0, paddingLeft: '12px', borderLeft: '3px solid #3b82f6', color: '#93c5fd' }}>
+      <b style={{ color: '#60a5fa' }}>{bridgeLabel}</b> {bridge}
+    </p>
+  </article>
 )
 
 const Bullets = ({ items }: { items: string[] }) => (
@@ -50,6 +50,12 @@ export const DocsView = ({ lang, header }: { lang: Language; header?: ReactNode 
   const t = translations[lang]
   const [copied, setCopied] = useState(false)
 
+  const chapters = [1, 2, 3, 4, 5].map((i) => ({
+    title: t[`docsStory${i}Title` as keyof typeof t] as string,
+    body: t[`docsStory${i}Body` as keyof typeof t] as string,
+    bridge: t[`docsStory${i}Bridge` as keyof typeof t] as string,
+  }))
+
   const handleCopy = () => {
     navigator.clipboard.writeText(t.installCmd)
     setCopied(true)
@@ -63,8 +69,16 @@ export const DocsView = ({ lang, header }: { lang: Language; header?: ReactNode 
           <div style={{ ...card, backgroundColor: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{t.docsWhyBody}</div>
         </Section>
 
-        <Section title={t.docsJourneyTitle}>
-          <Steps items={[t.docsJourney1, t.docsJourney2, t.docsJourney3, t.docsJourney4]} tint="#60a5fa" />
+        <Section title={t.docsStoryTitle}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {chapters.map((c) => (
+              <Chapter key={c.title} bridgeLabel={t.docsBridgeLabel} {...c} />
+            ))}
+          </div>
+        </Section>
+
+        <Section title={t.docsPrinciplesTitle}>
+          <Bullets items={[t.docsPrinciple1, t.docsPrinciple2, t.docsPrinciple3, t.docsPrinciple4, t.docsPrinciple5]} />
         </Section>
 
         <Section title={t.docsShapeTitle}>
