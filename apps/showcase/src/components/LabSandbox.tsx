@@ -2452,9 +2452,138 @@ function Exp04ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   )
 }
 
+/* ==========================================================================
+   EXP-04-B — Unlocked Window Scroll (4B) ⇄ App Shell (4A), decided by focus
+
+   4B: the document scrolls, so Safari collapses its URL bar (100lvh). Header and
+       composer are fixed overlays.
+   4A: while any text input inside has the focus, a fixed shell takes the screen and
+       <main> becomes the scroller, with the keyboard inset reserved as padding.
+
+   What decides the mode is focus, in CSS (:focus-within / :has()). The one thing CSS
+   cannot do is carry the reading position from the document into the shell's own
+   scroller, so JS does that once, at lock time. The document itself never moves:
+   it is capped at "scroll position + one viewport" so Safari's keyboard pan has
+   nowhere to go and its URL bar is left alone (which is what killed taps when the
+   body was position: fixed), and nothing is written back on unlock. Measured on
+   device (spike-lock A/B/C) before this was written; the keyboard cycles are driven
+   in the iOS Simulator through Appium (see the PR).
+   ========================================================================== */
+
+const EXP04B_TEXT = {
+  ko: {
+    mode4B: '4B 윈도우 스크롤 (비활성)',
+    mode4A: '4A App-Shell (키보드 활성)',
+    collapsed: '🚀 4B 윈도우 스크롤: 사파리 주소창 100lvh 축소 상태!',
+    scrollHint: '👇 아래로 스크롤하면 사파리 주소창이 축소됩니다',
+    locked: '🔒 4A 활성: 헤더 0.0px 완전 고정 | 키보드 위 밀착',
+    position: '스크롤 위치',
+    urlBar: 'Safari 주소창',
+    urlCollapsed: '100lvh 축소',
+    formTitle: '🎮 본문 인풋 (터치 시 4A로 자동 전환 & 헤더 0.0px 고정)',
+    bodyInputLabel: '본문 텍스트 인풋 (터치 즉시 타이핑 가능)',
+    bodyInputPlaceholder: '터치하여 본문 인풋 테스트 (자동 4A 전환)...',
+    datePicker: '네이티브 날짜 피커',
+    feedTitle: '📜 스크롤 테스트용 긴 피드 (주소창 축소 유도)',
+    feedItem: '아래로 스크롤할 때 사파리 주소창이 100lvh로 축소되는지 확인하세요.',
+    bottomTitle: '🛡️ 페이지 최하단 본문 인풋 (터치 시 키보드 위 자동 전개)',
+    bottomPlaceholder: '최하단 인풋 터치 ➔ 키보드 위로 스크롤 전개',
+    bottomHint: '키보드 비활성 상태에서 이 인풋을 터치하면 자동으로 4A 모드로 전환되며 키보드 위로 안전하게 드러납니다.',
+    floatingPlaceholder: '메시지 입력 (터치 시 4A App-Shell 자동 전환)...',
+  },
+  en: {
+    mode4B: '4B window scroll (idle)',
+    mode4A: '4A app shell (keyboard)',
+    collapsed: '🚀 4B window scroll: Safari URL bar collapsed to 100lvh',
+    scrollHint: '👇 Scroll down to collapse the Safari URL bar',
+    locked: '🔒 4A active: header pinned at 0.0px | flush with the keyboard',
+    position: 'Scroll position',
+    urlBar: 'Safari URL bar',
+    urlCollapsed: '100lvh collapsed',
+    formTitle: '🎮 Body input (auto-switches to 4A, header pinned at 0.0px)',
+    bodyInputLabel: 'Body text input (types immediately on tap)',
+    bodyInputPlaceholder: 'Tap to test body focus (auto 4A)...',
+    datePicker: 'Native date picker',
+    feedTitle: '📜 Long feed for URL bar collapse testing',
+    feedItem: 'Scroll down to verify Safari collapses its address bar.',
+    bottomTitle: '🛡️ Very bottom page input (revealed above the keyboard)',
+    bottomPlaceholder: 'Tap bottom input -> revealed above keyboard',
+    bottomHint: 'Tap this input while the keyboard is closed: the page switches to 4A and the input is revealed above the keyboard.',
+    floatingPlaceholder: 'Type message (auto-switches to 4A)...',
+  },
+} as const
+
+const EXP04B_INPUT_SELECTOR = 'input, textarea, [contenteditable]'
+
+const EXP04B_CSS = `
+  /* The showcase locks html/body/#root for every other lab; this one hands the document to the browser. */
+  html:has(.rmkl-exp04b-root) { height: auto; min-height: 100%; overflow-y: auto; overflow-x: hidden; }
+  body:has(.rmkl-exp04b-root) { height: auto; min-height: 100%; overflow: visible; position: static; }
+  #root:has(.rmkl-exp04b-root) { height: auto; min-height: 100%; }
+
+  /* 4A lock. The cap is exactly "scroll position + one viewport" (published by JS at tap time), so the
+     document keeps its offset yet has no room left for Safari's keyboard pan. Not position: fixed:
+     that resets the offset and makes Safari re-expand its URL bar under the finger. */
+  html:has(.rmkl-exp04b-root:focus-within) { overflow: hidden; }
+  body:has(.rmkl-exp04b-root:focus-within) { height: var(--rmkl-lock-height); min-height: 0; overflow: hidden; }
+
+  /* ---------------- 4B: document flow, fixed overlays ---------------- */
+  .rmkl-exp04b-root {
+    position: relative; width: 100%; min-height: 100%; box-sizing: border-box;
+    background: #09090b; color: #f4f4f5;
+  }
+  .rmkl-exp04b-header { position: fixed; top: 0; left: 0; right: 0; z-index: 60; transform: translateZ(0); }
+  .rmkl-exp04b-body-container {
+    position: relative; width: 100%; box-sizing: border-box;
+    padding-top: calc(53px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 24px);
+  }
+  /* column-reverse: the end of the content is the scroll origin, so the keyboard inset keeps the
+     newest content in view for free and the engine can hold a focused body input in place (04-A) */
+  .rmkl-exp04b-body { display: flex; flex-direction: column-reverse; width: 100%; overflow: visible; }
+  .rmkl-exp04b-body-inner {
+    display: flex; flex-direction: column-reverse; gap: 14px; width: 100%; box-sizing: border-box;
+    padding: 14px 16px 24px;
+  }
+  .rmkl-exp04b-footer {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; box-sizing: border-box;
+    background: rgba(9, 9, 11, 0.94); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    border-top: 1px solid #27272a;
+  }
+
+  /* ---------------- 4A: the shell, while an input inside has the focus ---------------- */
+  .rmkl-exp04b-root:focus-within {
+    position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; touch-action: none; z-index: 200;
+  }
+  .rmkl-exp04b-root:focus-within .rmkl-exp04b-header { position: absolute; }
+  .rmkl-exp04b-root:focus-within .rmkl-exp04b-body-container {
+    position: absolute; inset: 0; height: 100%; display: flex; flex-direction: column; overflow: hidden;
+    touch-action: none; padding-bottom: var(--rmkl-kb-inset, 0px);
+  }
+  .rmkl-exp04b-root:focus-within .rmkl-exp04b-body {
+    flex: 1 1 0%; min-height: 0; overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; touch-action: pan-y;
+  }
+  .rmkl-exp04b-root:focus-within .rmkl-exp04b-footer {
+    position: relative; z-index: 40; flex-shrink: 0; background: rgba(9, 9, 11, 0.96);
+    -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+  /* a focused body input owns the shell; the composer steps aside (04-A) */
+  .rmkl-exp04b-root:has(.rmkl-exp04b-body :is(input, textarea):focus) .rmkl-exp04b-footer { display: none; }
+
+  /* Mode copy lives in CSS too. Both variants are always in the DOM and take the same room, so
+     switching never changes the content height under the scroller. */
+  .rmkl-exp04b-only-4a { display: none; }
+  .rmkl-exp04b-root:focus-within .rmkl-exp04b-only-4a { display: inline; }
+  .rmkl-exp04b-root:focus-within .rmkl-exp04b-only-4b { display: none; }
+  .rmkl-exp04b-hud { --rmkl-exp04b-accent: 96, 165, 250; --rmkl-exp04b-tint: 59, 130, 246; }
+  .rmkl-exp04b-root:focus-within .rmkl-exp04b-hud { --rmkl-exp04b-accent: 74, 222, 128; --rmkl-exp04b-tint: 34, 197, 94; }
+  .rmkl-exp04b-hud-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rmkl-exp04b-hud-status { min-height: 2.9em; }
+`
+
 function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
-  const [is4AActive, setIs4AActive] = useState(false)
-  const is4AActiveRef = useRef(false)
+  const text = EXP04B_TEXT[lang === 'ko' ? 'ko' : 'en']
   const [floatingVal, setFloatingVal] = useState('')
   const [bodyVal, setBodyVal] = useState('')
   const [bottomInputVal, setBottomInputVal] = useState('')
@@ -2465,344 +2594,96 @@ function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     'Message 3: 어느 인풋이든 터치하면 즉시 4A App-Shell로 자동 전환되어 헤더 0.0px 고정!',
     'Message 4: 키보드가 닫히면(포커스 아웃 시) 다시 자동으로 4B 윈도우 스크롤로 복귀합니다.',
   ])
-
-  const savedScrollYRef = useRef(0)
-  // Where the inner <main> sat when 4A opened. The document and the inner container are two
-  // different scroll spaces with different extents, so only the *delta* travels between them.
-  const bodyEnterScrollTopRef = useRef(0)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const bodyContainerRef = useRef<HTMLDivElement | null>(null)
-  const bodyRef = useRef<HTMLDivElement | null>(null)
-  const bodyInputRef = useRef<HTMLInputElement | null>(null)
-  const bottomInputRef = useRef<HTMLInputElement | null>(null)
-  const rafIdRef = useRef<number | null>(null)
+  // for the header's gauge and the HUD; the header sits outside the scroller, and the HUD's
+  // numbers are written straight into the DOM, so neither can change the content height
   const [windowScrollY, setWindowScrollY] = useState(0)
 
-  // useMobileKeyboard hook manages --rmkl-kb and --rmkl-kb-inset css variables
-  const engine = useMobileKeyboard({ bodyRef })
+  const rootRef = useRef<HTMLDivElement | null>(null)
+  const bodyRef = useRef<HTMLElement | null>(null)
+  const hudScrollYRef = useRef<HTMLElement | null>(null)
+  const hudInnerHeightRef = useRef<HTMLElement | null>(null)
+  const hudVvHeightRef = useRef<HTMLElement | null>(null)
 
-  // HUD DOM Refs for 60/120fps direct update
-  const hudScrollYRef = useRef<HTMLSpanElement | null>(null)
-  const hudInnerHeightRef = useRef<HTMLSpanElement | null>(null)
-  const hudVvHeightRef = useRef<HTMLSpanElement | null>(null)
-  const hudModeRef = useRef<HTMLSpanElement | null>(null)
-  const hudStatusMsgRef = useRef<HTMLDivElement | null>(null)
+  // Publishes --rmkl-kb / --rmkl-kb-inset and keeps a focused body input in place in the
+  // column-reverse body. Its bodyProps/floatingProps are deliberately not spread and its top-lock is
+  // off: both scroll the window to 0, and here the window has to stay where the reader left it.
+  const engine = useMobileKeyboard({ bodyRef, lockDurationMs: 0 })
 
-  // Reveal focused input in visible body area (preventing bottom input from hiding behind keyboard)
-  const revealInputInBody = useCallback((input: HTMLElement | null) => {
-    if (!input || !bodyRef.current) return
-    const body = bodyRef.current
-    const inputRect = input.getBoundingClientRect()
-    const bodyRect = body.getBoundingClientRect()
-
-    // 20px buffer above keyboard
-    if (inputRect.bottom > bodyRect.bottom - 20) {
-      const diff = inputRect.bottom - (bodyRect.bottom - 20)
-      body.scrollBy({ top: diff, behavior: 'smooth' })
-    } else if (inputRect.top < bodyRect.top + 16) {
-      const diff = (bodyRect.top + 16) - inputRect.top
-      body.scrollBy({ top: -diff, behavior: 'smooth' })
-    }
-  }, [])
-
-  // Lock window.scrollY strictly at 0 during keyboard animation
-  const lockWindowTop = useCallback(() => {
-    if (typeof window === 'undefined') return
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current)
-      rafIdRef.current = null
-    }
-    const startedAt = performance.now()
-    const step = (now: number) => {
-      if (window.scrollY !== 0) window.scrollTo(0, 0)
-      if (now - startedAt < 500) {
-        rafIdRef.current = requestAnimationFrame(step)
-      } else {
-        rafIdRef.current = null
-      }
-    }
-    rafIdRef.current = requestAnimationFrame(step)
-  }, [])
-
-  // Auto-switch to 4A (App-Shell lock) on input focus
-  const activate4A = useCallback(() => {
-    if (is4AActiveRef.current) return
-    is4AActiveRef.current = true
-    const y = Math.round(window.scrollY)
-    savedScrollYRef.current = y
-
-    const html = document.documentElement
-    const body = document.body
-    const root = document.getElementById('root')
-    const container = containerRef.current
-    const bodyEl = bodyRef.current
-
-    html.style.cssText =
-      'height: 100% !important; overflow: hidden !important; background: #09090b !important;'
-    body.style.cssText =
-      'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
-    if (root) {
-      root.style.cssText =
-        'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
-    }
-    window.scrollTo(0, 0)
-
-    if (container) {
-      container.classList.remove('rmkl-mode-4b')
-      container.classList.add('rmkl-mode-4a')
-    }
-
-    if (bodyEl) {
-      // read back: the container clamps to its own scrollHeight, which is shorter than the document
-      bodyEl.scrollTop = y
-      bodyEnterScrollTopRef.current = Math.round(bodyEl.scrollTop)
-    } else {
-      bodyEnterScrollTopRef.current = 0
-    }
-
-    setIs4AActive(true)
-  }, [])
-
-  // Auto-switch to 4B (Window scroll) on blur / keyboard dismiss
-  const deactivate4A = useCallback(() => {
-    if (!is4AActiveRef.current) return
-    is4AActiveRef.current = false
-    const bodyEl = bodyRef.current
-    // Never adopt the container's scrollTop as a window coordinate: it is clamped to a shorter
-    // extent, so copying it would drag the reading position toward the top (often all the way to 0).
-    const innerDelta = bodyEl ? Math.round(bodyEl.scrollTop) - bodyEnterScrollTopRef.current : 0
-    const currentY = Math.max(0, savedScrollYRef.current + innerDelta)
-    savedScrollYRef.current = currentY
-
-    const html = document.documentElement
-    const body = document.body
-    const root = document.getElementById('root')
-    const container = containerRef.current
-
-    html.style.cssText =
-      'height: auto !important; min-height: 100% !important; overflow-y: scroll !important; overflow-x: hidden !important; background: #09090b !important; -webkit-overflow-scrolling: touch !important;'
-    body.style.cssText =
-      'height: auto !important; min-height: 100% !important; overflow: visible !important; background: #09090b !important; position: static !important;'
-    if (root) {
-      root.style.cssText =
-        'height: auto !important; min-height: 100% !important; overflow: visible !important; position: static !important;'
-    }
-
-    if (container) {
-      container.classList.remove('rmkl-mode-4a')
-      container.classList.add('rmkl-mode-4b')
-    }
-
-    window.scrollTo(0, currentY)
-    setIs4AActive(false)
-  }, [])
-
-  // Intercept touchstart / pointerdown in CAPTURE PHASE before WebKit initiates its window scroll animation
+  // The one job CSS cannot do: carry the reading position into the shell's scroller, once per lock.
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+    const root = rootRef.current
+    if (!root) return
+    let lastScrollY = Math.round(window.scrollY)
+    let pendingY: number | null = null
 
-    const handleInputTouch = (e: Event) => {
-      const target = e.target instanceof Element ? e.target.closest('input, textarea, [contenteditable]') : null
+    const isLocked = () => root.contains(document.activeElement) && isKeyboardTextInput(document.activeElement)
+    const publishLock = (y: number) => {
+      document.documentElement.style.setProperty('--rmkl-lock-height', `${y + window.innerHeight}px`)
+      pendingY = y
+    }
+    // while the document scrolls, remember where -- a lock that arrives without a tap needs it
+    const handleScroll = () => {
+      if (!isLocked()) lastScrollY = Math.round(window.scrollY)
+    }
+    // Capture phase: before the focus moves (and the CSS flips the layout), and before iOS decides
+    // whether to pan the window for the focused input
+    const handlePointerDown = (e: Event) => {
+      const target = e.target instanceof Element ? e.target.closest(EXP04B_INPUT_SELECTOR) : null
       if (!isKeyboardTextInput(target)) return
-      const input = target as HTMLElement
-
-      // Synchronously lock document to 4A App-Shell before WebKit evaluates layout scroll.
-      // activate4A is synchronous and self-guarding, so this is the same lock the focusin path
-      // takes -- keeping one implementation is what keeps the two scroll spaces in agreement.
-      activate4A()
-
-      // Explicitly tell WebKit: DO NOT run your native scroll-into-view animation
-      input.focus({ preventScroll: true })
-
-      // Fallback lock to keep window.scrollY strictly 0
-      lockWindowTop()
-
-      // Reveal input in body if covered by keyboard
-      setTimeout(() => revealInputInBody(input), 100)
-      setTimeout(() => revealInputInBody(input), 300)
+      if (!isLocked()) publishLock(Math.round(window.scrollY))
+      ;(target as HTMLElement).focus({ preventScroll: true })
     }
-
+    // After the flip: the shell's scroller exists now. Focus moving between inputs inside the shell
+    // is not a new lock (relatedTarget says where it came from).
     const handleFocusIn = (e: FocusEvent) => {
-      const target = e.target
-      if (target instanceof Element && isKeyboardTextInput(target)) {
-        if (!is4AActiveRef.current) {
-          activate4A()
-        }
-        setTimeout(() => {
-          if (target instanceof HTMLElement) {
-            revealInputInBody(target)
-          }
-        }, 120)
-      }
+      if (!isKeyboardTextInput(e.target)) return
+      const from = e.relatedTarget
+      if (from instanceof Node && root.contains(from) && isKeyboardTextInput(from)) return
+      if (pendingY === null) publishLock(lastScrollY)
+      const main = bodyRef.current
+      // column-reverse: 0 is the end of the content; the document's offset from the top is
+      // that far short of it
+      if (main && pendingY !== null) main.scrollTop = pendingY - (main.scrollHeight - main.clientHeight)
+      pendingY = null
     }
 
-    const handleFocusOut = () => {
-      // Debounce focusout using rAF to see if focus moved to another input inside container
-      requestAnimationFrame(() => {
-        const active = document.activeElement
-        const isStillFocused = active instanceof Element && container.contains(active) && isKeyboardTextInput(active)
-        if (!isStillFocused) {
-          deactivate4A()
-        }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    root.addEventListener('pointerdown', handlePointerDown, { capture: true, passive: true })
+    root.addEventListener('focusin', handleFocusIn)
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+      root.removeEventListener('pointerdown', handlePointerDown, { capture: true })
+      root.removeEventListener('focusin', handleFocusIn)
+      document.documentElement.style.removeProperty('--rmkl-lock-height')
+    }
+  }, [])
+
+  // Diagnostics: numbers go straight into the DOM, the mode copy is chosen by CSS
+  useEffect(() => {
+    let rafId: number | null = null
+    const update = () => {
+      if (rafId !== null) return
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        const y = Math.round(window.scrollY)
+        setWindowScrollY(y)
+        const vv = window.visualViewport
+        if (hudScrollYRef.current) hudScrollYRef.current.textContent = `${y}px`
+        if (hudInnerHeightRef.current) hudInnerHeightRef.current.textContent = `${window.innerHeight}px`
+        if (hudVvHeightRef.current) hudVvHeightRef.current.textContent = `${vv ? Math.round(vv.height) : window.innerHeight}px`
       })
     }
-
-    // Capture phase listeners run before WebKit's native element-level focus scroll pipeline
-    container.addEventListener('touchstart', handleInputTouch, { capture: true, passive: true })
-    container.addEventListener('pointerdown', handleInputTouch, { capture: true, passive: true })
-    container.addEventListener('focusin', handleFocusIn)
-    container.addEventListener('focusout', handleFocusOut)
-
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    window.visualViewport?.addEventListener('resize', update)
+    update()
     return () => {
-      container.removeEventListener('touchstart', handleInputTouch, { capture: true })
-      container.removeEventListener('pointerdown', handleInputTouch, { capture: true })
-      container.removeEventListener('focusin', handleFocusIn)
-      container.removeEventListener('focusout', handleFocusOut)
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      window.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+      window.visualViewport?.removeEventListener('resize', update)
     }
-  }, [activate4A, deactivate4A, lockWindowTop, revealInputInBody])
-
-  // Also auto-reveal focused input on visualViewport resize (e.g. keyboard height change)
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv || !is4AActive) return
-    const handleResize = () => {
-      const active = document.activeElement
-      if (active === bodyInputRef.current || active === bottomInputRef.current) {
-        revealInputInBody(active as HTMLElement)
-      }
-    }
-    vv.addEventListener('resize', handleResize)
-    return () => vv.removeEventListener('resize', handleResize)
-  }, [is4AActive, revealInputInBody])
-
-  // Manage HTML/BODY styles and scroll coordinates based on mode (4B vs 4A)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const html = document.documentElement
-    const body = document.body
-    const root = document.getElementById('root')
-
-    const prevHtmlStyle = html.getAttribute('style') || ''
-    const prevBodyStyle = body.getAttribute('style') || ''
-    const prevRootStyle = root?.getAttribute('style') || ''
-
-    if (!is4AActive) {
-      // 4B Mode: Unlock document to native window scroll
-      html.style.cssText = 'height: auto !important; min-height: 100% !important; overflow-y: scroll !important; overflow-x: hidden !important; background: #09090b !important; -webkit-overflow-scrolling: touch !important;'
-      body.style.cssText = 'height: auto !important; min-height: 100% !important; overflow: visible !important; background: #09090b !important; position: static !important;'
-      if (root) {
-        root.style.cssText = 'height: auto !important; min-height: 100% !important; overflow: visible !important; position: static !important;'
-      }
-
-      // Restore previous reading position in 4B window scroll
-      if (savedScrollYRef.current > 0) {
-        window.scrollTo(0, savedScrollYRef.current)
-      }
-
-      let rafId: number | null = null
-      const updateHud = () => {
-        if (rafId !== null) return
-        rafId = requestAnimationFrame(() => {
-          rafId = null
-          const y = Math.round(window.scrollY)
-          setWindowScrollY(y)
-          const ih = window.innerHeight
-          const vvH = window.visualViewport ? Math.round(window.visualViewport.height) : ih
-
-          if (hudScrollYRef.current) {
-            hudScrollYRef.current.textContent = `${y}px`
-            hudScrollYRef.current.style.color = y > 30 ? '#4ade80' : '#facc15'
-          }
-          if (hudInnerHeightRef.current) hudInnerHeightRef.current.textContent = `${ih}px`
-          if (hudVvHeightRef.current) hudVvHeightRef.current.textContent = `${vvH}px`
-          if (hudModeRef.current) {
-            hudModeRef.current.textContent = '4B 윈도우 스크롤 (비활성)'
-            hudModeRef.current.style.color = '#60a5fa'
-          }
-          if (hudStatusMsgRef.current) {
-            hudStatusMsgRef.current.textContent = y > 30
-              ? '🚀 4B 윈도우 스크롤: 사파리 주소창 100lvh 축소 상태!'
-              : '👇 아래로 스크롤하면 사파리 주소창이 축소됩니다'
-          }
-        })
-      }
-
-      window.addEventListener('scroll', updateHud, { passive: true })
-      window.addEventListener('resize', updateHud)
-      window.visualViewport?.addEventListener('resize', updateHud)
-      updateHud()
-
-      return () => {
-        if (rafId !== null) cancelAnimationFrame(rafId)
-        window.removeEventListener('scroll', updateHud)
-        window.removeEventListener('resize', updateHud)
-        window.visualViewport?.removeEventListener('resize', updateHud)
-        if (prevHtmlStyle) html.setAttribute('style', prevHtmlStyle); else html.removeAttribute('style')
-        if (prevBodyStyle) body.setAttribute('style', prevBodyStyle); else body.removeAttribute('style')
-        if (root) {
-          if (prevRootStyle) root.setAttribute('style', prevRootStyle); else root.removeAttribute('style')
-        }
-      }
-    } else {
-      // 4A Mode: Lock document to 0.0px app shell
-      html.style.cssText = 'height: 100% !important; overflow: hidden !important; background: #09090b !important;'
-      body.style.cssText = 'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
-      if (root) {
-        root.style.cssText = 'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
-      }
-      window.scrollTo(0, 0)
-
-      // Transfer saved window.scrollY to bodyRef internal scrollTop
-      const y = savedScrollYRef.current
-      if (bodyRef.current) {
-        bodyRef.current.scrollTop = y
-      }
-
-      let rafId: number | null = null
-      const updateHud4A = () => {
-        if (rafId !== null) return
-        rafId = requestAnimationFrame(() => {
-          rafId = null
-          const y = bodyRef.current ? Math.round(bodyRef.current.scrollTop) : savedScrollYRef.current
-          const ih = window.innerHeight
-          const vvH = window.visualViewport ? Math.round(window.visualViewport.height) : ih
-
-          if (hudScrollYRef.current) {
-            hudScrollYRef.current.textContent = `${y}px (본문 스크롤)`
-            hudScrollYRef.current.style.color = '#4ade80'
-          }
-          if (hudInnerHeightRef.current) hudInnerHeightRef.current.textContent = `${ih}px`
-          if (hudVvHeightRef.current) hudVvHeightRef.current.textContent = `${vvH}px`
-          if (hudModeRef.current) {
-            hudModeRef.current.textContent = '4A App-Shell (키보드 활성)'
-            hudModeRef.current.style.color = '#4ade80'
-          }
-          if (hudStatusMsgRef.current) {
-            hudStatusMsgRef.current.textContent = '🔒 4A 활성: 헤더 0.0px 완전 고정 | 키보드 위 밀착'
-          }
-        })
-      }
-
-      const bodyEl = bodyRef.current
-      bodyEl?.addEventListener('scroll', updateHud4A, { passive: true })
-      window.addEventListener('resize', updateHud4A)
-      window.visualViewport?.addEventListener('resize', updateHud4A)
-      updateHud4A()
-
-      return () => {
-        if (rafId !== null) cancelAnimationFrame(rafId)
-        bodyEl?.removeEventListener('scroll', updateHud4A)
-        window.removeEventListener('resize', updateHud4A)
-        window.visualViewport?.removeEventListener('resize', updateHud4A)
-        if (prevHtmlStyle) html.setAttribute('style', prevHtmlStyle); else html.removeAttribute('style')
-        if (prevBodyStyle) body.setAttribute('style', prevBodyStyle); else body.removeAttribute('style')
-        if (root) {
-          if (prevRootStyle) root.setAttribute('style', prevRootStyle); else root.removeAttribute('style')
-        }
-      }
-    }
-  }, [is4AActive])
+  }, [])
 
   const handleSubmit = () => {
     if (!floatingVal.trim()) return
@@ -2811,370 +2692,149 @@ function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     engine.scrollToBottom('smooth')
   }
 
+  const urlBarCollapsed = windowScrollY > 30
+  const inputStyle: CSSProperties = {
+    width: '100%',
+    boxSizing: 'border-box',
+    minHeight: '44px',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    border: '1px solid #3f3f46',
+    backgroundColor: '#09090b',
+    color: '#f4f4f5',
+    fontSize: '15px',
+    outline: 'none',
+  }
+  const cardStyle: CSSProperties = {
+    padding: '14px',
+    borderRadius: '12px',
+    backgroundColor: '#18181b',
+    border: '1px solid #27272a',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  }
+
   return (
-    <div
-      ref={containerRef}
-      className={`rmkl-exp04b-root ${is4AActive ? 'rmkl-mode-4a' : 'rmkl-mode-4b'}`}
-    >
-      <style>{`
-        /* -----------------------------------------------------------
-           4B Mode (Keyboard Inactive: Unlocked Native Window Scroll)
-           ----------------------------------------------------------- */
-        .rmkl-exp04b-root.rmkl-mode-4b {
-          position: relative;
-          width: 100%;
-          min-height: 240vh;
-          background-color: #09090b;
-          color: #f4f4f5;
-          box-sizing: border-box;
-        }
+    <div ref={rootRef} className="rmkl-exp04b-root">
+      <style>{EXP04B_CSS}</style>
 
-        .rmkl-mode-4b .rmkl-exp04b-header {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 60;
-          transform: translateZ(0);
-          -webkit-transform: translateZ(0);
-        }
-
-        .rmkl-mode-4b .rmkl-exp04b-body-container {
-          position: relative;
-          width: 100%;
-          padding-top: calc(53px + env(safe-area-inset-top, 0px));
-          padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 24px);
-          box-sizing: border-box;
-          overflow: visible;
-          display: block;
-        }
-
-        .rmkl-mode-4b .rmkl-exp04b-body {
-          overflow: visible;
-          display: block;
-          width: 100%;
-        }
-
-        .rmkl-mode-4b .rmkl-exp04b-body-inner {
-          padding: 14px 16px 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          box-sizing: border-box;
-        }
-
-        .rmkl-mode-4b .rmkl-exp04b-footer {
-          position: fixed;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          z-index: 50;
-          background-color: rgba(9, 9, 11, 0.94);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
-          border-top: 1px solid #27272a;
-          box-sizing: border-box;
-        }
-
-        /* -----------------------------------------------------------
-           4A Mode (Keyboard Active: SubpageLayout App-Shell Locked)
-           ----------------------------------------------------------- */
-        .rmkl-exp04b-root.rmkl-mode-4a {
-          position: fixed;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          overflow: hidden;
-          background-color: #09090b;
-          color: #f4f4f5;
-          touch-action: none;
-          z-index: 200;
-        }
-
-        .rmkl-mode-4a .rmkl-exp04b-header {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 60;
-          transform: translateZ(0);
-          -webkit-transform: translateZ(0);
-        }
-
-        .rmkl-mode-4a .rmkl-exp04b-body-container {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 100dvh;
-          padding-top: calc(53px + env(safe-area-inset-top, 0px));
-          padding-bottom: var(--rmkl-kb-inset, 0px);
-          box-sizing: border-box;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          touch-action: none;
-          z-index: 10;
-        }
-
-        .rmkl-mode-4a .rmkl-exp04b-body {
-          flex: 1 1 0%;
-          min-height: 0;
-          overflow-y: auto;
-          overflow-x: hidden;
-          -webkit-overflow-scrolling: touch;
-          overscroll-behavior-y: contain;
-          touch-action: pan-y;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .rmkl-mode-4a .rmkl-exp04b-body-inner {
-          padding: 14px 16px 24px;
-          display: flex;
-          flex-direction: column;
-          gap: 14px;
-          box-sizing: border-box;
-          width: 100%;
-        }
-
-        .rmkl-mode-4a .rmkl-exp04b-footer {
-          position: relative;
-          z-index: 40;
-          flex-shrink: 0;
-          background-color: rgba(9, 9, 11, 0.96);
-          border-top: 1px solid #27272a;
-          box-sizing: border-box;
-        }
-
-        /* Suppress floating input bar and footer when a body text input has focus */
-        .rmkl-mode-4a:has(.rmkl-exp04b-body input:focus) .rmkl-exp04b-footer {
-          display: none !important;
-        }
-
-        .rmkl-mode-4a:has(.rmkl-exp04b-body input:focus) .rmkl-floating-input-wrapper {
-          visibility: hidden;
-          pointer-events: none;
-          overflow: hidden;
-          max-height: 0px;
-          padding-top: 0px;
-          padding-bottom: 0px;
-          border: none;
-          margin: 0;
-        }
-
-        /* Closing: :focus-within flips synchronously on blur, avoiding lag */
-        .rmkl-mode-4a:not(:focus-within) .rmkl-exp04b-body-container {
-          padding-bottom: 0 !important;
-        }
-      `}</style>
-
-      {/* Header */}
       <header className="rmkl-exp04b-header">
-        <LabHeader
-          lab={lab}
-          lang={lang}
-          onClose={onClose}
-          windowScrollY={is4AActive ? (bodyRef.current?.scrollTop ?? savedScrollYRef.current) : windowScrollY}
-        />
+        <LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={windowScrollY} />
       </header>
 
-      {/* Body Scroll Container */}
-      <div ref={bodyContainerRef} className="rmkl-exp04b-body-container">
+      <div className="rmkl-exp04b-body-container">
+        {/* flex-direction is also set inline so getComputedStyle reports it without a stylesheet cascade */}
         <main
           ref={bodyRef}
           className="rmkl-exp04b-body"
-          onPointerDown={(e) => {
-            if (is4AActive) engine.bodyProps.onPointerDown(e)
-          }}
+          style={{ display: 'flex', flexDirection: 'column-reverse' }}
         >
+          {/* column-reverse: the sections are written bottom-up; the screen shows them top-down */}
           <div className="rmkl-exp04b-body-inner">
-            {/* Real-time Diagnostics HUD */}
-            <div style={{
-              padding: '12px 14px',
-              borderRadius: '12px',
-              backgroundColor: is4AActive ? 'rgba(34, 197, 94, 0.12)' : 'rgba(59, 130, 246, 0.12)',
-              border: `1px solid ${is4AActive ? 'rgba(34, 197, 94, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-              fontSize: '12px',
-              fontFamily: 'monospace',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontWeight: 700, color: is4AActive ? '#4ade80' : '#60a5fa', fontSize: '13px' }}>
-                  📊 EXP-04-B: <span ref={hudModeRef}>{is4AActive ? '4A App-Shell (키보드 활성)' : '4B 윈도우 스크롤 (비활성)'}</span>
+            <div style={{ height: '40px', flexShrink: 0 }} />
+
+            {/* Very bottom body input */}
+            <div style={{ ...cardStyle, backgroundColor: 'rgba(59, 130, 246, 0.12)', border: '2px solid rgba(59, 130, 246, 0.5)', marginTop: '16px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>{text.bottomTitle}</div>
+              <input
+                type="text"
+                value={bottomInputVal}
+                onChange={(e) => setBottomInputVal(e.target.value)}
+                placeholder={text.bottomPlaceholder}
+                style={{ ...inputStyle, border: '2px solid #3b82f6' }}
+              />
+              <div style={{ fontSize: '11.5px', color: '#93c5fd', lineHeight: '1.4' }}>{text.bottomHint}</div>
+            </div>
+
+            {/* Long feed, so Safari has something to collapse its URL bar over */}
+            <div style={{ ...cardStyle, padding: '12px', gap: '8px' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>{text.feedTitle}</div>
+              {Array.from({ length: 14 }).map((_, idx) => (
+                <div key={idx} style={{ padding: '12px', borderRadius: '8px', backgroundColor: '#27272a', fontSize: '12.5px', color: '#d4d4d8', lineHeight: '1.4' }}>
+                  <b>Item #{idx + 1}</b> — {text.feedItem}
                 </div>
-                <span style={{
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  backgroundColor: is4AActive ? '#15803d' : '#1d4ed8',
-                  color: '#ffffff',
-                  fontSize: '10.5px',
-                  fontWeight: 700,
-                }}>
-                  {is4AActive ? '4A LOCKED' : '4B NATIVE'}
-                </span>
+              ))}
+            </div>
+
+            <LabMessagesSection messages={messages} lang={lang} />
+            <LabFindingDecisionSection lab={lab} lang={lang} />
+            <LabEvaluationSection lab={lab} lang={lang} />
+
+            {/* Body input + native date picker */}
+            <div style={cardStyle}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>{text.formTitle}</div>
+              <div style={{ minWidth: 0 }}>
+                <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>{text.bodyInputLabel}</label>
+                <input
+                  type="text"
+                  value={bodyVal}
+                  onChange={(e) => setBodyVal(e.target.value)}
+                  placeholder={text.bodyInputPlaceholder}
+                  style={inputStyle}
+                />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', color: '#cbd5e1' }}>
-                <div>스크롤 위치: <b ref={hudScrollYRef} style={{ color: '#facc15' }}>{is4AActive ? `${savedScrollYRef.current}px` : `${windowScrollY}px`}</b></div>
-                <div>innerHeight: <b ref={hudInnerHeightRef}>{typeof window !== 'undefined' ? `${window.innerHeight}px` : '-'}</b></div>
-                <div>vv.height: <b ref={hudVvHeightRef}>{typeof window !== 'undefined' && window.visualViewport ? `${Math.round(window.visualViewport.height)}px` : '-'}</b></div>
-                <div>Safari 주소창: <b style={{ color: (!is4AActive && windowScrollY > 30) ? '#4ade80' : '#facc15' }}>{(!is4AActive && windowScrollY > 30) ? '100lvh 축소' : '100svh'}</b></div>
-              </div>
-              <div ref={hudStatusMsgRef} style={{ fontSize: '11px', color: is4AActive ? '#86efac' : '#93c5fd', marginTop: '2px' }}>
-                {is4AActive ? '🔒 4A 활성: 헤더 0.0px 완전 고정 | 키보드 위 밀착' : '👇 아래로 스크롤하면 사파리 주소창이 축소됩니다'}
+              <div style={{ minWidth: 0 }}>
+                <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>{text.datePicker}</label>
+                <input
+                  type="date"
+                  value={dateVal}
+                  onChange={(e) => setDateVal(e.target.value)}
+                  // iOS gives date inputs an intrinsic width a flex item will not shrink below
+                  style={{ ...inputStyle, display: 'block', minWidth: 0, maxWidth: '100%', WebkitAppearance: 'none', appearance: 'none' }}
+                />
               </div>
             </div>
 
             <LabHeroSection lab={lab} lang={lang} />
 
-            {/* REAL Form Section (Body Input + Date Picker) */}
-            <div style={{
-              padding: '14px',
-              borderRadius: '12px',
-              backgroundColor: '#18181b',
-              border: '1px solid #27272a',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-            }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>
-                🎮 {lang === 'ko' ? '본문 인풋 (터치 시 4A로 자동 전환 & 헤더 0.0px 고정)' : 'Body Input (Auto-switches to 4A)'}
-              </div>
-
-              <div>
-                <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
-                  {lang === 'ko' ? '본문 텍스트 인풋 (터치 즉시 타이핑 가능)' : 'Body Text Input'}
-                </label>
-                <input
-                  ref={bodyInputRef}
-                  type="text"
-                  value={bodyVal}
-                  onChange={(e) => setBodyVal(e.target.value)}
-                  placeholder={lang === 'ko' ? '터치하여 본문 인풋 테스트 (자동 4A 전환)...' : 'Tap to test body focus (auto 4A)...'}
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    minHeight: '44px',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #3f3f46',
-                    backgroundColor: '#09090b',
-                    color: '#f4f4f5',
-                    fontSize: '15px',
-                    outline: 'none',
-                  }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
-                  {lang === 'ko' ? '네이티브 날짜 피커' : 'Native Date Picker'}
-                </label>
-                <input
-                  type="date"
-                  value={dateVal}
-                  onChange={(e) => setDateVal(e.target.value)}
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    minHeight: '44px',
-                    padding: '10px 14px',
-                    borderRadius: '8px',
-                    border: '1px solid #3f3f46',
-                    backgroundColor: '#09090b',
-                    color: '#f4f4f5',
-                    fontSize: '15px',
-                    outline: 'none',
-                  }}
-                />
-              </div>
-            </div>
-
-            <LabEvaluationSection lab={lab} lang={lang} />
-            <LabFindingDecisionSection lab={lab} lang={lang} />
-            <LabMessagesSection messages={messages} lang={lang} />
-
-            {/* 14 Feed items for Safari URL Bar Collapse */}
-            <div style={{
-              padding: '12px',
-              borderRadius: '12px',
-              backgroundColor: '#18181b',
-              border: '1px solid #27272a',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-            }}>
-              <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>
-                📜 {lang === 'ko' ? '스크롤 테스트용 긴 피드 (주소창 축소 유도)' : 'Long Feed for URL Bar Collapse Testing'}
-              </div>
-              {Array.from({ length: 14 }).map((_, idx) => (
-                <div key={idx} style={{
-                  padding: '12px',
-                  borderRadius: '8px',
-                  backgroundColor: '#27272a',
-                  fontSize: '12.5px',
-                  color: '#d4d4d8',
-                  lineHeight: '1.4',
-                }}>
-                  <b>Item #{idx + 1}</b> — {lang === 'ko' ? '아래로 스크롤할 때 사파리 주소창이 100lvh로 축소되는지 확인하세요.' : 'Scroll down to verify Safari address bar collapses.'}
+            {/* Diagnostics HUD. Mode copy and colours are picked by CSS; the numbers are written by JS. */}
+            <div
+              className="rmkl-exp04b-hud"
+              style={{
+                padding: '12px 14px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(var(--rmkl-exp04b-tint), 0.12)',
+                border: '1px solid rgba(var(--rmkl-exp04b-tint), 0.35)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                fontSize: '12px',
+                fontFamily: 'monospace',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                <div className="rmkl-exp04b-hud-line" style={{ fontWeight: 700, color: 'rgb(var(--rmkl-exp04b-accent))', fontSize: '13px' }}>
+                  📊 EXP-04-B: <span className="rmkl-exp04b-only-4b">{text.mode4B}</span>
+                  <span className="rmkl-exp04b-only-4a">{text.mode4A}</span>
                 </div>
-              ))}
-            </div>
-
-            {/* REAL Bottom Page Input */}
-            <div style={{
-              padding: '14px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(59, 130, 246, 0.12)',
-              border: '2px solid rgba(59, 130, 246, 0.5)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-              marginTop: '16px',
-            }}>
-              <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>
-                🛡️ {lang === 'ko' ? '페이지 최하단 본문 인풋 (터치 시 키보드 위 자동 전개)' : 'Very Bottom Page Input (Revealed Above Keyboard)'}
+                <span style={{ padding: '2px 8px', borderRadius: '4px', backgroundColor: 'rgb(var(--rmkl-exp04b-tint))', color: '#ffffff', fontSize: '10.5px', fontWeight: 700, flexShrink: 0 }}>
+                  <span className="rmkl-exp04b-only-4b">4B NATIVE</span>
+                  <span className="rmkl-exp04b-only-4a">4A LOCKED</span>
+                </span>
               </div>
-              <input
-                ref={bottomInputRef}
-                type="text"
-                value={bottomInputVal}
-                onChange={(e) => setBottomInputVal(e.target.value)}
-                placeholder={lang === 'ko' ? '최하단 인풋 터치 ➔ 키보드 위로 스크롤 전개' : 'Tap bottom input -> revealed above keyboard'}
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: '44px',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  border: '2px solid #3b82f6',
-                  backgroundColor: '#09090b',
-                  color: '#f4f4f5',
-                  fontSize: '15px',
-                  outline: 'none',
-                }}
-              />
-              <div style={{ fontSize: '11.5px', color: '#93c5fd', lineHeight: '1.4' }}>
-                {lang === 'ko'
-                  ? '키보드 비활성 상태에서 이 인풋을 터치하면 자동으로 4A 모드로 전환되며 키보드 위로 안전하게 드러납니다.'
-                  : 'Tap this input while keyboard is closed to verify it auto-switches to 4A and reveals above keyboard.'}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', color: '#cbd5e1' }}>
+                <div className="rmkl-exp04b-hud-line">{text.position}: <b ref={hudScrollYRef} style={{ color: '#facc15' }}>{windowScrollY}px</b></div>
+                <div className="rmkl-exp04b-hud-line">innerHeight: <b ref={hudInnerHeightRef}>-</b></div>
+                <div className="rmkl-exp04b-hud-line">vv.height: <b ref={hudVvHeightRef}>-</b></div>
+                <div className="rmkl-exp04b-hud-line">
+                  {text.urlBar}: <b style={{ color: urlBarCollapsed ? '#4ade80' : '#facc15' }}>{urlBarCollapsed ? text.urlCollapsed : '100svh'}</b>
+                </div>
+              </div>
+              <div className="rmkl-exp04b-hud-status" style={{ fontSize: '11px', color: 'rgb(var(--rmkl-exp04b-accent))', marginTop: '2px' }}>
+                <span className="rmkl-exp04b-only-4b">{urlBarCollapsed ? text.collapsed : text.scrollHint}</span>
+                <span className="rmkl-exp04b-only-4a">{text.locked}</span>
               </div>
             </div>
-
-            <div style={{ height: '40px', flexShrink: 0 }} />
           </div>
         </main>
 
-        {/* REAL Floating Input Footer */}
         <footer className="rmkl-exp04b-footer">
           <FloatingInput
             value={floatingVal}
             onChange={setFloatingVal}
             onSubmit={handleSubmit}
-            placeholder={lang === 'ko' ? '메시지 입력 (터치 시 4A App-Shell 자동 전환)...' : 'Type message (Auto-switches to 4A)...'}
-            {...engine.floatingProps}
+            placeholder={text.floatingPlaceholder}
             isKeyboardOpen={engine.isKeyboardOpen}
           />
         </footer>
