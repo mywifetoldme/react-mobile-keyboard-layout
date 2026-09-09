@@ -28,8 +28,18 @@ export const Navigation = ({
   return (
     <header
       role="banner"
-      className="rmkl-subpage-header"
+      className="showcase-nav"
+      // In flow on purpose: the layouts position their header slot (absolute in SubpageLayout,
+      // sticky in PageLayout). Borrowing .rmkl-subpage-header made this absolute inside the sticky
+      // slot, so the slot collapsed to 0px and the nav covered the top of the page.
       style={{
+        height: 'var(--rmkl-header-height, 56px)',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+        boxSizing: 'content-box',
+        backgroundColor: 'var(--rmkl-header-bg)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--rmkl-header-border)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',

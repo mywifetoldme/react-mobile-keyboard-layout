@@ -9,11 +9,6 @@ import {
   LabMessagesSection,
 } from './labSections'
 import { Exp04BSandbox } from '../labs/Exp04BSandbox'
-import {
-  SubpageLayout,
-  FloatingInput,
-  isKeyboardTextInput,
-} from 'react-mobile-keyboard-layout'
 
 // EXP-03-F is frozen at v0.2.0 (03c867d0). It runs on an isolated copy of the old
 // engine under ../labs/engine-v0.2 so the current package can evolve freely.
@@ -22,12 +17,15 @@ import {
   FloatingInput as FloatingInputV02,
   useMobileKeyboard as useMobileKeyboardV02,
 } from '../labs/engine-v0.2'
-// EXP-04-A and EXP-04-B run on a frozen copy of the v1.0 engine (../labs/engine-v1.0) for the
-// same reason, so the package can keep moving without rewriting what those two labs showed.
+// Every other lab that needs an engine runs on a frozen copy of the v1.0 engine (../labs/engine-v1.0)
+// for the same reason: no lab depends on the live package, so it can keep moving without rewriting
+// what the labs showed. EXP-03-D and EXP-03-E predate that engine; their sandboxes stand in for the
+// layouts they describe, and their records say so.
 import {
   SubpageLayout as SubpageLayoutV10,
   FloatingInput as FloatingInputV10,
   useMobileKeyboard as useMobileKeyboardV10,
+  isKeyboardTextInput,
 } from '../labs/engine-v1.0'
 
 
@@ -1601,13 +1599,13 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
   }, [])
 
   return (
-    <SubpageLayout
+    <SubpageLayoutV10
       keyboardEngine={mockEngine}
       bodyRef={bodyRef}
       style={{ zIndex: 300 }}
       header={<LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />}
       footer={
-        <FloatingInput
+        <FloatingInputV10
           value={floatingVal}
           onChange={setFloatingVal}
           onSubmit={handleSubmit}
@@ -1635,7 +1633,7 @@ function Exp03DSandbox({ lab, lang, onClose }: LabSandboxProps) {
         <LabMessagesSection messages={messages} lang={lang} />
         <div style={{ height: '40px', flexShrink: 0 }} />
       </div>
-    </SubpageLayout>
+    </SubpageLayoutV10>
   )
 }
 
@@ -1916,13 +1914,13 @@ function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
   }
 
   return (
-    <SubpageLayout
+    <SubpageLayoutV10
       keyboardEngine={engine}
       bodyRef={bodyRef}
       style={{ zIndex: 300 }}
       header={<LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={scrollY} />}
       footer={
-        <FloatingInput
+        <FloatingInputV10
           value={floatingVal}
           onChange={setFloatingVal}
           onSubmit={handleSubmit}
@@ -1988,7 +1986,7 @@ function Exp03ESandbox({ lab, lang, onClose }: LabSandboxProps) {
 
         <div style={{ height: '40px', flexShrink: 0 }} />
       </div>
-    </SubpageLayout>
+    </SubpageLayoutV10>
   )
 }
 

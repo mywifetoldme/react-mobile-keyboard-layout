@@ -11,6 +11,9 @@ export interface LabSandboxProps {
    Shared Evaluation Badge & Section Components
    ========================================================================== */
 
+/** `exp04_b` -> `EXP-04-B`, the code every lab is referred to by. */
+export const labCode = (lab: LabInfo) => lab.id.replace(/^exp(\d+)_([a-z])$/i, (_, n, l) => `EXP-${n}-${l.toUpperCase()}`)
+
 /** Every criterion met -- the FINAL of the series or a winner of its era (superseded since). */
 const passedAll = (lab: LabInfo) => lab.status === 'winner' || lab.status === 'passed'
 const STATUS_BADGE: Record<LabInfo['status'], { text: string; bg: string }> = {
@@ -273,7 +276,7 @@ export const LabHeader = ({ lab, lang, onClose, windowScrollY }: { lab: LabInfo;
         scrollY: {windowScrollY.toFixed(0)}px {windowScrollY === 0 ? '✓' : '⚠️'}
       </span>
       <div style={{ fontSize: '13px', fontWeight: 700, color: '#60a5fa' }}>
-        {lab.id.toUpperCase().replace('_', '-')}
+        {labCode(lab)}
       </div>
     </div>
 
