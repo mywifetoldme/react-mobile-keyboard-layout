@@ -9,7 +9,7 @@ EXP-04-B는 아직 완결되지 않았으므로 **라이브러리와 같은 코�
 
 ## 출처
 
-- 커밋: `4f76db7` (v1.0.0 + PR #23: `PageLayout`, `FloatingInput` pointerup 포커스, `useMobileKeyboard` 수정들)
+- 커밋: `5acad74` (v1.0.0 + PR #23: `PageLayout`, `FloatingInput` pointerup 포커스, `useMobileKeyboard` 수정들)
   - `lockDurationMs: 0`이 보험용 탑락을 완전히 끔
   - 플로팅 바 포커스 중 column-reverse 본문의 하단 가장자리를 붙잡음 (WebKit은 scrollTop 0에서만 하단 고정) — 본문 인풋 blur 유예창 안에서도
   - 키보드에 가려진 본문 인풋을 `<main>`만 부드럽게 스크롤해 드러냄 (scrollIntoView는 문서까지 밀 수 있음)
@@ -36,7 +36,7 @@ for p in components/SubpageLayout.tsx components/SubpageLayout.css \
          components/PageLayout.tsx components/PageLayout.css \
          components/FloatingInput.tsx components/FloatingInput.css \
          hooks/useMobileKeyboard.ts utils/isKeyboardTextInput.ts index.ts; do
-  git show "4f76db7:packages/react-mobile-keyboard-layout/src/$p" \
+  git show "5acad74:packages/react-mobile-keyboard-layout/src/$p" \
     | sed 's/rmkl-/rmkl-v10-/g' | diff -q - "apps/showcase/src/labs/engine-v1.0/$p"
 done
 ```

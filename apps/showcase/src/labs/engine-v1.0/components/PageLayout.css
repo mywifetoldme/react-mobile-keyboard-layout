@@ -36,18 +36,19 @@ html:has(.rmkl-v10-page-root textarea:focus),
 html:has(.rmkl-v10-page-root [contenteditable]:not([contenteditable="false"]):focus),
 html:has(.rmkl-v10-page-root input:not([type]):focus),
 html:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
-  height: 100%;
   overflow: hidden;
 }
 body:has(.rmkl-v10-page-root textarea:focus),
 body:has(.rmkl-v10-page-root [contenteditable]:not([contenteditable="false"]):focus),
 body:has(.rmkl-v10-page-root input:not([type]):focus),
 body:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
-  /* offset + the live layout viewport (100% of html), not a number taken at focus time: iOS Safari
-     may shrink innerHeight by part or all of the keyboard height as the keyboard opens (measured
-     695 -> 601 and 695 -> 396), and a cap frozen in px would leave it exactly that much room to
-     scroll the window into -- the shell, header included, rode up with it */
-  height: calc(var(--rmkl-v10-page-lock-y, 0px) + 100%);
+  /* offset + one full viewport, from CSS. The cap's one hard requirement is to never clamp below
+     the offset: 100lvh (URL bar collapsed) is never less than innerHeight, whereas 100% of html is
+     iOS's small viewport and, with the bar collapsed (695 vs 735), shoved the document up 40px at
+     focus. The room the cap leaves -- the 40px of an expanded bar, or whatever Safari shrinks
+     the viewport by as the keyboard opens (measured 695 -> 396) -- is closed by the layout's
+     guard, which puts the window back when Safari pans it. */
+  height: calc(var(--rmkl-v10-page-lock-y, 0px) + 100lvh);
   min-height: 0;
   overflow: hidden;
 }
