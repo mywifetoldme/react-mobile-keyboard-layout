@@ -28,7 +28,7 @@ interface HudOverlayProps {
 const activeInputLabel = () => {
   const el = typeof document !== 'undefined' ? document.activeElement : null
   if (el?.closest('.rmkl-floating-input-wrapper')) return 'FLOATING'
-  if (el?.closest('.rmkl-subpage-body')) return 'BODY'
+  if (el?.closest('.rmkl-subpage-body, .rmkl-page-body')) return 'BODY'
   return 'NONE'
 }
 

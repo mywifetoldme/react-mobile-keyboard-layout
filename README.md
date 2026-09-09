@@ -55,6 +55,28 @@ On mobile browsers—especially **iOS Safari / WebKit**—virtual software keybo
 
 ---
 
+## 🧭 Two layouts
+
+- **`PageLayout`** (latest) — the document scrolls like any web page, so iOS Safari collapses its URL bar, until an input is tapped. Then a fixed shell takes the screen at the same reading position — header pinned, composer on the keyboard — and hands the document back untouched when the keyboard leaves. The document is never `position: fixed`: it is capped at its offset plus one viewport and frozen, which is what keeps Safari from panning it or re-expanding its URL bar under the finger. Use it for a page with a composer.
+- **`SubpageLayout`** — the page is the shell to begin with and the document never scrolls. Use it for a screen like a chat room.
+
+Both decide their state in CSS (`:has()` over the inputs that raise the keyboard) and share `useMobileKeyboard`. `PageLayout` owns `html`/`body` overflow while mounted; do not lock them yourself.
+
+```tsx
+import { PageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
+import 'react-mobile-keyboard-layout/dist/index.css'
+
+export function Article() {
+  const [text, setText] = useState('')
+  return (
+    <PageLayout title="Article" footer={<FloatingInput value={text} onChange={setText} onSubmit={post} />}>
+      <ArticleBody />
+      <Comments />
+    </PageLayout>
+  )
+}
+```
+
 ## 📦 Installation
 
 ```bash

@@ -1,0 +1,206 @@
+/* ------------------------------------------------------------------------------------------------
+   PageLayout — the document scrolls until an input is tapped; then a shell takes the screen.
+
+   Two states, decided by focus, in CSS:
+     idle    no keyboard input focused    the document scrolls (Safari collapses its URL bar);
+                                          header and footer are sticky, in flow
+     shell   a keyboard input is focused  the root is a fixed shell, <main> scrolls, the footer
+                                          sits on the keyboard inset; the document is capped at
+                                          --rmkl-page-lock-height (its offset + one viewport) and
+                                          frozen, so it keeps its place and Safari has nothing to pan
+
+   The shell is keyed to the inputs that raise the keyboard (the list mirrors isKeyboardTextInput
+   and SubpageLayout.css): a native picker must not flip it — iOS does not resize the viewport for
+   one, and no position is handed over for it.
+
+   Why the document is capped rather than position: fixed: fixing the body resets its offset to 0
+   and makes iOS Safari re-expand its URL bar under the finger, which moves the tapped input and
+   kills the tap (measured: 3/3 taps died). See the EXP-04-B lab for the measurements.
+   ------------------------------------------------------------------------------------------------ */
+
+/* ---- the document: handed to the browser while idle, capped and frozen while the shell is up ---- */
+html:has(.rmkl-page-root) {
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+body:has(.rmkl-page-root) {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+  position: static;
+}
+
+html:has(.rmkl-page-root textarea:focus),
+html:has(.rmkl-page-root [contenteditable]:not([contenteditable="false"]):focus),
+html:has(.rmkl-page-root input:not([type]):focus),
+html:has(.rmkl-page-root input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
+  overflow: hidden;
+}
+body:has(.rmkl-page-root textarea:focus),
+body:has(.rmkl-page-root [contenteditable]:not([contenteditable="false"]):focus),
+body:has(.rmkl-page-root input:not([type]):focus),
+body:has(.rmkl-page-root input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
+  /* no fallback on purpose: an unset variable leaves height: auto (still scrollable, offset kept) */
+  height: var(--rmkl-page-lock-height);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---- idle: document flow, sticky header and footer ---- */
+.rmkl-page-root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  background-color: var(--rmkl-bg);
+  color: var(--rmkl-text);
+  /* no double-tap-to-zoom arbitration: the click follows the tap in ~100ms instead of ~400ms */
+  touch-action: manipulation;
+}
+
+.rmkl-page-header-slot,
+.rmkl-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+.rmkl-page-header {
+  height: var(--rmkl-header-height, 56px);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
+  background-color: var(--rmkl-header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rmkl-header-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.rmkl-page-body-container {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* column-reverse: the end of the content is the scroll origin in the shell, so the keyboard inset
+   keeps the newest content in view and the hook can hold a focused body input in place */
+.rmkl-page-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column-reverse;
+  width: 100%;
+  overflow: visible;
+}
+
+.rmkl-page-body-inner {
+  margin-bottom: auto;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rmkl-page-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  background-color: var(--rmkl-bg);
+  border-top: 1px solid var(--rmkl-border);
+}
+
+/* ---- shell: while a keyboard input inside has the focus ---- */
+.rmkl-page-root:has(textarea:focus),
+.rmkl-page-root:has([contenteditable]:not([contenteditable="false"]):focus),
+.rmkl-page-root:has(input:not([type]):focus),
+.rmkl-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: block;
+  overflow: hidden;
+  touch-action: none;
+  z-index: 200;
+}
+
+.rmkl-page-root:has(textarea:focus) .rmkl-page-header-slot,
+.rmkl-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-page-header-slot,
+.rmkl-page-root:has(input:not([type]):focus) .rmkl-page-header-slot,
+.rmkl-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-page-header-slot,
+.rmkl-page-root:has(textarea:focus) .rmkl-page-header,
+.rmkl-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-page-header,
+.rmkl-page-root:has(input:not([type]):focus) .rmkl-page-header,
+.rmkl-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-page-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.rmkl-page-root:has(textarea:focus) .rmkl-page-body-container,
+.rmkl-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-page-body-container,
+.rmkl-page-root:has(input:not([type]):focus) .rmkl-page-body-container,
+.rmkl-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-page-body-container {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  padding-top: calc(var(--rmkl-header-height, 56px) + env(safe-area-inset-top, 0px));
+  /* Safari keeps the layout viewport while the keyboard is up, so the covered part is reserved here */
+  padding-bottom: var(--rmkl-kb-inset, 0px);
+}
+
+.rmkl-page-root:has(textarea:focus) .rmkl-page-body,
+.rmkl-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-page-body,
+.rmkl-page-root:has(input:not([type]):focus) .rmkl-page-body,
+.rmkl-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-page-body {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
+.rmkl-page-root:has(textarea:focus) .rmkl-page-footer,
+.rmkl-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-page-footer,
+.rmkl-page-root:has(input:not([type]):focus) .rmkl-page-footer,
+.rmkl-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-page-footer {
+  position: relative;
+  z-index: 40;
+  /* a drag on the bar must not become a document scroll: overflow: hidden does not stop touch */
+  touch-action: none;
+}
+
+/* the textarea scrolls its own lines; when they end, the gesture must not chain into the document */
+.rmkl-page-footer textarea {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+/* ---- a text input in the body has the focus → the floating bar steps aside (2-step, as SubpageLayout) ---- */
+.rmkl-page-root:has(.rmkl-page-body textarea:focus) .rmkl-floating-input-wrapper,
+.rmkl-page-root:has(.rmkl-page-body [contenteditable]:not([contenteditable="false"]):focus) .rmkl-floating-input-wrapper,
+.rmkl-page-root:has(.rmkl-page-body input:not([type]):focus) .rmkl-floating-input-wrapper,
+.rmkl-page-root:has(.rmkl-page-body input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-floating-input-wrapper {
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  max-height: max(0px, calc(var(--rmkl-floating-slot, 240px) - var(--rmkl-kb, 0px)));
+}

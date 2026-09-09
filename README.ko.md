@@ -55,6 +55,28 @@
 
 ---
 
+## 🧭 두 가지 레이아웃
+
+- **`PageLayout`** (최신) — 인풋을 탭하기 전까지 문서가 보통 웹페이지처럼 스크롤되어 iOS Safari 주소창이 접힙니다. 탭하면 같은 읽기 위치에서 고정 셸이 화면을 잡고(헤더 고정, 작성기는 키보드 위), 키보드가 내려가면 문서를 건드리지 않은 채 돌려줍니다. 문서는 절대 `position: fixed`가 되지 않습니다 — 오프셋 + 뷰포트 하나로 캡하고 얼립니다. 그래서 Safari가 문서를 밀지도, 손가락 아래에서 주소창을 다시 펼치지도 못합니다. 작성기가 있는 페이지에 쓰세요.
+- **`SubpageLayout`** — 처음부터 페이지가 셸이고 문서는 스크롤되지 않습니다. 채팅방 같은 화면에 쓰세요.
+
+둘 다 상태를 CSS(키보드를 띄우는 인풋에 대한 `:has()`)로 결정하고 `useMobileKeyboard`를 공유합니다. `PageLayout`은 마운트 중 `html`/`body`의 overflow를 소유합니다 — 직접 잠그지 마세요.
+
+```tsx
+import { PageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
+import 'react-mobile-keyboard-layout/dist/index.css'
+
+export function Article() {
+  const [text, setText] = useState('')
+  return (
+    <PageLayout title="Article" footer={<FloatingInput value={text} onChange={setText} onSubmit={post} />}>
+      <ArticleBody />
+      <Comments />
+    </PageLayout>
+  )
+}
+```
+
 ## 📦 설치
 
 ```bash

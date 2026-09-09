@@ -15,6 +15,12 @@ export {
 } from './components/SubpageLayout'
 
 export {
+  PageLayout,
+  PAGE_LOCK_HEIGHT_CSS_VAR,
+  type PageLayoutProps,
+} from './components/PageLayout'
+
+export {
   FloatingInput,
   type FloatingInputProps,
 } from './components/FloatingInput'
