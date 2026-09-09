@@ -98,12 +98,13 @@ describe('PageLayout: the mode is decided by focus, in CSS', () => {
 
   it('caps and freezes the document, never position: fixed, while a keyboard input has the focus', () => {
     const lock = ruleContaining('body:has(.rmkl-page-root textarea:focus)')
-    // the cap is "offset + the live layout viewport", not a snapshot: iOS Safari may shrink
-    // innerHeight by (part of) the keyboard height as the keyboard opens (measured 695 -> 601 and
-    // 695 -> 396), and a cap frozen in px would leave it that much room to scroll the window into
-    expect(lock).toMatch(/height:\s*calc\(var\(--rmkl-page-lock-y, 0px\) \+ 100%\)/)
-    // 100% of the body needs a definite html height
-    expect(ruleContaining('html:has(.rmkl-page-root textarea:focus)')).toMatch(/height:\s*100%/)
+    // the cap is "offset + one full viewport", from CSS, not a number taken at focus time. It must
+    // never clamp below the offset: 100% of html is iOS's small viewport (695 while innerHeight is
+    // 735 with the URL bar collapsed) and shoved the document up 40px at focus; 100lvh is the large
+    // one and is never less than innerHeight. The room it leaves (<= 40px, or what Safari shrinks
+    // the viewport by) is the guard's business, not the cap's.
+    expect(lock).toMatch(/height:\s*calc\(var\(--rmkl-page-lock-y, 0px\) \+ 100lvh\)/)
+    expect(ruleContaining('html:has(.rmkl-page-root textarea:focus)')).not.toMatch(/height:\s*100%/)
     expect(lock).toMatch(/overflow:\s*hidden/)
     // fixing the body resets its offset and makes Safari re-expand its URL bar under the finger
     expect(lock).not.toMatch(/position:\s*fixed/)
