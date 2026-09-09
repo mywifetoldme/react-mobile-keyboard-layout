@@ -187,7 +187,7 @@ describe('useMobileKeyboard hook', () => {
     sizeBody(263) // keyboard: the body lost 337px at the bottom; bottom-anchoring moved the input up
     expect(inputTop()).toBe(400) // …and it was put back
     expect(body.scrollTop).toBe(-537)
-    expect(input.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
+    expect(input.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' })
 
     input.blur()
     sizeBody(600) // the body got its space back right after the blur
