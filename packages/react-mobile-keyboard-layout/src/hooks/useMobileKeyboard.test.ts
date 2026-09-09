@@ -353,6 +353,26 @@ describe('useMobileKeyboard hook', () => {
     expect(frames).toHaveLength(0)
   })
 
+  it('lockDurationMs: 0 turns the fallback top-lock off entirely: neither the tap nor the focusout touches the window', () => {
+    installViewport(700, 700)
+    const { result } = renderHook(() => useMobileKeyboard({ lockDurationMs: 0 }))
+    const input = document.createElement('input')
+    input.type = 'text'
+    document.body.appendChild(input)
+
+    // a layout that keeps the window at a non-zero offset on purpose (EXP-04-B's unlocked document)
+    // must be able to opt out; a single "duration 0" step would still scroll it to 0
+    act(() => {
+      result.current.bodyProps.onPointerDown(pointerDownOn(input))
+    })
+    expect(frames).toHaveLength(0)
+
+    input.focus()
+    act(() => input.blur())
+    expect(frames).toHaveLength(0)
+    expect(window.scrollTo).not.toHaveBeenCalled()
+  })
+
   it('scrollToBottom scrolls to the end, which is scrollTop 0 for a column-reverse body', () => {
     installViewport(700, 700)
     const div = document.createElement('div')

@@ -25,7 +25,10 @@ export interface UseMobileKeyboardOptions {
   bodyRef?: RefObject<HTMLElement | null>
   /** Threshold in pixels to treat viewport height contraction as keyboard opening. Default: 100 */
   keyboardThreshold?: number
-  /** Duration in milliseconds of the fallback rAF top-lock loop started on tap and on blur. Default: 350 */
+  /**
+   * Duration in milliseconds of the fallback rAF top-lock loop started on tap and on blur. Default: 350.
+   * `0` turns the lock off entirely -- for a layout that keeps the window at a non-zero offset on purpose.
+   */
   lockDurationMs?: number
   /** Whether to prevent rubber-banding on non-scrollable background areas. Default: false */
   preventOuterScroll?: boolean
@@ -179,7 +182,7 @@ export const useMobileKeyboard = ({
   }, [])
 
   const lockWindowTop = useCallback(() => {
-    if (typeof window === 'undefined') return
+    if (typeof window === 'undefined' || lockDurationMs <= 0) return
     cancelLock()
     const startedAt = performance.now()
     const step = (now: number) => {
