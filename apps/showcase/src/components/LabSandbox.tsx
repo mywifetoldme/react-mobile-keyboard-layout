@@ -2514,6 +2514,8 @@ const EXP04B_TEXT = {
 } as const
 
 const EXP04B_INPUT_SELECTOR = 'input, textarea, [contenteditable]'
+/** How long after our pointerup focus the tap's own click may still arrive (~400ms measured worst case). */
+const EXP04B_TAP_CLICK_WINDOW_MS = 600
 
 const EXP04B_CSS = `
   /* The showcase locks html/body/#root for every other lab; this one hands the document to the browser. */
@@ -2531,6 +2533,8 @@ const EXP04B_CSS = `
   .rmkl-exp04b-root {
     position: relative; width: 100%; min-height: 100%; box-sizing: border-box;
     background: #09090b; color: #f4f4f5;
+    /* no double-tap-to-zoom arbitration: the click follows the tap in ~100ms instead of ~400ms */
+    touch-action: manipulation;
   }
   .rmkl-exp04b-header { position: fixed; top: 0; left: 0; right: 0; z-index: 60; transform: translateZ(0); }
   .rmkl-exp04b-body-container {
@@ -2625,16 +2629,48 @@ function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     const handleScroll = () => {
       if (!isLocked()) lastScrollY = Math.round(window.scrollY)
     }
-    // Capture phase: before the focus moves (and the CSS flips the layout), and before iOS decides
-    // whether to pan the window for the focused input
-    const handlePointerDown = (e: Event) => {
+    // The TAP locks the shell, not the touch. Focusing at pointerdown swapped the layout in the
+    // middle of a gesture -- a finger that touched an input and dragged then scrolled the frozen
+    // document and the shell's <main> at once. iOS cancels the pointer when a drag begins, so a
+    // pointerup on the input it went down on is a completed tap. It also puts our focus ~50ms
+    // ahead of iOS's own (at click), so the keyboard's resize mostly lands after the click has.
+    let armed: HTMLElement | null = null
+    const inputOf = (e: Event) => {
       const target = e.target instanceof Element ? e.target.closest(EXP04B_INPUT_SELECTOR) : null
-      if (!isKeyboardTextInput(target)) return
+      return isKeyboardTextInput(target) ? (target as HTMLElement) : null
+    }
+    const handlePointerDown = (e: Event) => {
+      armed = inputOf(e)
+    }
+    const handlePointerCancel = () => {
+      armed = null
+    }
+    // The tap's own click still has to land; if the keyboard inset moved the content in between,
+    // the mousedown synthesized at the original point would blur the input (the tap that died on
+    // device). While that click is pending, a mousedown anywhere but the focused input is refused.
+    let clickPendingUntil = 0
+    const handlePointerUp = (e: Event) => {
+      const input = inputOf(e)
+      if (!input || input !== armed) return
+      armed = null
       if (!isLocked()) publishLock(Math.round(window.scrollY))
-      ;(target as HTMLElement).focus({ preventScroll: true })
+      clickPendingUntil = performance.now() + EXP04B_TAP_CLICK_WINDOW_MS
+      input.focus({ preventScroll: true })
+    }
+    const handleClick = () => {
+      clickPendingUntil = 0
+    }
+    const handleMouseDown = (e: MouseEvent) => {
+      if (performance.now() >= clickPendingUntil) return
+      const active = document.activeElement
+      if (!(active instanceof HTMLElement) || !root.contains(active) || !isKeyboardTextInput(active)) return
+      if (e.target !== active) e.preventDefault()
     }
     // After the flip: the shell's scroller exists now. Focus moving between inputs inside the shell
-    // is not a new lock (relatedTarget says where it came from).
+    // is not a new lock (relatedTarget says where it came from). Registered in the CAPTURE phase:
+    // useMobileKeyboard listens for focusin on <main> to remember where a focused body input sits
+    // and puts it back there when the box changes -- it has to see the input where the transfer
+    // leaves it, or it rewinds the shell to the pre-transfer spot as the keyboard opens.
     const handleFocusIn = (e: FocusEvent) => {
       if (!isKeyboardTextInput(e.target)) return
       const from = e.relatedTarget
@@ -2649,11 +2685,19 @@ function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
 
     window.addEventListener('scroll', handleScroll, { passive: true })
     root.addEventListener('pointerdown', handlePointerDown, { capture: true, passive: true })
-    root.addEventListener('focusin', handleFocusIn)
+    root.addEventListener('pointercancel', handlePointerCancel, { capture: true, passive: true })
+    root.addEventListener('pointerup', handlePointerUp, { capture: true, passive: true })
+    root.addEventListener('focusin', handleFocusIn, { capture: true })
+    root.addEventListener('mousedown', handleMouseDown, { capture: true })
+    root.addEventListener('click', handleClick, { capture: true })
     return () => {
       window.removeEventListener('scroll', handleScroll)
       root.removeEventListener('pointerdown', handlePointerDown, { capture: true })
-      root.removeEventListener('focusin', handleFocusIn)
+      root.removeEventListener('pointercancel', handlePointerCancel, { capture: true })
+      root.removeEventListener('pointerup', handlePointerUp, { capture: true })
+      root.removeEventListener('focusin', handleFocusIn, { capture: true })
+      root.removeEventListener('mousedown', handleMouseDown, { capture: true })
+      root.removeEventListener('click', handleClick, { capture: true })
       document.documentElement.style.removeProperty('--rmkl-lock-height')
     }
   }, [])

@@ -123,10 +123,16 @@ const ruleFor = (selector: string) => {
   return new RegExp(`(?:^|\\n)[ \\t]*${escaped}[ \\t]*\\{([^}]*)\\}`).exec(css())?.[1] ?? ''
 }
 
-/** The capture-phase handler reads `event.target`, so a plain bubbling Event is enough. */
+/** A completed tap: pointerdown then pointerup on the same element (the handlers read `event.target`). */
 const tap = (el: HTMLElement) => {
   act(() => {
     el.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    el.dispatchEvent(new Event('pointerup', { bubbles: true }))
+  })
+}
+const clickLands = (el: HTMLElement) => {
+  act(() => {
+    el.dispatchEvent(new MouseEvent('click', { bubbles: true }))
   })
 }
 const blur = () => {
@@ -152,7 +158,20 @@ describe('EXP-04-B: mode is decided by focus, in CSS', () => {
     const lock = ruleFor('body:has(.rmkl-exp04b-root:focus-within)')
     expect(lock).toMatch(/height:\s*var\(--rmkl-lock-height\)/)
     expect(lock).toMatch(/overflow:\s*hidden/)
+    // never position: fixed on the document: that resets the offset and makes Safari re-expand its
+    // URL bar under the finger -- 3/3 taps died that way on device (spike B), and every cycle
+    // came back 40px off
+    expect(lock).not.toMatch(/position:\s*fixed/)
     expect(ruleFor('.rmkl-exp04b-root:focus-within')).toMatch(/position:\s*fixed/)
+  })
+
+  it('reserves the keyboard inset in the shell right away, so the focused input is never left behind the keyboard', () => {
+    // withholding the inset until the click landed looked safe but left the caret under the
+    // keyboard for ~35ms -- long enough for Safari to pan the visual viewport itself (vvTop 96)
+    // and drop the click on the wrong element
+    renderSandbox()
+    expect(ruleFor('.rmkl-exp04b-root:focus-within .rmkl-exp04b-body-container')).toMatch(/padding-bottom:\s*var\(--rmkl-kb-inset/)
+    expect(css()).not.toMatch(/tap-pending/)
   })
 
   it('keeps the shell body bottom-anchored so the engine can hold a focused body input', () => {
@@ -212,6 +231,22 @@ describe('EXP-04-B: the one JS job -- carry the position into the shell, once', 
     expect(main.scrollTop).toBe(offset + 50)
   })
 
+  it('transfers the position before bubble-phase focusin listeners on the body run', () => {
+    // useMobileKeyboard listens for focusin on <main> (bubble phase) to remember where a focused
+    // body input sits, then puts it back there whenever the box changes. If that runs before the
+    // transfer, it remembers the pre-transfer spot and rewinds the shell to it as the keyboard opens.
+    const { main } = renderSandbox()
+    windowScroll.set(600)
+    let scrollTopSeenByEngine: number | null = null
+    main.addEventListener('focusin', () => {
+      scrollTopSeenByEngine = main.scrollTop
+    })
+
+    tap(bodyInput())
+
+    expect(scrollTopSeenByEngine).toBe(600 - MAX_SCROLL)
+  })
+
   it('locks from a focus that arrives without a tap', () => {
     renderSandbox()
     windowScroll.set(600)
@@ -236,7 +271,93 @@ describe('EXP-04-B: the one JS job -- carry the position into the shell, once', 
   })
 })
 
+describe('EXP-04-B: the tap, not the touch, locks the shell', () => {
+  // Focusing at pointerdown swapped the layout in the middle of a gesture: a finger that touched
+  // an input and then dragged scrolled the frozen document (iOS keeps a started gesture on its
+  // original scroller) and the shell's <main> at once. iOS also cancels the pointer when a drag
+  // begins, so waiting for pointerup makes a scroll never lock, and puts our focus ~50ms ahead
+  // of the click -- so the keyboard's resize lands after the click has, most of the time.
+  it('does not lock on pointerdown alone', () => {
+    renderSandbox()
+    windowScroll.set(600)
+
+    act(() => {
+      bodyInput().dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    })
+
+    expect(lockHeight()).toBe('')
+    expect(document.activeElement).not.toBe(bodyInput())
+  })
+
+  it('never locks from a touch that turned into a scroll', () => {
+    renderSandbox()
+    windowScroll.set(600)
+
+    act(() => {
+      bodyInput().dispatchEvent(new Event('pointerdown', { bubbles: true }))
+      bodyInput().dispatchEvent(new Event('pointercancel', { bubbles: true }))
+      bodyInput().dispatchEvent(new Event('pointerup', { bubbles: true }))
+    })
+
+    expect(lockHeight()).toBe('')
+    expect(document.activeElement).not.toBe(bodyInput())
+  })
+
+  it('keeps the focus when the click of the same tap lands on whatever moved under the finger', () => {
+    // the keyboard inset can move the content between pointerup and the click; the synthesized
+    // mousedown at the original point would then blur the input -- the tap that died on device
+    renderSandbox()
+    windowScroll.set(600)
+    tap(bodyInput())
+    const elsewhere = document.querySelector('.rmkl-exp04b-hud') as HTMLElement
+
+    const strayMouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    act(() => {
+      elsewhere.dispatchEvent(strayMouseDown)
+    })
+
+    expect(strayMouseDown.defaultPrevented).toBe(true)
+  })
+
+  it('stops protecting the focus once the click has landed', () => {
+    renderSandbox()
+    windowScroll.set(600)
+    tap(bodyInput())
+    clickLands(bodyInput())
+    const elsewhere = document.querySelector('.rmkl-exp04b-hud') as HTMLElement
+
+    const laterMouseDown = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    act(() => {
+      elsewhere.dispatchEvent(laterMouseDown)
+    })
+
+    expect(laterMouseDown.defaultPrevented).toBe(false)
+  })
+
+  it('removes the double-tap-to-zoom delay so the click comes sooner', () => {
+    renderSandbox()
+    expect(ruleFor('.rmkl-exp04b-root')).toMatch(/touch-action:\s*manipulation/)
+  })
+})
+
 describe('EXP-04-B: nothing in the content depends on the mode', () => {
+  it('shows the real document offset in the header through a keyboard cycle (no stale 0, no green flash)', () => {
+    renderSandbox()
+    windowScroll.set(600)
+    flushFrames()
+    const gauge = () => screen.getByText(/scrollY:/).textContent ?? ''
+    expect(gauge()).toContain('600px')
+
+    tap(floatingInput())
+    flushFrames()
+    expect(gauge()).toContain('600px')
+
+    blur()
+    flushFrames()
+    // the gauge turns green at 0; a stale 0 here was the flash seen while the keyboard left
+    expect(gauge()).toContain('600px')
+  })
+
   it('renders both mode labels at all times and lets CSS pick one', () => {
     renderSandbox()
     const before = document.querySelectorAll('.rmkl-exp04b-only-4a, .rmkl-exp04b-only-4b').length
@@ -246,5 +367,21 @@ describe('EXP-04-B: nothing in the content depends on the mode', () => {
 
     // a React mode state would swap copy here and change the content height under the scroller
     expect(document.querySelectorAll('.rmkl-exp04b-only-4a, .rmkl-exp04b-only-4b').length).toBe(before)
+  })
+})
+
+describe('EXP-04-B: the parts the reader sees', () => {
+  it('speaks the UI language in the HUD', () => {
+    render(<LabSandbox lab={lab} lang="en" onClose={() => {}} />, { container: document.getElementById('root')! })
+    const hud = document.querySelector('.rmkl-exp04b-hud')!
+    expect(hud.textContent).not.toMatch(/[가-힣]/)
+  })
+
+  it('lets the native date picker shrink to the card', () => {
+    // iOS gives date inputs an intrinsic width a flex item will not shrink below; it spilled out of the card
+    renderSandbox()
+    const date = document.querySelector('input[type="date"]') as HTMLInputElement
+    expect(date.style.minWidth).toMatch(/^0(px)?$/)
+    expect(date.style.maxWidth).toBe('100%')
   })
 })
