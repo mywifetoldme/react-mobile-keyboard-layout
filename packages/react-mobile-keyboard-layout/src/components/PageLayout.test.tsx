@@ -192,6 +192,19 @@ describe('PageLayout: the one JS job -- carry the position into the shell, once'
     Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true, writable: true })
   })
 
+  it('does not nudge when the visual viewport offset is within the 10px deadzone (e.g. collapsed URL bar)', () => {
+    const vv = Object.assign(new EventTarget(), { offsetTop: 0 })
+    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true, writable: true })
+    renderPage()
+    windowScroll.set(600)
+    tap(bodyInput())
+    scrollToSpy.mockClear()
+    vv.offsetTop = 7
+    act(() => { vv.dispatchEvent(new Event('scroll')) })
+    expect(scrollToSpy).not.toHaveBeenCalled()
+    Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true, writable: true })
+  })
+
   it('leaves the reader\'s own scrolling alone while idle and after the shell closes', () => {
     renderPage()
     windowScroll.set(600)
@@ -261,9 +274,11 @@ describe('PageLayout: the tap, not the touch, opens the shell', () => {
   it('stops protecting the focus once the click has landed', () => {
     renderPage()
     tap(bodyInput())
+    const clickEv = new MouseEvent('click', { bubbles: true, cancelable: true })
     act(() => {
-      bodyInput().dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      bodyInput().dispatchEvent(clickEv)
     })
+    expect(clickEv.defaultPrevented).toBe(true)
     const later = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
     act(() => {
       screen.getByText('content').dispatchEvent(later)

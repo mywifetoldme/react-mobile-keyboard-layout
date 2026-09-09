@@ -83,24 +83,32 @@ const useTapToFocus = (rootRef: RefObject<HTMLElement | null>) => {
       clickPendingUntil = performance.now() + TAP_CLICK_WINDOW_MS
       input.focus({ preventScroll: true })
     }
-    const onClick = () => {
-      clickPendingUntil = 0
+    const onFocusIn = (e: FocusEvent) => {
+      if (!keyboardInputOf(e.target)) return
+      clickPendingUntil = performance.now() + TAP_CLICK_WINDOW_MS
+    }
+    const onClick = (e: MouseEvent) => {
+      if (performance.now() < clickPendingUntil) {
+        e.preventDefault()
+        clickPendingUntil = 0
+      }
     }
     const onMouseDown = (e: MouseEvent) => {
       if (performance.now() >= clickPendingUntil) return
-      const focused = focusedInputInside(root)
-      if (focused && e.target !== focused) e.preventDefault()
+      e.preventDefault()
     }
 
     root.addEventListener('pointerdown', onPointerDown, { capture: true, passive: true })
     root.addEventListener('pointercancel', onPointerCancel, { capture: true, passive: true })
     root.addEventListener('pointerup', onPointerUp, { capture: true, passive: true })
+    root.addEventListener('focusin', onFocusIn, { capture: true })
     root.addEventListener('mousedown', onMouseDown, { capture: true })
     root.addEventListener('click', onClick, { capture: true })
     return () => {
       root.removeEventListener('pointerdown', onPointerDown, { capture: true })
       root.removeEventListener('pointercancel', onPointerCancel, { capture: true })
       root.removeEventListener('pointerup', onPointerUp, { capture: true })
+      root.removeEventListener('focusin', onFocusIn, { capture: true })
       root.removeEventListener('mousedown', onMouseDown, { capture: true })
       root.removeEventListener('click', onClick, { capture: true })
     }
@@ -141,9 +149,11 @@ const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: Ref
     // has been put back (measured offsetTop 127 with the window already at the offset). The two
     // re-sync on a real scroll: the window is asked to move 1px, and the guard above returns it.
     // Bounded, so a viewport that will not re-sync cannot keep it busy.
+    // Small resting offsets (<= 10px, e.g. collapsed URL bar) are ignored so they don't nudge.
     let nudges = 0
     const onViewportScroll = () => {
-      if (!focusedInputInside(root) || !window.visualViewport || window.visualViewport.offsetTop === 0) return
+      if (!focusedInputInside(root) || !window.visualViewport) return
+      if (Math.abs(window.visualViewport.offsetTop) <= 10) return
       if (Math.round(window.scrollY) !== lockY || nudges >= 2) return
       nudges += 1
       window.scrollTo(0, lockY > 0 ? lockY - 1 : lockY + 1)
