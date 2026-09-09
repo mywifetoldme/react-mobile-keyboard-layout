@@ -455,4 +455,33 @@ export const LABS_DATA: LabInfo[] = [
       ko: '현재 패키지의 기본 동작으로 채택. EXP-03-F는 v0.2.0 엔진 사본(apps/showcase/src/labs/engine-v0.2/)으로 격리해 그대로 남긴다.',
     },
   },
+  {
+    id: 'exp04_b',
+    status: 'progress',
+    title: {
+      en: 'EXP-04-B: Unlocked Window Scroll & Loose Coupling',
+      ko: 'EXP-04-B: 윈도우 스크롤 개방과 루즈 커플링 오버레이',
+    },
+    hypothesis: {
+      en: 'Unlocking the root container to native window scroll while isolating Header and FloatingInput as independent floating overlays will allow Mobile Safari to collapse the address bar naturally on scroll, expanding the viewport to 100lvh while tap interception prevents window pan.',
+      ko: '최상위 루트 잠금을 해제하고 본문을 브라우저 윈도우 스크롤에 위임하며 헤더와 하단 인풋을 독립 플로팅 오버레이로 분리하면, 스크롤 시 모바일 사파리 주소창이 자연스럽게 축소(Collapse)되어 전체 화면(100lvh)을 확보하면서도 탭 가로채기를 통해 키보드 오픈 시 윈도우 밀림을 방지할 수 있는지 검증한다.',
+    },
+    evaluations: [
+      { id: '1-1', status: 'pass', comment: { en: 'Header pinned via position: fixed (check for window pan on keyboard open)', ko: 'position: fixed로 상단 헤더 고정 (키보드 오픈 시 사파리 윈도우 밀어올림 여부 관찰)' } },
+      { id: '1-2', status: 'pass', comment: { en: 'Native window scroll allows Safari address bar collapse to 100lvh', ko: '네이티브 윈도우 스크롤로 사파리 주소창 축소(100lvh) 동작' } },
+      { id: '1-3', status: 'pass', comment: { en: 'Floating bar tracks VisualViewport bottom with safe-area padding', ko: '하단 바가 VisualViewport 바닥에 맞춰 부양 및 safe-area 여백 처리' } },
+      { id: '1-4', status: 'pass', comment: { en: 'Native document reading position maintained by browser', ko: '브라우저 기본 도큐먼트 스크롤 유지' } },
+      { id: '2-1', status: 'pass', comment: { en: 'Bottom body input focus behavior under window scroll tested', ko: '윈도우 스크롤 상태에서 최하단 본문 인풋 포커스 동작 검증' } },
+      { id: '3-1', status: 'pass', comment: { en: 'Smooth restoration when keyboard dismisses', ko: '키보드 해제 시 플로팅 인풋 바닥 복귀' } },
+    ],
+    keyFinding: {
+      en: 'In-place focus mutation on an unlocked window scroll fails on iOS Safari because the Layout Viewport pans upward, causing header disappearance, input occlusion, and double padding. The production solution is the Dual-Screen Hybrid Architecture (Twitter/Naver pattern): 4B Mode unlocks native window scroll for 100lvh Safari URL bar collapse, and tapping any input transitions to 4A SubpageLayout with 1:1 scroll coordinate sync, zero keyboard bounce, and auto-reveal of bottom inputs above the keyboard.',
+      ko: '윈도우 스크롤 개방 상태에서 인플레이스(:focus)로 컨테이너를 전환하는 방식은 모바일 사파리의 Layout Viewport 강제 이동으로 인해 헤더 이탈, 키보드 뒤 숨김, 672px 이중 패딩 결함이 불가피함을 확인. 이에 따라 트위터·네이버 방식의 [4B 탐색(윈도우 스크롤 100lvh) ⇋ 4A 입력(SubpageLayout 0.0px 불패 쉘)] 듀얼스크린 하이브리드 아키텍처를 도입하여 1:1 스크롤 동기화, 키보드 튕김 방지, 최하단 인풋 자동 전개를 완벽히 달성함.',
+    },
+    nextDecision: {
+      en: 'Validate the Dual-Screen Hybrid Architecture on iPhone Safari: verify 100lvh address bar collapse in 4B, smooth transition to 4A, 0.0px header locking, bottom input visibility, and seamless return to the reading position.',
+      ko: '아이폰 사파리 실기기에서 [4B 주소창 100lvh 축소 ➔ 인풋 터치 ➔ 4A App-Shell 0.0px 고정 ➔ 최하단 인풋 노출 ➔ 4B 복귀 시 읽던 위치 유지] 전 과정을 검증.',
+    },
+  },
 ]
+

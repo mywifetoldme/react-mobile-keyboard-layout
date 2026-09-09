@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, type CSSProperties, type RefObject, type PointerEvent as ReactPointerEvent } from 'react'
+import { useState, useEffect, useRef, useCallback, type CSSProperties, type RefObject, type PointerEvent as ReactPointerEvent, type Dispatch, type SetStateAction } from 'react'
 import type { LabInfo, EvaluationItem } from '../data/labsData'
 import type { Language } from '../i18n'
 import {
@@ -2452,6 +2452,753 @@ function Exp04ASandbox({ lab, lang, onClose }: LabSandboxProps) {
   )
 }
 
+function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
+  const [is4AActive, setIs4AActive] = useState(false)
+  const is4AActiveRef = useRef(false)
+  const [floatingVal, setFloatingVal] = useState('')
+  const [bodyVal, setBodyVal] = useState('')
+  const [bottomInputVal, setBottomInputVal] = useState('')
+  const [dateVal, setDateVal] = useState('2026-09-01')
+  const [messages, setMessages] = useState<string[]>([
+    'Message 1: 아래로 스크롤하여 사파리 주소창 축소(100lvh)를 확인하세요.',
+    'Message 2: 스크롤 중에는 4B 순수 윈도우 스크롤 모드로 자유롭게 탐색합니다.',
+    'Message 3: 어느 인풋이든 터치하면 즉시 4A App-Shell로 자동 전환되어 헤더 0.0px 고정!',
+    'Message 4: 키보드가 닫히면(포커스 아웃 시) 다시 자동으로 4B 윈도우 스크롤로 복귀합니다.',
+  ])
+
+  const savedScrollYRef = useRef(0)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const bodyContainerRef = useRef<HTMLDivElement | null>(null)
+  const bodyRef = useRef<HTMLDivElement | null>(null)
+  const bodyInputRef = useRef<HTMLInputElement | null>(null)
+  const bottomInputRef = useRef<HTMLInputElement | null>(null)
+  const rafIdRef = useRef<number | null>(null)
+  const [windowScrollY, setWindowScrollY] = useState(0)
+
+  // useMobileKeyboard hook manages --rmkl-kb and --rmkl-kb-inset css variables
+  const engine = useMobileKeyboard({ bodyRef })
+
+  // HUD DOM Refs for 60/120fps direct update
+  const hudScrollYRef = useRef<HTMLSpanElement | null>(null)
+  const hudInnerHeightRef = useRef<HTMLSpanElement | null>(null)
+  const hudVvHeightRef = useRef<HTMLSpanElement | null>(null)
+  const hudModeRef = useRef<HTMLSpanElement | null>(null)
+  const hudStatusMsgRef = useRef<HTMLDivElement | null>(null)
+
+  // Reveal focused input in visible body area (preventing bottom input from hiding behind keyboard)
+  const revealInputInBody = useCallback((input: HTMLElement | null) => {
+    if (!input || !bodyRef.current) return
+    const body = bodyRef.current
+    const inputRect = input.getBoundingClientRect()
+    const bodyRect = body.getBoundingClientRect()
+
+    // 20px buffer above keyboard
+    if (inputRect.bottom > bodyRect.bottom - 20) {
+      const diff = inputRect.bottom - (bodyRect.bottom - 20)
+      body.scrollBy({ top: diff, behavior: 'smooth' })
+    } else if (inputRect.top < bodyRect.top + 16) {
+      const diff = (bodyRect.top + 16) - inputRect.top
+      body.scrollBy({ top: -diff, behavior: 'smooth' })
+    }
+  }, [])
+
+  // Lock window.scrollY strictly at 0 during keyboard animation
+  const lockWindowTop = useCallback(() => {
+    if (typeof window === 'undefined') return
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current)
+      rafIdRef.current = null
+    }
+    const startedAt = performance.now()
+    const step = (now: number) => {
+      if (window.scrollY !== 0) window.scrollTo(0, 0)
+      if (now - startedAt < 500) {
+        rafIdRef.current = requestAnimationFrame(step)
+      } else {
+        rafIdRef.current = null
+      }
+    }
+    rafIdRef.current = requestAnimationFrame(step)
+  }, [])
+
+  // Auto-switch to 4A (App-Shell lock) on input focus
+  const activate4A = useCallback(() => {
+    if (is4AActiveRef.current) return
+    is4AActiveRef.current = true
+    const y = Math.round(window.scrollY)
+    savedScrollYRef.current = y
+
+    const html = document.documentElement
+    const body = document.body
+    const root = document.getElementById('root')
+    const container = containerRef.current
+    const bodyEl = bodyRef.current
+
+    html.style.cssText =
+      'height: 100% !important; overflow: hidden !important; background: #09090b !important;'
+    body.style.cssText =
+      'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
+    if (root) {
+      root.style.cssText =
+        'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
+    }
+    window.scrollTo(0, 0)
+
+    if (container) {
+      container.classList.remove('rmkl-mode-4b')
+      container.classList.add('rmkl-mode-4a')
+    }
+
+    if (bodyEl) {
+      bodyEl.scrollTop = y
+    }
+
+    setIs4AActive(true)
+  }, [])
+
+  // Auto-switch to 4B (Window scroll) on blur / keyboard dismiss
+  const deactivate4A = useCallback(() => {
+    if (!is4AActiveRef.current) return
+    is4AActiveRef.current = false
+    const bodyEl = bodyRef.current
+    const currentY = bodyEl ? Math.round(bodyEl.scrollTop) : savedScrollYRef.current
+    savedScrollYRef.current = currentY
+
+    const html = document.documentElement
+    const body = document.body
+    const root = document.getElementById('root')
+    const container = containerRef.current
+
+    html.style.cssText =
+      'height: auto !important; min-height: 100% !important; overflow-y: scroll !important; overflow-x: hidden !important; background: #09090b !important; -webkit-overflow-scrolling: touch !important;'
+    body.style.cssText =
+      'height: auto !important; min-height: 100% !important; overflow: visible !important; background: #09090b !important; position: static !important;'
+    if (root) {
+      root.style.cssText =
+        'height: auto !important; min-height: 100% !important; overflow: visible !important; position: static !important;'
+    }
+
+    if (container) {
+      container.classList.remove('rmkl-mode-4a')
+      container.classList.add('rmkl-mode-4b')
+    }
+
+    window.scrollTo(0, currentY)
+    setIs4AActive(false)
+  }, [])
+
+  // Intercept touchstart / pointerdown in CAPTURE PHASE before WebKit initiates its window scroll animation
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const handleInputTouch = (e: Event) => {
+      const target = e.target instanceof Element ? e.target.closest('input, textarea, [contenteditable]') : null
+      if (!isKeyboardTextInput(target)) return
+      const input = target as HTMLElement
+
+      // Synchronously lock document to 4A App-Shell before WebKit evaluates layout scroll
+      if (!is4AActiveRef.current) {
+        is4AActiveRef.current = true
+        const y = Math.round(window.scrollY)
+        savedScrollYRef.current = y
+
+        const html = document.documentElement
+        const body = document.body
+        const root = document.getElementById('root')
+        const bodyEl = bodyRef.current
+
+        html.style.cssText =
+          'height: 100% !important; overflow: hidden !important; background: #09090b !important;'
+        body.style.cssText =
+          'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
+        if (root) {
+          root.style.cssText =
+            'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
+        }
+        window.scrollTo(0, 0)
+
+        container.classList.remove('rmkl-mode-4b')
+        container.classList.add('rmkl-mode-4a')
+
+        if (bodyEl) {
+          bodyEl.scrollTop = y
+        }
+
+        setIs4AActive(true)
+      }
+
+      // Explicitly tell WebKit: DO NOT run your native scroll-into-view animation
+      input.focus({ preventScroll: true })
+
+      // Fallback lock to keep window.scrollY strictly 0
+      lockWindowTop()
+
+      // Reveal input in body if covered by keyboard
+      setTimeout(() => revealInputInBody(input), 100)
+      setTimeout(() => revealInputInBody(input), 300)
+    }
+
+    const handleFocusIn = (e: FocusEvent) => {
+      const target = e.target
+      if (target instanceof Element && isKeyboardTextInput(target)) {
+        if (!is4AActiveRef.current) {
+          activate4A()
+        }
+        setTimeout(() => {
+          if (target instanceof HTMLElement) {
+            revealInputInBody(target)
+          }
+        }, 120)
+      }
+    }
+
+    const handleFocusOut = () => {
+      // Debounce focusout using rAF to see if focus moved to another input inside container
+      requestAnimationFrame(() => {
+        const active = document.activeElement
+        const isStillFocused = active instanceof Element && container.contains(active) && isKeyboardTextInput(active)
+        if (!isStillFocused) {
+          deactivate4A()
+        }
+      })
+    }
+
+    // Capture phase listeners run before WebKit's native element-level focus scroll pipeline
+    container.addEventListener('touchstart', handleInputTouch, { capture: true, passive: true })
+    container.addEventListener('pointerdown', handleInputTouch, { capture: true, passive: true })
+    container.addEventListener('focusin', handleFocusIn)
+    container.addEventListener('focusout', handleFocusOut)
+
+    return () => {
+      container.removeEventListener('touchstart', handleInputTouch, { capture: true })
+      container.removeEventListener('pointerdown', handleInputTouch, { capture: true })
+      container.removeEventListener('focusin', handleFocusIn)
+      container.removeEventListener('focusout', handleFocusOut)
+    }
+  }, [activate4A, deactivate4A, lockWindowTop, revealInputInBody])
+
+  // Also auto-reveal focused input on visualViewport resize (e.g. keyboard height change)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv || !is4AActive) return
+    const handleResize = () => {
+      const active = document.activeElement
+      if (active === bodyInputRef.current || active === bottomInputRef.current) {
+        revealInputInBody(active as HTMLElement)
+      }
+    }
+    vv.addEventListener('resize', handleResize)
+    return () => vv.removeEventListener('resize', handleResize)
+  }, [is4AActive, revealInputInBody])
+
+  // Manage HTML/BODY styles and scroll coordinates based on mode (4B vs 4A)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const html = document.documentElement
+    const body = document.body
+    const root = document.getElementById('root')
+
+    const prevHtmlStyle = html.getAttribute('style') || ''
+    const prevBodyStyle = body.getAttribute('style') || ''
+    const prevRootStyle = root?.getAttribute('style') || ''
+
+    if (!is4AActive) {
+      // 4B Mode: Unlock document to native window scroll
+      html.style.cssText = 'height: auto !important; min-height: 100% !important; overflow-y: scroll !important; overflow-x: hidden !important; background: #09090b !important; -webkit-overflow-scrolling: touch !important;'
+      body.style.cssText = 'height: auto !important; min-height: 100% !important; overflow: visible !important; background: #09090b !important; position: static !important;'
+      if (root) {
+        root.style.cssText = 'height: auto !important; min-height: 100% !important; overflow: visible !important; position: static !important;'
+      }
+
+      // Restore previous reading position in 4B window scroll
+      if (savedScrollYRef.current > 0) {
+        window.scrollTo(0, savedScrollYRef.current)
+      }
+
+      let rafId: number | null = null
+      const updateHud = () => {
+        if (rafId !== null) return
+        rafId = requestAnimationFrame(() => {
+          rafId = null
+          const y = Math.round(window.scrollY)
+          setWindowScrollY(y)
+          const ih = window.innerHeight
+          const vvH = window.visualViewport ? Math.round(window.visualViewport.height) : ih
+
+          if (hudScrollYRef.current) {
+            hudScrollYRef.current.textContent = `${y}px`
+            hudScrollYRef.current.style.color = y > 30 ? '#4ade80' : '#facc15'
+          }
+          if (hudInnerHeightRef.current) hudInnerHeightRef.current.textContent = `${ih}px`
+          if (hudVvHeightRef.current) hudVvHeightRef.current.textContent = `${vvH}px`
+          if (hudModeRef.current) {
+            hudModeRef.current.textContent = '4B 윈도우 스크롤 (비활성)'
+            hudModeRef.current.style.color = '#60a5fa'
+          }
+          if (hudStatusMsgRef.current) {
+            hudStatusMsgRef.current.textContent = y > 30
+              ? '🚀 4B 윈도우 스크롤: 사파리 주소창 100lvh 축소 상태!'
+              : '👇 아래로 스크롤하면 사파리 주소창이 축소됩니다'
+          }
+        })
+      }
+
+      window.addEventListener('scroll', updateHud, { passive: true })
+      window.addEventListener('resize', updateHud)
+      window.visualViewport?.addEventListener('resize', updateHud)
+      updateHud()
+
+      return () => {
+        if (rafId !== null) cancelAnimationFrame(rafId)
+        window.removeEventListener('scroll', updateHud)
+        window.removeEventListener('resize', updateHud)
+        window.visualViewport?.removeEventListener('resize', updateHud)
+        if (prevHtmlStyle) html.setAttribute('style', prevHtmlStyle); else html.removeAttribute('style')
+        if (prevBodyStyle) body.setAttribute('style', prevBodyStyle); else body.removeAttribute('style')
+        if (root) {
+          if (prevRootStyle) root.setAttribute('style', prevRootStyle); else root.removeAttribute('style')
+        }
+      }
+    } else {
+      // 4A Mode: Lock document to 0.0px app shell
+      html.style.cssText = 'height: 100% !important; overflow: hidden !important; background: #09090b !important;'
+      body.style.cssText = 'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
+      if (root) {
+        root.style.cssText = 'height: 100% !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; width: 100% !important; background: #09090b !important;'
+      }
+      window.scrollTo(0, 0)
+
+      // Transfer saved window.scrollY to bodyRef internal scrollTop
+      const y = savedScrollYRef.current
+      if (bodyRef.current) {
+        bodyRef.current.scrollTop = y
+      }
+
+      let rafId: number | null = null
+      const updateHud4A = () => {
+        if (rafId !== null) return
+        rafId = requestAnimationFrame(() => {
+          rafId = null
+          const y = bodyRef.current ? Math.round(bodyRef.current.scrollTop) : savedScrollYRef.current
+          const ih = window.innerHeight
+          const vvH = window.visualViewport ? Math.round(window.visualViewport.height) : ih
+
+          if (hudScrollYRef.current) {
+            hudScrollYRef.current.textContent = `${y}px (본문 스크롤)`
+            hudScrollYRef.current.style.color = '#4ade80'
+          }
+          if (hudInnerHeightRef.current) hudInnerHeightRef.current.textContent = `${ih}px`
+          if (hudVvHeightRef.current) hudVvHeightRef.current.textContent = `${vvH}px`
+          if (hudModeRef.current) {
+            hudModeRef.current.textContent = '4A App-Shell (키보드 활성)'
+            hudModeRef.current.style.color = '#4ade80'
+          }
+          if (hudStatusMsgRef.current) {
+            hudStatusMsgRef.current.textContent = '🔒 4A 활성: 헤더 0.0px 완전 고정 | 키보드 위 밀착'
+          }
+        })
+      }
+
+      const bodyEl = bodyRef.current
+      bodyEl?.addEventListener('scroll', updateHud4A, { passive: true })
+      window.addEventListener('resize', updateHud4A)
+      window.visualViewport?.addEventListener('resize', updateHud4A)
+      updateHud4A()
+
+      return () => {
+        if (rafId !== null) cancelAnimationFrame(rafId)
+        bodyEl?.removeEventListener('scroll', updateHud4A)
+        window.removeEventListener('resize', updateHud4A)
+        window.visualViewport?.removeEventListener('resize', updateHud4A)
+        if (prevHtmlStyle) html.setAttribute('style', prevHtmlStyle); else html.removeAttribute('style')
+        if (prevBodyStyle) body.setAttribute('style', prevBodyStyle); else body.removeAttribute('style')
+        if (root) {
+          if (prevRootStyle) root.setAttribute('style', prevRootStyle); else root.removeAttribute('style')
+        }
+      }
+    }
+  }, [is4AActive])
+
+  const handleSubmit = () => {
+    if (!floatingVal.trim()) return
+    setMessages((prev) => [...prev, floatingVal.trim()])
+    setFloatingVal('')
+    engine.scrollToBottom('smooth')
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className={`rmkl-exp04b-root ${is4AActive ? 'rmkl-mode-4a' : 'rmkl-mode-4b'}`}
+    >
+      <style>{`
+        /* -----------------------------------------------------------
+           4B Mode (Keyboard Inactive: Unlocked Native Window Scroll)
+           ----------------------------------------------------------- */
+        .rmkl-exp04b-root.rmkl-mode-4b {
+          position: relative;
+          width: 100%;
+          min-height: 240vh;
+          background-color: #09090b;
+          color: #f4f4f5;
+          box-sizing: border-box;
+        }
+
+        .rmkl-mode-4b .rmkl-exp04b-header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 60;
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
+        }
+
+        .rmkl-mode-4b .rmkl-exp04b-body-container {
+          position: relative;
+          width: 100%;
+          padding-top: calc(53px + env(safe-area-inset-top, 0px));
+          padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px) + 24px);
+          box-sizing: border-box;
+          overflow: visible;
+          display: block;
+        }
+
+        .rmkl-mode-4b .rmkl-exp04b-body {
+          overflow: visible;
+          display: block;
+          width: 100%;
+        }
+
+        .rmkl-mode-4b .rmkl-exp04b-body-inner {
+          padding: 14px 16px 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          box-sizing: border-box;
+        }
+
+        .rmkl-mode-4b .rmkl-exp04b-footer {
+          position: fixed;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          z-index: 50;
+          background-color: rgba(9, 9, 11, 0.94);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-top: 1px solid #27272a;
+          box-sizing: border-box;
+        }
+
+        /* -----------------------------------------------------------
+           4A Mode (Keyboard Active: SubpageLayout App-Shell Locked)
+           ----------------------------------------------------------- */
+        .rmkl-exp04b-root.rmkl-mode-4a {
+          position: fixed;
+          inset: 0;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+          background-color: #09090b;
+          color: #f4f4f5;
+          touch-action: none;
+          z-index: 200;
+        }
+
+        .rmkl-mode-4a .rmkl-exp04b-header {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          z-index: 60;
+          transform: translateZ(0);
+          -webkit-transform: translateZ(0);
+        }
+
+        .rmkl-mode-4a .rmkl-exp04b-body-container {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 100dvh;
+          padding-top: calc(53px + env(safe-area-inset-top, 0px));
+          padding-bottom: var(--rmkl-kb-inset, 0px);
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          touch-action: none;
+          z-index: 10;
+        }
+
+        .rmkl-mode-4a .rmkl-exp04b-body {
+          flex: 1 1 0%;
+          min-height: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior-y: contain;
+          touch-action: pan-y;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .rmkl-mode-4a .rmkl-exp04b-body-inner {
+          padding: 14px 16px 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          box-sizing: border-box;
+          width: 100%;
+        }
+
+        .rmkl-mode-4a .rmkl-exp04b-footer {
+          position: relative;
+          z-index: 40;
+          flex-shrink: 0;
+          background-color: rgba(9, 9, 11, 0.96);
+          border-top: 1px solid #27272a;
+          box-sizing: border-box;
+        }
+
+        /* Suppress floating input bar and footer when a body text input has focus */
+        .rmkl-mode-4a:has(.rmkl-exp04b-body input:focus) .rmkl-exp04b-footer {
+          display: none !important;
+        }
+
+        .rmkl-mode-4a:has(.rmkl-exp04b-body input:focus) .rmkl-floating-input-wrapper {
+          visibility: hidden;
+          pointer-events: none;
+          overflow: hidden;
+          max-height: 0px;
+          padding-top: 0px;
+          padding-bottom: 0px;
+          border: none;
+          margin: 0;
+        }
+
+        /* Closing: :focus-within flips synchronously on blur, avoiding lag */
+        .rmkl-mode-4a:not(:focus-within) .rmkl-exp04b-body-container {
+          padding-bottom: 0 !important;
+        }
+      `}</style>
+
+      {/* Header */}
+      <header className="rmkl-exp04b-header">
+        <LabHeader
+          lab={lab}
+          lang={lang}
+          onClose={onClose}
+          windowScrollY={is4AActive ? (bodyRef.current?.scrollTop ?? savedScrollYRef.current) : windowScrollY}
+        />
+      </header>
+
+      {/* Body Scroll Container */}
+      <div ref={bodyContainerRef} className="rmkl-exp04b-body-container">
+        <main
+          ref={bodyRef}
+          className="rmkl-exp04b-body"
+          onPointerDown={(e) => {
+            if (is4AActive) engine.bodyProps.onPointerDown(e)
+          }}
+        >
+          <div className="rmkl-exp04b-body-inner">
+            {/* Real-time Diagnostics HUD */}
+            <div style={{
+              padding: '12px 14px',
+              borderRadius: '12px',
+              backgroundColor: is4AActive ? 'rgba(34, 197, 94, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+              border: `1px solid ${is4AActive ? 'rgba(34, 197, 94, 0.35)' : 'rgba(59, 130, 246, 0.35)'}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              fontSize: '12px',
+              fontFamily: 'monospace',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ fontWeight: 700, color: is4AActive ? '#4ade80' : '#60a5fa', fontSize: '13px' }}>
+                  📊 EXP-04-B: <span ref={hudModeRef}>{is4AActive ? '4A App-Shell (키보드 활성)' : '4B 윈도우 스크롤 (비활성)'}</span>
+                </div>
+                <span style={{
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: is4AActive ? '#15803d' : '#1d4ed8',
+                  color: '#ffffff',
+                  fontSize: '10.5px',
+                  fontWeight: 700,
+                }}>
+                  {is4AActive ? '4A LOCKED' : '4B NATIVE'}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', color: '#cbd5e1' }}>
+                <div>스크롤 위치: <b ref={hudScrollYRef} style={{ color: '#facc15' }}>{is4AActive ? `${savedScrollYRef.current}px` : `${windowScrollY}px`}</b></div>
+                <div>innerHeight: <b ref={hudInnerHeightRef}>{typeof window !== 'undefined' ? `${window.innerHeight}px` : '-'}</b></div>
+                <div>vv.height: <b ref={hudVvHeightRef}>{typeof window !== 'undefined' && window.visualViewport ? `${Math.round(window.visualViewport.height)}px` : '-'}</b></div>
+                <div>Safari 주소창: <b style={{ color: (!is4AActive && windowScrollY > 30) ? '#4ade80' : '#facc15' }}>{(!is4AActive && windowScrollY > 30) ? '100lvh 축소' : '100svh'}</b></div>
+              </div>
+              <div ref={hudStatusMsgRef} style={{ fontSize: '11px', color: is4AActive ? '#86efac' : '#93c5fd', marginTop: '2px' }}>
+                {is4AActive ? '🔒 4A 활성: 헤더 0.0px 완전 고정 | 키보드 위 밀착' : '👇 아래로 스크롤하면 사파리 주소창이 축소됩니다'}
+              </div>
+            </div>
+
+            <LabHeroSection lab={lab} lang={lang} />
+
+            {/* REAL Form Section (Body Input + Date Picker) */}
+            <div style={{
+              padding: '14px',
+              borderRadius: '12px',
+              backgroundColor: '#18181b',
+              border: '1px solid #27272a',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>
+                🎮 {lang === 'ko' ? '본문 인풋 (터치 시 4A로 자동 전환 & 헤더 0.0px 고정)' : 'Body Input (Auto-switches to 4A)'}
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
+                  {lang === 'ko' ? '본문 텍스트 인풋 (터치 즉시 타이핑 가능)' : 'Body Text Input'}
+                </label>
+                <input
+                  ref={bodyInputRef}
+                  type="text"
+                  value={bodyVal}
+                  onChange={(e) => setBodyVal(e.target.value)}
+                  placeholder={lang === 'ko' ? '터치하여 본문 인풋 테스트 (자동 4A 전환)...' : 'Tap to test body focus (auto 4A)...'}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    minHeight: '44px',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #3f3f46',
+                    backgroundColor: '#09090b',
+                    color: '#f4f4f5',
+                    fontSize: '15px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', color: '#71717a', display: 'block', marginBottom: '4px' }}>
+                  {lang === 'ko' ? '네이티브 날짜 피커' : 'Native Date Picker'}
+                </label>
+                <input
+                  type="date"
+                  value={dateVal}
+                  onChange={(e) => setDateVal(e.target.value)}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    minHeight: '44px',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #3f3f46',
+                    backgroundColor: '#09090b',
+                    color: '#f4f4f5',
+                    fontSize: '15px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+
+            <LabEvaluationSection lab={lab} lang={lang} />
+            <LabFindingDecisionSection lab={lab} lang={lang} />
+            <LabMessagesSection messages={messages} lang={lang} />
+
+            {/* 14 Feed items for Safari URL Bar Collapse */}
+            <div style={{
+              padding: '12px',
+              borderRadius: '12px',
+              backgroundColor: '#18181b',
+              border: '1px solid #27272a',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#a1a1aa' }}>
+                📜 {lang === 'ko' ? '스크롤 테스트용 긴 피드 (주소창 축소 유도)' : 'Long Feed for URL Bar Collapse Testing'}
+              </div>
+              {Array.from({ length: 14 }).map((_, idx) => (
+                <div key={idx} style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  backgroundColor: '#27272a',
+                  fontSize: '12.5px',
+                  color: '#d4d4d8',
+                  lineHeight: '1.4',
+                }}>
+                  <b>Item #{idx + 1}</b> — {lang === 'ko' ? '아래로 스크롤할 때 사파리 주소창이 100lvh로 축소되는지 확인하세요.' : 'Scroll down to verify Safari address bar collapses.'}
+                </div>
+              ))}
+            </div>
+
+            {/* REAL Bottom Page Input */}
+            <div style={{
+              padding: '14px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(59, 130, 246, 0.12)',
+              border: '2px solid rgba(59, 130, 246, 0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              marginTop: '16px',
+            }}>
+              <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>
+                🛡️ {lang === 'ko' ? '페이지 최하단 본문 인풋 (터치 시 키보드 위 자동 전개)' : 'Very Bottom Page Input (Revealed Above Keyboard)'}
+              </div>
+              <input
+                ref={bottomInputRef}
+                type="text"
+                value={bottomInputVal}
+                onChange={(e) => setBottomInputVal(e.target.value)}
+                placeholder={lang === 'ko' ? '최하단 인풋 터치 ➔ 키보드 위로 스크롤 전개' : 'Tap bottom input -> revealed above keyboard'}
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  minHeight: '44px',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  border: '2px solid #3b82f6',
+                  backgroundColor: '#09090b',
+                  color: '#f4f4f5',
+                  fontSize: '15px',
+                  outline: 'none',
+                }}
+              />
+              <div style={{ fontSize: '11.5px', color: '#93c5fd', lineHeight: '1.4' }}>
+                {lang === 'ko'
+                  ? '키보드 비활성 상태에서 이 인풋을 터치하면 자동으로 4A 모드로 전환되며 키보드 위로 안전하게 드러납니다.'
+                  : 'Tap this input while keyboard is closed to verify it auto-switches to 4A and reveals above keyboard.'}
+              </div>
+            </div>
+
+            <div style={{ height: '40px', flexShrink: 0 }} />
+          </div>
+        </main>
+
+        {/* REAL Floating Input Footer */}
+        <footer className="rmkl-exp04b-footer">
+          <FloatingInput
+            value={floatingVal}
+            onChange={setFloatingVal}
+            onSubmit={handleSubmit}
+            placeholder={lang === 'ko' ? '메시지 입력 (터치 시 4A App-Shell 자동 전환)...' : 'Type message (Auto-switches to 4A)...'}
+            {...engine.floatingProps}
+            isKeyboardOpen={engine.isKeyboardOpen}
+          />
+        </footer>
+      </div>
+    </div>
+  )
+}
+
 /* ==========================================================================
    Main Sandbox Dispatcher
    ========================================================================== */
@@ -2487,7 +3234,11 @@ export const LabSandbox = ({ lab, lang, onClose }: LabSandboxProps) => {
     case 'exp03_f':
       return <Exp03FSandbox lab={lab} lang={lang} onClose={onClose} />
     case 'exp04_a':
+      return <Exp04ASandbox lab={lab} lang={lang} onClose={onClose} />
+    case 'exp04_b':
+      return <Exp04BSandbox lab={lab} lang={lang} onClose={onClose} />
     default:
       return <Exp04ASandbox lab={lab} lang={lang} onClose={onClose} />
   }
 }
+
