@@ -13,6 +13,24 @@ import { useMobileKeyboard, type UseMobileKeyboardReturn } from '../hooks/useMob
 import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
 import './PageLayout.css'
 
+/*
+ * Every number JavaScript derives for this layout, where it is read from, what refreshes it and
+ * what it is written to. A code path that is not in this table is a bug waiting for the event
+ * iOS does not send -- each row below was, at some point, a device report.
+ *
+ *   value                       read from                    refreshed on                          written to
+ *   --rmkl-v10-page-lock-y          window.scrollY               scroll (idle); focusin (capture)      the CSS cap: calc(y + 100lvh)
+ *   main.scrollTop (hand-off)   scrollY, main scroll range   focusin (capture), once               the shell's scroller
+ *   window offset (the guard)   scrollY vs lock-y            scroll (locked); vv scroll (nudge<=2) window.scrollTo -- the one write-back
+ *   --rmkl-v10-kb / --rmkl-v10-kb-inset innerHeight, vv.height       vv resize, resize, scroll, vv scroll  shell padding, composer bottom  (useMobileKeyboard)
+ *   body-input anchor / edge    input rect, main.scrollTop   ResizeObserver(main); focusin (bubble) main.scrollTop                 (useMobileKeyboard)
+ *
+ * Order that the code relies on: the hand-off runs in the capture phase so the hook's anchor
+ * (bubble) sees the post-transfer position; the guard is driven by the scroll Safari's pan
+ * emits, so it cannot run early; the inset is re-measured on any viewport signal, so nothing
+ * waits for iOS to send a resize.
+ */
+
 /**
  * The document's height while the shell is up: the reader's offset plus one viewport, published
  * while the document scrolls. Read by PageLayout.css.
