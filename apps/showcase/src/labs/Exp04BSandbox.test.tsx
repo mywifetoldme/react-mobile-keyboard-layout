@@ -34,7 +34,7 @@ describe('EXP-04-B runs on the frozen copy of the library layout', () => {
     expect(document.querySelector('.rmkl-v10-page-root')).not.toBeNull()
     expect(document.querySelector('main.rmkl-v10-page-body')).not.toBeNull()
     expect(document.querySelector('.rmkl-page-root')).toBeNull()
-    expect(document.documentElement.style.getPropertyValue('--rmkl-v10-page-lock-height')).not.toBe('')
+    expect(document.documentElement.style.getPropertyValue('--rmkl-v10-page-lock-y')).not.toBe('')
   })
 
   it('keys its HUD to the copy\'s shell selector: keyboard inputs only, never :focus-within', () => {

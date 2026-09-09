@@ -17,7 +17,7 @@ import './PageLayout.css'
  * The document's height while the shell is up: the reader's offset plus one viewport, published
  * while the document scrolls. Read by PageLayout.css.
  */
-export const PAGE_LOCK_HEIGHT_CSS_VAR = '--rmkl-v10-page-lock-height'
+export const PAGE_LOCK_Y_CSS_VAR = '--rmkl-v10-page-lock-y'
 
 const INPUT_SELECTOR = 'input, textarea, [contenteditable]'
 /** How long after the pointerup focus the tap's own click may still arrive (~400ms measured worst case on iOS). */
@@ -105,32 +105,31 @@ const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: Ref
   useEffect(() => {
     const root = rootRef.current
     if (!root || typeof window === 'undefined') return
-    const publishCap = () => {
-      document.documentElement.style.setProperty(PAGE_LOCK_HEIGHT_CSS_VAR, `${Math.round(window.scrollY) + window.innerHeight}px`)
+    // only the offset: the viewport half of the cap is CSS's 100%, which follows Safari's resizes
+    const publishOffset = () => {
+      document.documentElement.style.setProperty(PAGE_LOCK_Y_CSS_VAR, `${Math.round(window.scrollY)}px`)
     }
     const onScroll = () => {
-      if (!focusedInputInside(root)) publishCap()
+      if (!focusedInputInside(root)) publishOffset()
     }
     const onFocusIn = (e: FocusEvent) => {
       if (!isKeyboardTextInput(e.target)) return
       const from = e.relatedTarget
       if (from instanceof Node && root.contains(from) && isKeyboardTextInput(from)) return
-      publishCap()
+      publishOffset()
       const main = bodyRef.current
       if (!main) return
       // column-reverse: 0 is the end of the content; the document's offset from the top is that far short of it
       main.scrollTop = Math.round(window.scrollY) - (main.scrollHeight - main.clientHeight)
     }
 
-    publishCap()
+    publishOffset()
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll)
     root.addEventListener('focusin', onFocusIn, { capture: true })
     return () => {
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
       root.removeEventListener('focusin', onFocusIn, { capture: true })
-      document.documentElement.style.removeProperty(PAGE_LOCK_HEIGHT_CSS_VAR)
+      document.documentElement.style.removeProperty(PAGE_LOCK_Y_CSS_VAR)
     }
   }, [rootRef, bodyRef])
 }

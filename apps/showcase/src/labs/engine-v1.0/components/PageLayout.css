@@ -6,8 +6,8 @@
                                           header and footer are sticky, in flow
      shell   a keyboard input is focused  the root is a fixed shell, <main> scrolls, the footer
                                           sits on the keyboard inset; the document is capped at
-                                          --rmkl-v10-page-lock-height (its offset + one viewport) and
-                                          frozen, so it keeps its place and Safari has nothing to pan
+                                          its offset (--rmkl-v10-page-lock-y) + one viewport and frozen,
+                                          so it keeps its place and Safari has nothing to pan
 
    The shell is keyed to the inputs that raise the keyboard (the list mirrors isKeyboardTextInput
    and SubpageLayout.css): a native picker must not flip it — iOS does not resize the viewport for
@@ -36,14 +36,18 @@ html:has(.rmkl-v10-page-root textarea:focus),
 html:has(.rmkl-v10-page-root [contenteditable]:not([contenteditable="false"]):focus),
 html:has(.rmkl-v10-page-root input:not([type]):focus),
 html:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
+  height: 100%;
   overflow: hidden;
 }
 body:has(.rmkl-v10-page-root textarea:focus),
 body:has(.rmkl-v10-page-root [contenteditable]:not([contenteditable="false"]):focus),
 body:has(.rmkl-v10-page-root input:not([type]):focus),
 body:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
-  /* no fallback on purpose: an unset variable leaves height: auto (still scrollable, offset kept) */
-  height: var(--rmkl-v10-page-lock-height);
+  /* offset + the live layout viewport (100% of html), not a number taken at focus time: iOS Safari
+     may shrink innerHeight by part or all of the keyboard height as the keyboard opens (measured
+     695 -> 601 and 695 -> 396), and a cap frozen in px would leave it exactly that much room to
+     scroll the window into -- the shell, header included, rode up with it */
+  height: calc(var(--rmkl-v10-page-lock-y, 0px) + 100%);
   min-height: 0;
   overflow: hidden;
 }
