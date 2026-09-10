@@ -38,8 +38,6 @@ import './PageLayout.css'
 export const PAGE_LOCK_Y_CSS_VAR = '--rmkl-v10-page-lock-y'
 
 const INPUT_SELECTOR = 'input, textarea, [contenteditable]'
-/** How long after the pointerup focus the tap's own click may still arrive (~400ms measured worst case on iOS). */
-const TAP_CLICK_WINDOW_MS = 600
 
 const keyboardInputOf = (target: EventTarget | null): HTMLElement | null => {
   const el = target instanceof Element ? target.closest(INPUT_SELECTOR) : null
@@ -60,42 +58,44 @@ const focusedInputInside = (root: HTMLElement): HTMLElement | null => {
  * focus ~50ms ahead of iOS's own (at click), so the keyboard's resize mostly lands after the click.
  *
  * The tap's own click still has to land. If the keyboard inset moved the content in between, the
- * mousedown synthesized at the original point would blur the input. While that click is pending, a
- * mousedown anywhere but the focused input is refused.
+ * mousedown synthesized at the original point would blur the input. While that click is pending,
+ * every mousedown is refused. "Pending" is bounded by events, not a clock: the click itself, a
+ * cancelled pointer, or the next pointerdown (a new gesture -- the previous tap's click, if it was
+ * ever coming, has been delivered by then). A focus without a tap therefore cannot leave the
+ * protection stuck open.
  */
 const useTapToFocus = (rootRef: RefObject<HTMLElement | null>) => {
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
     let armed: HTMLElement | null = null
-    let clickPendingUntil = 0
+    let clickPending = false
 
     const onPointerDown = (e: Event) => {
+      clickPending = false
       armed = keyboardInputOf(e.target)
     }
     const onPointerCancel = () => {
       armed = null
+      clickPending = false
     }
     const onPointerUp = (e: Event) => {
       const input = keyboardInputOf(e.target)
       if (!input || input !== armed) return
       armed = null
-      clickPendingUntil = performance.now() + TAP_CLICK_WINDOW_MS
+      clickPending = true
       input.focus({ preventScroll: true })
     }
     const onFocusIn = (e: FocusEvent) => {
-      if (!keyboardInputOf(e.target)) return
-      clickPendingUntil = performance.now() + TAP_CLICK_WINDOW_MS
+      if (keyboardInputOf(e.target)) clickPending = true
     }
     const onClick = (e: MouseEvent) => {
-      if (performance.now() < clickPendingUntil) {
-        e.preventDefault()
-        clickPendingUntil = 0
-      }
+      if (!clickPending) return
+      e.preventDefault()
+      clickPending = false
     }
     const onMouseDown = (e: MouseEvent) => {
-      if (performance.now() >= clickPendingUntil) return
-      e.preventDefault()
+      if (clickPending) e.preventDefault()
     }
 
     root.addEventListener('pointerdown', onPointerDown, { capture: true, passive: true })
