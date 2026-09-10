@@ -32,64 +32,32 @@
 3. **34px 하단 갭**: 바닥 고정 인풋창이 홈바 위로 34px 떠서 빈 공간 발생.
 4. **네이티브 피커 닫힘 현상**: 스크롤 락 로직이 날짜/시간 피커(`<input type="date">`)를 즉시 닫아버리는 문제.
 
-`react-mobile-keyboard-layout`은 외부 라이브러리 없이 **CSS(`:has()`, `:focus-within`)와 표준 웹 API 둘(`visualViewport`, `preventScroll`)만으로 레이아웃을 안정화**합니다.
+`react-mobile-keyboard-layout`은 레이아웃 하나로 이 문제를 다룹니다. 인풋을 탭하기 전까지는 보통 웹페이지처럼 스크롤되고, 키보드가 떠 있는 동안은 앱 셸인 페이지. CSS와 표준 웹 API 둘(`visualViewport`, `preventScroll`), **외부 의존성 0**, 그리고 명세가 주지 않는 숫자는 정확히 하나.
 
 ---
 
 ## 🎯 핵심 구조 및 접근법
 
-- **키보드 상태는 CSS가 판정**:
-  키보드가 열렸는지, 포커스가 본문 폼에 있는지 하단 플로팅 바에 있는지, 네이티브 피커가 열렸는지를 전부 스타일시트의 셀렉터(`:focus-within`, `:has()`)로 읽는다. 어긋날 JS 상태 기계가 없다.
-- **물리적 독립 헤더 격리 (Isolated Static Header)**:
-  헤더를 리사이징 컨테이너 밖에 배치하여 레이아웃 리플로우로 인한 흔들림을 차단.
-- **되돌리기 대신 탭 가로채기**:
-  텍스트 입력은 `pointerdown`에서 `preventScroll: true`로 직접 포커스해, iOS가 창을 밀어 올리기 전에 끝낸다. 350ms rAF 탑락은 보험으로만 남는다. iOS 26에서 영상을 프레임 단위로 재보면, 밀린 뒤 되돌리는 방식은 항상 약 240ms 헤더 튐이 남는다.
+- **상태 둘, 속성 하나**:
+  대기 중엔 문서가 스크롤되고 Safari 주소창이 접힙니다. 헤더와 작성기는 `position: sticky`로 흐름 안에 있습니다. 셸의 열쇠는 루트의 속성 하나 `data-rmkl-shell`이고, 나머지는 PageLayout.css가 합니다: `position: fixed` 셸, 고정 헤더, 같은 읽던 위치의 `column-reverse` 본문 스크롤러, 키보드 인셋 위의 작성기. 상태 기계는 없습니다.
+- **탭이 셸을 먼저 만들고, 그 다음 포커스**:
+  Safari는 캐럿을 어디로 드러낼지 인풋이 포커스되는 순간 정합니다. 그래서 레이아웃은 `pointerup`에서 문서 오프셋을 발표하고, 속성을 세팅하고, 셸을 배치하고, 오프셋을 본문 스크롤러에 건넨 뒤 -- 그때 포커스합니다. Safari는 인풋을 셸 자체의 스크롤러 안에서 발견하고 밀 것이 없습니다(실기기: 셸이 `:focus`에 걸렸을 때 48회 중 9회 밀림, 속성에 걸었을 때 47회 중 0회).
+- **문서는 캡될 뿐, `position: fixed`는 절대 아님**:
+  셸이 떠 있는 동안 문서는 `calc(오프셋 + 100lvh)` 높이에 `overflow: hidden`입니다. 오프셋이 유지되고, Safari 주소창은 그대로이며, blur 시 문서는 독자가 두고 간 자리에 정확히 있습니다. body를 fixed로 잠그면 오프셋이 리셋되고 Safari가 손가락 아래에서 주소창을 다시 펼칩니다. Safari가 그래도 윈도우를 움직이면 숫자 없는 가드가 되돌립니다.
 - **키보드 높이는 CSS 변수로**:
-  CSS가 읽을 수 없는 유일한 값인 키보드 높이를 `--rmkl-kb`로 내보낸다(브라우저는 키보드를 두 방식 중 하나로 알립니다. visual viewport만 줄이는 쪽은 `innerHeight - visualViewport.height`, layout viewport 자체가 줄어드는 쪽은 `innerHeight` 감소분입니다. 둘 다 읽으며, 어느 브라우저의 어느 버전이 어느 쪽인지는 단정하지 말고 재봐야 합니다 — 실제로 재본 iOS Safari·Android Chrome 133·WKWebView는 셋 다 visual viewport 축소였습니다). 그중 layout viewport가 가려진 만큼은 `--rmkl-kb-inset`으로 내보내 아래 여백으로 잡는다. 블러 시엔 지연되는 `visualViewport` resize를 기다리지 않고 `:not(:focus-within)`으로 즉시 되돌아간다.
+  CSS가 읽을 수 없는 유일한 값을 `--rmkl-kb`로, 그중 레이아웃 뷰포트가 가려진 만큼을 `--rmkl-kb-inset`으로 내보냅니다(`innerHeight − visualViewport.height × scale`; 레이아웃 뷰포트 자체가 줄어드는 브라우저는 `innerHeight` 감소분). `resize`뿐 아니라 `scroll`에서도 잽니다 -- iOS는 스스로 밀고 난 뒤 `innerHeight`를 resize 이벤트 없이 되돌립니다.
 - **읽던 위치 유지**:
-  본문은 아래에서부터 스크롤한다(`flex-direction: column-reverse`, 자식은 DOM 순서 그대로). 피드 끝에서는 브라우저가 최신 메시지를 스스로 그 자리에 둔다. 위로 스크롤한 상태에서는 WebKit이 위쪽 기준 오프셋을 유지하므로, 플로팅 바가 포커스인 채 상자가 바뀌면 훅이 하단 가장자리를 되돌린다.
-- **포커스된 본문 입력은 제자리에**:
-  아래 끝이 앵커인 본문은 키보드가 자리를 차지하면 포커스된 폼 필드를 위로 밀어 올린다. 훅이 `ResizeObserver`로 본문을 지켜보다가 스크롤 오프셋을 옮겨 필드의 화면 위치를 지키고(키보드에 가려지면 드러내고), 키보드가 내려가면 원래 자리로 되돌린다.
-- **네이티브 피커 분기 (Picker Passthrough)**:
-  가상 키보드 텍스트 입력창과 OS 모달 시트(날짜/시간 피커)를 구분하여 자연스러운 동작 보장.
+  본문은 아래에서부터 스크롤합니다(`flex-direction: column-reverse`, 자식은 DOM 순서 그대로). 포커스된 본문 인풋은 키보드가 자리를 차지해도 화면 위치를 지키고, 가려질 땐 본문만 스크롤해 드러냅니다. 작성기는 하단 가장자리를 유지합니다. 닫힘의 끝은 타이머가 아니라 다음 포커스입니다.
+- **네이티브 피커 분기**:
+  키보드를 띄우는 인풋만 셸을 엽니다. `<input type="date">`, `<select>`, 버튼은 네이티브 동작 그대로입니다.
 
 ---
 
-## 🧭 두 가지 레이아웃
+## 🧭 레이아웃 하나
 
-- **`SubpageLayout` (★ 공식 최종 채택 / 기본 권장)** — 페이지 전체가 셸이고 윈도우 스크롤은 `0`으로 영구 고정됩니다. 브라우저와 완벽한 평화 협정을 맺어, 100% 순수 선언적 CSS flexbox(`column-reverse`)와 `--rmkl-kb-inset`으로만 작동합니다. 윈도우 스크롤이 움직이지 않으므로 Safari의 문서 밀어올림, 캐럿 노출 점프, 지연 클릭 충돌 결함이 원천 차단됩니다. 0.0px 무결점 안정성과 제로 유지보수를 보장합니다. 채팅방, 메신저, 대시보드, 인터랙티브 폼 화면의 기본 권장 선택입니다.
-- **`PageLayout` (고급 하이브리드 레이아웃)** — 아티클/블로그/댓글처럼 평소 읽기 중 Safari 주소창 축소(`100lvh`)가 반드시 필요한 콘텐츠 중심 페이지를 위한 고급 대안입니다. 평소에는 문서 스크롤을 유지하다가, 인풋 탭 시 문서를 `calc(offset + 100lvh)`로 캡하여 얼리고 셸로 정밀 인계합니다. 셸의 열쇠는 탭이 포커스 *전에* 세팅하는 속성 하나라서, Safari는 인풋을 셸 자체의 스크롤러 안에서 발견하고 문서를 밀 이유가 없습니다. 숫자 없는 가드가 문서를 읽던 오프셋에 붙잡습니다.
+v2.0.0부터 `PageLayout`이 유일한 레이아웃입니다. 채팅 화면은 독자가 문서 끝에 있는 같은 레이아웃입니다. 작성기를 탭하는 순간 앱 셸이 되고, 그 전까지는 주소창이 접히는 보통 페이지입니다. (v1의 `SubpageLayout` -- 셸 단독 -- 은 showcase 랩 아카이브에 EXP-04-A로 보존됩니다.)
 
-`SubpageLayout`은 상태를 CSS(키보드를 띄우는 인풋에 대한 `:has()`)로 결정하고 `useMobileKeyboard`와 함께 옵니다. `PageLayout`은 자기 훅 `usePageKeyboard`를 가지며 전략 코드를 공유하지 않습니다 -- 둘은 별개의 실험이고 각각 따로 읽힙니다. `PageLayout`은 마운트 중 `html`/`body` overflow를 소유하니 직접 잠그지 마세요.
-
-```tsx
-// 1. 공식 권장 기본 선택: SubpageLayout (채팅 / 앱 셸)
-import { SubpageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
-import 'react-mobile-keyboard-layout/dist/index.css'
-
-export function ChatPage() {
-  const [text, setText] = useState('')
-  return (
-    <SubpageLayout title="Chat" footer={<FloatingInput value={text} onChange={setText} onSubmit={send} />}>
-      <MessageList />
-    </SubpageLayout>
-  )
-}
-
-// 2. 고급 하이브리드: PageLayout (주소창 축소형)
-import { PageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
-import 'react-mobile-keyboard-layout/dist/index.css'
-
-export function ArticlePage() {
-  const [text, setText] = useState('')
-  return (
-    <PageLayout title="Article" footer={<FloatingInput value={text} onChange={setText} onSubmit={post} />}>
-      <ArticleBody />
-      <Comments />
-    </PageLayout>
-  )
-}
-```
+`PageLayout`은 마운트 중 `html`/`body` overflow를 소유하니 직접 잠그지 마세요.
 
 ## 📦 설치
 
@@ -107,43 +75,34 @@ yarn add react-mobile-keyboard-layout
 
 ```tsx
 import { useRef, useState } from 'react'
-import {
-  SubpageLayout,
-  FloatingInput,
-  useMobileKeyboard,
-} from 'react-mobile-keyboard-layout'
+import { PageLayout, FloatingInput, type PageLayoutHandle } from 'react-mobile-keyboard-layout'
 import 'react-mobile-keyboard-layout/dist/index.css'
 
 export default function ChatScreen() {
   const [text, setText] = useState('')
   const [messages, setMessages] = useState<string[]>([])
-  const bodyRef = useRef<HTMLDivElement | null>(null)
-  const engine = useMobileKeyboard({ bodyRef })
+  const layout = useRef<PageLayoutHandle>(null)
 
   const handleSend = () => {
     if (!text.trim()) return
     setMessages((prev) => [...prev, text.trim()])
     setText('')
-    
-    requestAnimationFrame(() => {
-      engine.scrollToBottom('smooth')
-    })
+    layout.current?.scrollToBottom('smooth')
   }
 
   return (
-    <SubpageLayout
-      bodyRef={bodyRef}
-      keyboardEngine={engine}
+    <PageLayout
+      ref={layout}
       title="대화방"
-      footer={
+      footer={({ isKeyboardOpen }) => (
         <FloatingInput
           value={text}
           onChange={setText}
           onSubmit={handleSend}
           placeholder="메시지를 입력하세요..."
-          {...engine.floatingProps}
+          isKeyboardOpen={isKeyboardOpen}
         />
-      }
+      )}
     >
       <div style={{ padding: '16px' }}>
         {messages.map((msg, i) => (
@@ -152,10 +111,14 @@ export default function ChatScreen() {
           </div>
         ))}
       </div>
-    </SubpageLayout>
+    </PageLayout>
   )
 }
 ```
+
+- `footer`는 노드 또는 함수. 함수는 `{ isKeyboardOpen, keyboardHeight, keyboardInset }`을 받습니다.
+- `ref`는 `{ element, scrollToBottom(behavior?) }`를 줍니다 -- `scrollToBottom`은 대기 중엔 문서를, 셸 중엔 셸의 스크롤러를 스크롤합니다.
+- 키보드 상태가 필요한 다른 곳(HUD, 분석 훅)을 위해 `usePageKeyboard()`를 내보냅니다. 레이아웃 자체는 여러분이 그것을 부를 필요가 없습니다.
 
 ---
 

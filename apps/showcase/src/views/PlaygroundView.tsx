@@ -1,8 +1,9 @@
 import { useState, useRef, type CSSProperties, type ReactNode } from 'react'
 import {
-  SubpageLayout,
+  PageLayout,
   FloatingInput,
-  useMobileKeyboard,
+  usePageKeyboard,
+  type PageLayoutHandle,
 } from 'react-mobile-keyboard-layout'
 import { HudOverlay } from '../components/HudOverlay'
 import { translations, type Language } from '../i18n'
@@ -37,9 +38,9 @@ const inputStyle: CSSProperties = {
 
 export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
   const t = translations[lang]
-  const bodyRef = useRef<HTMLDivElement | null>(null)
-  // 4A (SubpageLayout): Official production winner with pure declarative CSS flexbox & zero shift
-  const engine = useMobileKeyboard({ bodyRef })
+  const layoutRef = useRef<PageLayoutHandle>(null)
+  // The HUD reads the keyboard state the layout also reads; the layout itself needs nothing from us
+  const engine = usePageKeyboard()
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -79,26 +80,24 @@ export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
     setMessages((prev) => [...prev, newMsg])
     setInputVal('')
     setTimeout(() => {
-      engine.scrollToBottom('smooth')
+      layoutRef.current?.scrollToBottom('smooth')
     }, 50)
   }
 
   return (
-    <SubpageLayout
-      bodyRef={bodyRef}
-      keyboardEngine={engine}
+    <PageLayout
+      ref={layoutRef}
       header={header}
       title="Playground"
-      footer={
+      footer={({ isKeyboardOpen }) => (
         <FloatingInput
           value={inputVal}
           onChange={setInputVal}
           onSubmit={handleSend}
           placeholder={t.demoInputPlaceholder}
-          isKeyboardOpen={engine.isKeyboardOpen}
-          {...engine.floatingProps}
+          isKeyboardOpen={isKeyboardOpen}
         />
-      }
+      )}
     >
       <HudOverlay engine={engine} lang={lang} />
 
@@ -221,6 +220,6 @@ export const PlaygroundView = ({ lang, header }: PlaygroundViewProps) => {
           </div>
         </div>
       </div>
-    </SubpageLayout>
+    </PageLayout>
   )
 }

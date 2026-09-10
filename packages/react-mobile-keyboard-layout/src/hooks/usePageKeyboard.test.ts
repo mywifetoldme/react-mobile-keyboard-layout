@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { usePageKeyboard, PAGE_KEYBOARD_HEIGHT_CSS_VAR, PAGE_KEYBOARD_INSET_CSS_VAR } from './usePageKeyboard'
+import { usePageKeyboard, KEYBOARD_HEIGHT_CSS_VAR, KEYBOARD_INSET_CSS_VAR } from './usePageKeyboard'
 
 /** Minimal stand-in for window.visualViewport, which jsdom does not implement. */
 class FakeVisualViewport extends EventTarget {
@@ -39,8 +39,8 @@ const resizeLayoutViewport = (vv: FakeVisualViewport, height: number) => {
 }
 
 const cssVar = (name: string) => document.documentElement.style.getPropertyValue(name)
-const kbVar = () => cssVar(PAGE_KEYBOARD_HEIGHT_CSS_VAR)
-const insetVar = () => cssVar(PAGE_KEYBOARD_INSET_CSS_VAR)
+const kbVar = () => cssVar(KEYBOARD_HEIGHT_CSS_VAR)
+const insetVar = () => cssVar(KEYBOARD_INSET_CSS_VAR)
 
 
 // performance.now() is stubbed so the tests can state that no timing is involved
@@ -112,8 +112,8 @@ describe('usePageKeyboard (PageLayout\'s own hook)', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     document.body.replaceChildren()
-    document.documentElement.style.removeProperty(PAGE_KEYBOARD_HEIGHT_CSS_VAR)
-    document.documentElement.style.removeProperty(PAGE_KEYBOARD_INSET_CSS_VAR)
+    document.documentElement.style.removeProperty(KEYBOARD_HEIGHT_CSS_VAR)
+    document.documentElement.style.removeProperty(KEYBOARD_INSET_CSS_VAR)
   })
 
   it('publishes the keyboard height as --rmkl-kb (the prototype --kb) and the covered inset as --rmkl-kb-inset on Safari', () => {

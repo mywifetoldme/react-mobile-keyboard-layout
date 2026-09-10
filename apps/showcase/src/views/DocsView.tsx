@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { SubpageLayout } from 'react-mobile-keyboard-layout'
+import { PageLayout } from 'react-mobile-keyboard-layout'
 import { translations, type Language } from '../i18n'
 
 const card = {
@@ -63,7 +63,7 @@ export const DocsView = ({ lang, header }: { lang: Language; header?: ReactNode 
   }
 
   return (
-    <SubpageLayout header={header} title={t.docsTitle}>
+    <PageLayout header={header} title={t.docsTitle}>
       <div style={{ padding: '16px 16px 36px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <Section title={t.docsWhyTitle}>
           <div style={{ ...card, backgroundColor: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{t.docsWhyBody}</div>
@@ -133,40 +133,29 @@ export const DocsView = ({ lang, header }: { lang: Language; header?: ReactNode 
                 {copied ? t.copied : t.copy}
               </button>
             </div>
-            <Code>{`// 1. Primary Recommendation (Official Winner): SubpageLayout (App Shell)
-import { SubpageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
+            <Code>{`import { useRef, useState } from 'react'
+import { PageLayout, FloatingInput, type PageLayoutHandle } from 'react-mobile-keyboard-layout'
 import 'react-mobile-keyboard-layout/dist/index.css'
 
 export function ChatPage() {
   const [text, setText] = useState('')
-  const bodyRef = useRef<HTMLDivElement>(null)
+  const layout = useRef<PageLayoutHandle>(null)
 
-  return (
-    <SubpageLayout
-      bodyRef={bodyRef}
-      title="Chat"
-      footer={<FloatingInput value={text} onChange={setText} onSubmit={handleSend} />}
-    >
-      <MessageList />
-    </SubpageLayout>
-  )
-}`}</Code>
-            <Code color="#93c5fd">{`// 2. Advanced Hybrid: PageLayout (Collapsible Address Bar)
-import { PageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
-import 'react-mobile-keyboard-layout/dist/index.css'
-
-export function ArticlePage() {
-  const [text, setText] = useState('')
-  const bodyRef = useRef<HTMLDivElement>(null)
+  const send = () => {
+    post(text)
+    setText('')
+    layout.current?.scrollToBottom()
+  }
 
   return (
     <PageLayout
-      bodyRef={bodyRef}
-      title="Article"
-      footer={<FloatingInput value={text} onChange={setText} onSubmit={handleSend} />}
+      ref={layout}
+      title="Chat"
+      footer={({ isKeyboardOpen }) => (
+        <FloatingInput value={text} onChange={setText} onSubmit={send} isKeyboardOpen={isKeyboardOpen} />
+      )}
     >
-      <ArticleContent />
-      <Comments />
+      <MessageList />
     </PageLayout>
   )
 }`}</Code>
@@ -183,6 +172,6 @@ export function ArticlePage() {
           </div>
         </Section>
       </div>
-    </SubpageLayout>
+    </PageLayout>
   )
 }

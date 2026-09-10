@@ -29,11 +29,11 @@ export interface FloatingInputProps {
   isKeyboardOpen?: boolean
   /** Maximum height in pixels for the auto-growing textarea. Default: 120 */
   maxHeight?: number
-  /** Focus handler forwarded from keyboardEngine.floatingProps */
+  /** Optional focus handler, called after the component's own */
   onFocus?: () => void
-  /** Blur handler forwarded from keyboardEngine.floatingProps */
+  /** Optional blur handler, called after the component's own */
   onBlur?: () => void
-  /** PointerDown handler forwarded from keyboardEngine.floatingProps */
+  /** Optional pointerdown handler, called after the component's own */
   onPointerDown?: (e: ReactPointerEvent<HTMLElement> | PointerEvent) => void
   /** Class name for outer wrapper */
   className?: string

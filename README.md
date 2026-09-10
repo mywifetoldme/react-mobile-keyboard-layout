@@ -32,64 +32,32 @@ On mobile browsers—especially **iOS Safari / WebKit**—virtual software keybo
 3. **The 34px Ghost Gap**: Fixed bottom input bars often leave an empty gap above the home indicator bar.
 4. **Picker Invalidation**: Heavy programmatic scroll locking can cause native date/time pickers (`<input type="date">`, `<select>`) to dismiss immediately upon opening.
 
-`react-mobile-keyboard-layout` addresses these layout challenges with CSS (`:has()`, `:focus-within`) plus two standard APIs (`visualViewport`, `preventScroll`), with **zero external dependencies**.
+`react-mobile-keyboard-layout` addresses these with one layout: a page that scrolls like any web page until an input is tapped, and is an app shell while the keyboard is up. CSS plus two standard APIs (`visualViewport`, `preventScroll`), **zero external dependencies**, and exactly one number that no specification gives.
 
 ---
 
 ## 🎯 Architecture & Approach
 
-- **CSS decides the keyboard state**:
-  Whether the keyboard is open, whether the focused input sits in the body or in the floating bar, and whether a native picker is open are all read from selectors (`:focus-within`, `:has()`) in the stylesheet. There is no JavaScript state machine that can drift out of sync.
-- **Physically Isolated Static Header**:
-  The header sits outside the resizing body container, preventing layout reflow jitter when the keyboard opens and closes.
-- **Tap interception instead of scroll correction**:
-  Text inputs are focused with `preventScroll: true` on `pointerdown`, before iOS pans the window to reveal them. A short rAF top-lock (350ms) only remains as a fallback: frame-by-frame video measurement on iOS 26 showed that undoing the pan afterwards always leaves a ~240ms header jump.
+- **Two states, one attribute**:
+  Idle, the document scrolls and Safari collapses its URL bar; header and composer are `position: sticky`, in flow. The shell is keyed to one attribute on the root, `data-rmkl-shell`, and PageLayout.css does the rest: `position: fixed` shell, header pinned, a `column-reverse` body scroller at the same reading position, the composer on the keyboard inset. There is no state machine.
+- **The tap builds the shell, then focuses**:
+  Safari decides where to reveal a caret at the moment the input is focused. So on `pointerup` the layout publishes the document offset, sets the attribute, lays the shell out, hands the offset to the body scroller — and only then focuses. Safari finds the input inside the shell's own scroller and has nothing to pan (device: 9 of 48 opens panned with the shell keyed to `:focus`, 0 of 47 keyed to the attribute).
+- **The document is capped, never `position: fixed`**:
+  While the shell is up the document is `calc(offset + 100lvh)` tall with `overflow: hidden`: it keeps its offset, Safari's URL bar stays as it was, and on blur the document is exactly where the reader left it. Fixing the body resets the offset and makes Safari re-expand its URL bar under the finger. A guard with no number in it puts the window back should Safari still move it.
 - **Keyboard height as CSS variables**:
-  The one value CSS cannot read, the keyboard height, is published as `--rmkl-kb` (browsers report the keyboard in one of two ways: some shrink only the visual viewport, so the height is `innerHeight - visualViewport.height`; others shrink the layout viewport itself, so it is the drop in `innerHeight`. Both are read, and which one a given browser and version uses has to be measured rather than assumed — iOS Safari, Android Chrome 133 and WKWebView all took the visual-viewport path when measured). The part of the layout viewport the keyboard covers is published as `--rmkl-kb-inset` and reserved as bottom padding. On blur the layout snaps back synchronously through `:not(:focus-within)`, without waiting for the delayed `visualViewport` resize event.
+  The one value CSS cannot read is published as `--rmkl-kb` and, as the part of the layout viewport the keyboard covers, `--rmkl-kb-inset` (`innerHeight − visualViewport.height × scale`; browsers that shrink the layout viewport instead report the drop in `innerHeight`). Measured on `resize` and on `scroll` — iOS restores `innerHeight` after its own pan without a resize event.
 - **Reading position kept**:
-  The body scrolls from the bottom (`flex-direction: column-reverse`, children stay in DOM order). At the end of the feed the browser keeps the newest message in place by itself; scrolled up, WebKit keeps the top-based offset instead, so the hook puts the bottom edge back when the box changes while the floating bar has the focus.
-- **A focused body input stays put**:
-  A bottom-anchored body would push a focused form field up when the keyboard takes space. The hook watches the body with a `ResizeObserver`, shifts the scroll offset so the field keeps its screen position (or reveals it when the keyboard would hide it), and puts it back where it was when the keyboard leaves.
-- **Native Picker Passthrough**:
-  Differentiates virtual keyboard text inputs from native modal sheets (`<input type="date">`, `<input type="time">`, `<select>`), allowing system pickers to open naturally.
+  The body scrolls from the bottom (`flex-direction: column-reverse`, children in DOM order). A focused body input keeps its screen position while the keyboard takes space, and is revealed by scrolling the body alone if the keyboard would hide it; the composer keeps the bottom edge in view. The close is bounded by the next focus, not a timer.
+- **Native picker passthrough**:
+  Only the inputs that raise a keyboard open the shell; `<input type="date">`, `<select>` and buttons keep their native behaviour.
 
 ---
 
-## 🧭 Two Layouts
+## 🧭 One layout
 
-- **`SubpageLayout` (★ Official Winner / Recommended Default)** — The page is the shell; document scroll is permanently locked to `0`. It establishes an absolute peace treaty with the browser, powered by 100% declarative CSS flexbox (`column-reverse`) and `--rmkl-kb-inset`. Because document scroll never moves, Safari's window pan, caret reveal jump, and delayed click collisions never occur. Zero drift, zero flicker, and zero maintenance overhead across iOS releases. Ideal for chat rooms, messenger apps, dashboards, and interactive forms.
-- **`PageLayout` (Advanced Hybrid Layout)** — For content-first pages (e.g., articles with comments) where native document scrolling to collapse Safari's URL bar (`100lvh`) is strictly required. The document scrolls freely while reading. Upon tapping an input, the layout dynamically freezes the document at `calc(offset + 100lvh)` and hands off control to an App Shell scroller without jumping. The shell is keyed to one attribute the tap sets *before* focusing, so Safari finds the input inside the shell's own scroller and has nothing to pan; a guard with no number in it keeps the document at the reader's offset.
+`PageLayout` is the only layout since v2.0.0. A chat screen is the same layout with the reader at the end of the document: it is the app shell the moment the composer is tapped and an ordinary page — URL bar collapsing — until then. (The v1 `SubpageLayout`, the shell on its own, is preserved in the showcase's lab archive as EXP-04-A.)
 
-`SubpageLayout` decides its state in CSS (`:has()` over the inputs that raise the keyboard) and comes with `useMobileKeyboard`. `PageLayout` has its own hook, `usePageKeyboard`, and shares no strategy code with it -- the two are separate experiments and stay separately readable. `PageLayout` owns `html`/`body` overflow while mounted; do not lock them yourself.
-
-```tsx
-// 1. Primary Recommendation: SubpageLayout (Chat / App Shell)
-import { SubpageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
-import 'react-mobile-keyboard-layout/dist/index.css'
-
-export function ChatPage() {
-  const [text, setText] = useState('')
-  return (
-    <SubpageLayout title="Chat" footer={<FloatingInput value={text} onChange={setText} onSubmit={send} />}>
-      <MessageList />
-    </SubpageLayout>
-  )
-}
-
-// 2. Advanced Hybrid: PageLayout (Collapsible URL Bar)
-import { PageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
-import 'react-mobile-keyboard-layout/dist/index.css'
-
-export function ArticlePage() {
-  const [text, setText] = useState('')
-  return (
-    <PageLayout title="Article" footer={<FloatingInput value={text} onChange={setText} onSubmit={post} />}>
-      <ArticleBody />
-      <Comments />
-    </PageLayout>
-  )
-}
-```
+`PageLayout` owns `html`/`body` overflow while mounted; do not lock them yourself.
 
 ## 📦 Installation
 
@@ -107,43 +75,34 @@ yarn add react-mobile-keyboard-layout
 
 ```tsx
 import { useRef, useState } from 'react'
-import {
-  SubpageLayout,
-  FloatingInput,
-  useMobileKeyboard,
-} from 'react-mobile-keyboard-layout'
+import { PageLayout, FloatingInput, type PageLayoutHandle } from 'react-mobile-keyboard-layout'
 import 'react-mobile-keyboard-layout/dist/index.css'
 
 export default function ChatScreen() {
   const [text, setText] = useState('')
   const [messages, setMessages] = useState<string[]>([])
-  const bodyRef = useRef<HTMLDivElement | null>(null)
-  const engine = useMobileKeyboard({ bodyRef })
+  const layout = useRef<PageLayoutHandle>(null)
 
   const handleSend = () => {
     if (!text.trim()) return
     setMessages((prev) => [...prev, text.trim()])
     setText('')
-    
-    requestAnimationFrame(() => {
-      engine.scrollToBottom('smooth')
-    })
+    layout.current?.scrollToBottom('smooth')
   }
 
   return (
-    <SubpageLayout
-      bodyRef={bodyRef}
-      keyboardEngine={engine}
+    <PageLayout
+      ref={layout}
       title="Conversation"
-      footer={
+      footer={({ isKeyboardOpen }) => (
         <FloatingInput
           value={text}
           onChange={setText}
           onSubmit={handleSend}
           placeholder="Write a message..."
-          {...engine.floatingProps}
+          isKeyboardOpen={isKeyboardOpen}
         />
-      }
+      )}
     >
       <div style={{ padding: '16px' }}>
         {messages.map((msg, i) => (
@@ -152,10 +111,14 @@ export default function ChatScreen() {
           </div>
         ))}
       </div>
-    </SubpageLayout>
+    </PageLayout>
   )
 }
 ```
+
+- `footer` may be a node or a function; the function receives `{ isKeyboardOpen, keyboardHeight, keyboardInset }`.
+- `ref` gives `{ element, scrollToBottom(behavior?) }` — `scrollToBottom` scrolls the document while idle and the shell's scroller while the shell is up.
+- `usePageKeyboard()` is exported for anything else that wants the keyboard state (a HUD, an analytics hook); the layout does not need you to call it.
 
 ---
 

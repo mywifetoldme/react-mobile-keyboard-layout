@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { createRef } from 'react'
 import { render, act, cleanup, screen } from '@testing-library/react'
-import { PageLayout, PAGE_LOCK_Y_CSS_VAR } from './PageLayout'
+import { PageLayout, PAGE_LOCK_Y_CSS_VAR, type PageLayoutHandle } from './PageLayout'
 import { FloatingInput } from './FloatingInput'
 import css from './PageLayout.css?raw'
 
@@ -266,6 +267,51 @@ describe('PageLayout: the one JS job -- carry the position into the shell, once'
     })
     tap(bodyInput())
     expect(seen).toBe(600 - MAX_SCROLL)
+  })
+})
+
+describe('PageLayout: the whole API a page needs -- a footer that knows the keyboard, a handle that scrolls', () => {
+  it('passes the keyboard state to a footer given as a function', () => {
+    let seen: { isKeyboardOpen: boolean; keyboardHeight: number; keyboardInset: number } | null = null
+    render(
+      <PageLayout
+        title="Page"
+        footer={(kb) => {
+          seen = kb
+          return <FloatingInput value="" onChange={() => {}} onSubmit={() => {}} placeholder="Write" isKeyboardOpen={kb.isKeyboardOpen} />
+        }}
+      >
+        <p>content</p>
+      </PageLayout>,
+    )
+    expect(seen).toEqual({ isKeyboardOpen: false, keyboardHeight: 0, keyboardInset: 0 })
+    expect(screen.getByPlaceholderText('Write')).toBeTruthy()
+  })
+
+  it('exposes scrollToBottom on its ref: the document while idle, the shell scroller while the shell is up', () => {
+    const handle = createRef<PageLayoutHandle>()
+    render(
+      <PageLayout ref={handle} title="Page" footer={<FloatingInput value="" onChange={() => {}} onSubmit={() => {}} placeholder="Write" />}>
+        <label>
+          Name <input type="text" placeholder="Body input" />
+        </label>
+        <p>content</p>
+      </PageLayout>,
+    )
+    const main = document.querySelector('main.rmkl-page-body') as HTMLElement
+    installScroller(main)
+    windowScroll.set(100)
+    act(() => handle.current!.scrollToBottom('auto'))
+    // idle: the document is the scroller
+    expect(scrollToSpy).toHaveBeenLastCalledWith({ top: document.documentElement.scrollHeight, behavior: 'auto' })
+    scrollToSpy.mockClear()
+    tap(bodyInput())
+    main.scrollTop = -300
+    act(() => handle.current!.scrollToBottom('auto'))
+    // shell: the column-reverse scroller, whose end is 0; the document is not touched
+    expect(main.scrollTop).toBe(0)
+    expect(scrollToSpy).not.toHaveBeenCalled()
+    expect(handle.current!.element).toBe(document.querySelector('.rmkl-page-root'))
   })
 })
 

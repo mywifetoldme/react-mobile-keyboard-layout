@@ -4,13 +4,14 @@ import {
   forwardRef,
   useCallback,
   useEffect,
+  useImperativeHandle,
   useRef,
   type ReactNode,
   type HTMLAttributes,
   type ComponentPropsWithoutRef,
   type RefObject,
 } from 'react'
-import { usePageKeyboard } from '../hooks/usePageKeyboard'
+import { usePageKeyboard, type UsePageKeyboardReturn } from '../hooks/usePageKeyboard'
 import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
 import './PageLayout.css'
 
@@ -189,14 +190,26 @@ const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: Ref
   return enterShell
 }
 
+/** What a footer given as a function receives */
+export type PageKeyboardState = Pick<UsePageKeyboardReturn, 'isKeyboardOpen' | 'keyboardHeight' | 'keyboardInset'>
+
+/** What `ref` gives you */
+export interface PageLayoutHandle {
+  /** The root element */
+  element: HTMLDivElement | null
+  /** Scroll to the end of the content: the document while idle, the shell's scroller while the shell is up */
+  scrollToBottom: (behavior?: ScrollBehavior) => void
+}
+
 export interface PageLayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   title?: ReactNode
   headerLeft?: ReactNode
   headerRight?: ReactNode
   header?: ReactNode
-  footer?: ReactNode
+  /** The composer. A function receives the keyboard state, so it can be told `isKeyboardOpen` without a hook of its own. */
+  footer?: ReactNode | ((keyboard: PageKeyboardState) => ReactNode)
   children: ReactNode
-  /** Pass the same ref to `usePageKeyboard({ bodyRef })` to read `isKeyboardOpen` or call `scrollToBottom` */
+  /** Only if you need the body element yourself; the layout creates one otherwise */
   bodyRef?: RefObject<HTMLDivElement | null>
   headerProps?: ComponentPropsWithoutRef<'header'>
   bodyProps?: ComponentPropsWithoutRef<'main'>
@@ -210,10 +223,10 @@ export interface PageLayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 't
  * leaves. Which of the two you are in is one attribute on the root, set by the tap before it focuses
  * and removed when the focus leaves the layout's keyboard inputs; PageLayout.css keys on it.
  *
- * Use SubpageLayout when the page is the shell to begin with (a chat screen that never scrolls the
- * document); use PageLayout when the page is a document with a composer.
+ * A chat screen is the same layout with the reader at the end of the document: it becomes the shell
+ * the moment the composer is tapped, and scrolls like a page -- URL bar collapsing -- until then.
  */
-export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(({
+export const PageLayout = forwardRef<PageLayoutHandle, PageLayoutProps>(({
   title,
   headerLeft,
   headerRight,
@@ -231,21 +244,33 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const ownBodyRef = useRef<HTMLDivElement | null>(null)
   const resolvedBodyRef = bodyRef ?? ownBodyRef
-  // PageLayout's own hook: keyboard geometry as CSS variables, the reading position held in the
-  // column-reverse body. It shares no code with SubpageLayout's useMobileKeyboard -- no tap
-  // handler, no top-lock; the tap and the document are this file's business.
-  usePageKeyboard({ bodyRef: resolvedBodyRef })
+  // The layout's hook: keyboard geometry as CSS variables, the reading position held in the
+  // column-reverse body. No tap handler, no top-lock; the tap and the document are this file's business.
+  const { isKeyboardOpen, keyboardHeight, keyboardInset } = usePageKeyboard({ bodyRef: resolvedBodyRef })
   const enterShell = useDocumentHandoff(rootRef, resolvedBodyRef)
   useTapToFocus(rootRef, enterShell)
 
-  const setRoot = (el: HTMLDivElement | null) => {
-    rootRef.current = el
-    if (typeof ref === 'function') ref(el)
-    else if (ref) ref.current = el
-  }
+  useImperativeHandle(ref, () => ({
+    get element() {
+      return rootRef.current
+    },
+    scrollToBottom: (behavior: ScrollBehavior = 'smooth') => {
+      const main = resolvedBodyRef.current
+      if (rootRef.current?.hasAttribute(PAGE_SHELL_ATTR) && main) {
+        // the shell's column-reverse scroller: its end is 0
+        if (typeof main.scrollTo === 'function') main.scrollTo({ top: 0, behavior })
+        else main.scrollTop = 0
+        return
+      }
+      // idle: the document is the scroller
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior })
+    },
+  }), [resolvedBodyRef])
+
+  const footerNode = typeof footer === 'function' ? footer({ isKeyboardOpen, keyboardHeight, keyboardInset }) : footer
 
   return (
-    <div ref={setRoot} className={`rmkl-page-root ${className}`.trim()} style={style} {...rest}>
+    <div ref={rootRef} className={`rmkl-page-root ${className}`.trim()} style={style} {...rest}>
       {header ? (
         <div className="rmkl-page-header-slot">{header}</div>
       ) : (
@@ -261,9 +286,9 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(({
           <div className="rmkl-page-body-inner">{children}</div>
         </main>
 
-        {footer && (
+        {footerNode && (
           <footer role="contentinfo" {...footerProps} className={`rmkl-page-footer ${footerProps?.className ?? ''}`.trim()}>
-            {footer}
+            {footerNode}
           </footer>
         )}
       </div>

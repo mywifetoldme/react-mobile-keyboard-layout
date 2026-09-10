@@ -10,7 +10,7 @@
                                           so it keeps its place and Safari has nothing to pan
 
    The shell is keyed to the inputs that raise the keyboard (the list mirrors isKeyboardTextInput
-   and SubpageLayout.css): a native picker must not flip it — iOS does not resize the viewport for
+   and EXP-04-A's shell): a native picker must not flip it — iOS does not resize the viewport for
    one, and no position is handed over for it.
 
    Why the document is capped rather than position: fixed: fixing the body resets its offset to 0
@@ -180,7 +180,7 @@ body:has(.rmkl-page-root[data-rmkl-shell]) {
   overscroll-behavior: contain;
 }
 
-/* ---- a text input in the body has the focus → the floating bar steps aside (2-step, as SubpageLayout) ---- */
+/* ---- a text input in the body has the focus → the floating bar steps aside (2-step, as EXP-04-A's shell) ---- */
 .rmkl-page-root:has(.rmkl-page-body textarea:focus) .rmkl-floating-input-wrapper,
 .rmkl-page-root:has(.rmkl-page-body [contenteditable]:not([contenteditable="false"]):focus) .rmkl-floating-input-wrapper,
 .rmkl-page-root:has(.rmkl-page-body input:not([type]):focus) .rmkl-floating-input-wrapper,

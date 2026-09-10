@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { SubpageLayout } from 'react-mobile-keyboard-layout'
+import { PageLayout } from 'react-mobile-keyboard-layout'
 import { LABS_DATA, type LabInfo } from '../data/labsData'
 import { translations, type Language } from '../i18n'
 import { LabSandbox } from '../components/LabSandbox'
@@ -38,7 +38,7 @@ export const LabsView = ({ lang, header }: LabsViewProps) => {
   }
 
   return (
-    <SubpageLayout header={header} title={t.labsArchiveTitle}>
+    <PageLayout header={header} title={t.labsArchiveTitle}>
       <div style={{ padding: '16px 16px 36px' }}>
         <p style={{ fontSize: '13px', color: '#a1a1aa', marginBottom: '16px', lineHeight: '1.5' }}>
           {t.labsArchiveSubtitle}
@@ -104,6 +104,6 @@ export const LabsView = ({ lang, header }: LabsViewProps) => {
           })}
         </div>
       </div>
-    </SubpageLayout>
+    </PageLayout>
   )
 }

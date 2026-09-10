@@ -430,7 +430,7 @@ export const LABS_DATA: LabInfo[] = [
      ========================================================================== */
   {
     id: 'exp04_a',
-    status: 'winner',
+    status: 'passed',
     title: {
       en: 'EXP-04-A: CSS-First Consolidation',
       ko: 'EXP-04-A: 개념 정리와 CSS 이관',
@@ -452,13 +452,13 @@ export const LABS_DATA: LabInfo[] = [
       ko: 'CSS로 옮긴 것: 상태 판정(:focus-within), 입력바 서프레션과 네이티브 피커 통과(:has()), 본문 앵커(column-reverse). JS에 남은 것: --rmkl-kb / --rmkl-kb-inset 갱신, preventScroll 포커스로 하는 탭 가로채기, 보험용 rAF 탑락, 포커스된 본문 입력의 읽던 위치 유지. 이 갈래로 src/core(레이아웃 엔진·룰 매트릭스·FSM)를 통째로 지우고도 6개 항목이 그대로 통과했다. (뒤에 EXP-04-B가 WebKit은 column-reverse 본문을 scrollTop 0에서만 하단 고정한다는 것을 측정했고, 훅이 플로팅 바 포커스 중에도 하단 가장자리를 붙잡게 됐다.)',
     },
     nextDecision: {
-      en: 'Adopted as the official final winner (Final Choice) and default production layout of react-mobile-keyboard-layout (SubpageLayout). EXP-03-F is kept as-is on an isolated copy of the v0.2.0 engine (apps/showcase/src/labs/engine-v0.2/); this lab runs on a frozen copy of the v1.0 engine (engine-v1.0/).',
-      ko: 'react-mobile-keyboard-layout의 공식 최종 채택(Final Choice)이자 기본 프로덕션 권장 레이아웃(SubpageLayout)으로 채택. EXP-03-F는 v0.2.0 엔진 사본(apps/showcase/src/labs/engine-v0.2/)으로 격리해 그대로 남기고, 이 실험은 v1.0 엔진 사본(engine-v1.0/)에서 돈다.',
+      en: 'The shell that PageLayout uses whenever the keyboard is up. Shipped as SubpageLayout in v1.0.0 and briefly the default again while 04-B was being cleaned; removed from the package in v2.0.0, because 04-B is this shell plus an ordinary page around it and covers the chat screen too. The code lives on here, on the frozen v1.0 engine copy (apps/showcase/src/labs/engine-v1.0/), as the record of how the shell was found.',
+      ko: '키보드가 떠 있을 때 PageLayout이 쓰는 셸. v1.0.0에 SubpageLayout으로 출시되었고 04-B를 정리하는 동안 잠시 다시 기본이었으나, 04-B가 이 셸에 보통 페이지를 두른 것이라 채팅 화면까지 덮으므로 v2.0.0에서 패키지에서 제거. 코드는 셸을 찾아낸 과정의 기록으로 얼린 v1.0 엔진 사본(apps/showcase/src/labs/engine-v1.0/)에 남아 있다.',
     },
   },
   {
     id: 'exp04_b',
-    status: 'passed',
+    status: 'winner',
     title: {
       en: 'EXP-04-B: Unlocked Window Scroll & Loose Coupling',
       ko: 'EXP-04-B: 윈도우 스크롤 개방과 루즈 커플링 오버레이',
@@ -480,8 +480,8 @@ export const LABS_DATA: LabInfo[] = [
       ko: '스크롤 주인이 둘이라는 것이 문제의 전부였다. 첫 구현의 모든 버그 -- 블러 시 위치 리셋, 사이클당 15px 드리프트, 40px 밀림, 키보드가 열리며 죽는 탭 -- 는 문서와 셸 사이에서 좌표를 주고받는 동안 Safari가 조건을 바꿔서 생겼다. position: fixed로 문서를 잠그면 오프셋이 리셋되고 Safari가 손가락 아래에서 주소창을 다시 펼친다(스파이크 B: 탭 3/3 사망). overflow: hidden만 쓰면 오프셋은 남지만 Safari가 포커스 인풋을 향해 +507 밀고 터치가 뒤 페이지를 밀어낸다(스파이크 A). 문서 높이를 정확히 "스크롤 위치 + 뷰포트 하나"로 캡하고 overflow: hidden(스파이크 C)을 걸면 Safari가 밀 곳이 없고, 오프셋도 주소창도 그대로다. 그 위에서 모드는 EXP-04-A처럼 CSS(:focus-within / :has())가 결정하고, JS는 문서가 스크롤될 때 캡을 발행하고(엔진이 키보드 높이를 발행하는 방식 그대로) 진입 시 column-reverse 셸 스크롤러로 위치를 한 번 옮기는 일만 한다. 해제 시엔 아무것도 되돌려 쓰지 않는다. 탭 자체에 대한 실기기 발견 둘: pointerdown 포커스는 제스처 도중 레이아웃을 바꿔 인풋을 짚고 끌면 문서와 셸이 동시에 스크롤됐고, 캐럿을 키보드 뒤에 ~35ms 두면 iOS가 visual viewport를 스스로 밀어올린다. 그래서 pointerup에 잠그고, inset은 즉시 반영하며, 같은 탭이 다른 곳에 합성하는 mousedown은 blur 대신 거부한다. 발견 하나는 엔진까지 갔다: column-reverse 본문은 WebKit에서 scrollTop 0일 때만 하단 고정이고, 위로 스크롤된 상태에서 상자가 줄면 위쪽 기준 오프셋을 유지해 최신 내용이 키보드 뒤로 사라진다. 그래서 useMobileKeyboard가 플로팅 바 포커스 중엔 하단 가장자리를 붙잡는다. 출시된 레이아웃을 폰에서 쓰며 둘이 더 나왔다: 본문 인풋 blur의 유예창이 1초 안에 이어진 작성기 탭을 가로채 읽던 위치를 잃게 했고, 가려진 인풋을 scrollIntoView로 드러내면 키보드가 닫히는 중엔 문서까지 스크롤되어 헤더가 함께 밀렸다 -- 훅은 이제 유예창 안에서도 바에 차례를 넘기고, <main>만 스크롤해 드러낸다. 마지막 하나가 남은 보고 전부를 설명했다: iOS 사파리는 대부분의 키보드 열림에서 레이아웃 뷰포트를 키보드 높이의 일부 또는 전부만큼 줄이고(상단 인풋 innerHeight 695→601, 하단 인풋 695→396 측정), px로 얼린 캡이 남긴 여지 -- 94px, 299px -- 만큼 윈도우를 스크롤한다. 고정 셸이 함께 올라가 헤더가 사라지고, 작성기 자리에 문서 끝 너머의 까만 공백이 보이고, 하단 인풋이 숨고, blur 때 다른 오프셋이 돌아왔다. 캡은 이제 calc(offset + 100%): JS는 오프셋만 발표하고 뷰포트는 CSS의 100%가 따라가므로 사파리가 innerHeight를 어떻게 바꾸든 여지는 0이다. 그래도 18번 중 5번은 올라갔다: 사파리의 캐럿 리빌은 문서 자체의 최대치를 넘어 윈도우를 밀고(y = offset + 94, + 299), 주소창을 펼친 뒤엔 윈도우는 그대로 두고 시각 뷰포트만 40px 밀었다 -- overflow 규칙은 참조되지 않는다. 그래서 JS에 남은 한 가지 의무는 선언을 집행하는 것: 셸이 떠 있는 동안 윈도우가 발표한 오프셋을 벗어나면 되돌린다. 04-A의 lockWindowTop을 목표 0 대신 읽던 위치로 일반화하고, 350ms 타이머 대신 이벤트로 트리거한 것이다. 같은 트레이스에서 하나 더: 주소창이 접힌 상태에선 캡 자체가 포커스 순간 문서를 40px 밀어올렸다 -- iOS에서 html의 100%는 innerHeight가 735일 때도 작은 뷰포트(695)이기 때문. 캡은 이제 offset + 100lvh로 뷰포트보다 작아지는 일이 없고, 남는 여지는 가드가 닫는다. 그리고 같은 트레이스를 헤더가 아니라 inset으로 다시 읽으니, 열림의 ~40%에서 --rmkl-kb-inset이 키보드 303px에 대해 4px나 209px로 정착해 있었다. 사파리가 키보드와 함께 innerHeight를 줄였고, 가드가 윈도우를 되돌렸고, innerHeight가 돌아왔는데 -- iOS는 그때 resize를 보내지 않는다, scroll만 보낸다. 훅은 resize에서만 측정했으므로 헤더는 0인데 작성기와 하단 인풋은 키보드 뒤에 있었다. 훅은 이제 scroll에서도 측정한다. 그 다음엔 숫자 자체를 감사했다 -- 어느 것이 명세에서 왔고 어느 것이 Safari를 재서 나왔는가. 탭의 600ms 클릭 대기창과 본문 인풋의 1000ms blur 유예가 후자였고, 둘 다 이제 이벤트로 닫힌다(click·pointercancel·다음 pointerdown; 다음 키보드 인풋의 focusin). 명세가 주지 않아 남은 것은 keyboardThreshold -- Safari에 VirtualKeyboard API가 없어 키보드를 기하로 추론하므로 노이즈 바닥이 필요하다 -- 그리고 다음 실험에 달렸던 1px 넛지와 10px 데드존이다. 그 실험: 셸을 포커스보다 먼저 만든다. Safari는 캐럿을 어디로 드러낼지 포커스 시점에 정하는데, 셸이 :focus에 걸려 있으면 그때 문서는 아직 스크롤러였다. 탭이 먼저 세팅하는 속성 하나에 걸자 47회 열림에 밀림 0(직전 48회 중 9회); 넛지와 데드존은 사라졌고(30회, 같은 프로필); PageLayout이 자기 훅을 갖자 SubpageLayout의 350ms 탑락은 이 경로에 존재하지 않게 되었으며; inset 공식은 시각 뷰포트의 scale을 얻어 줌 아래에서도 맞다. 남은 것: 키보드 임계값(주소창 ~40px 전환 노이즈 위의 바닥, 명세가 주지 않는 유일한 숫자), JS 상태 한 비트(포커스보다 먼저 있어야 하는 셸은 :focus로 표현 불가), 그리고 키보드가 열린 뒤 스스로 자랄 때의 드문 밀림(103회 중 4회, 전부 가드가 40ms 안에 되돌림).',
     },
     nextDecision: {
-      en: 'All six criteria pass on an iPhone (iOS 18.7 Safari, in-page traces) and in the iOS Simulator (Appium, real software keyboard). Provided as the package\'s advanced hybrid layout (PageLayout) for content-first pages where collapsible address bars are strictly required. SubpageLayout (EXP-04-A) remains the official primary recommendation for app shells and chat feeds.',
-      ko: 'iPhone(iOS 18.7 Safari, 페이지 내 트레이스)과 iOS 시뮬레이터(Appium, 실제 소프트웨어 키보드)에서 6개 항목 전부 통과. 주소창 축소가 엄격히 요구되는 콘텐츠 중심 페이지를 위한 패키지의 고급 하이브리드 레이아웃(PageLayout)으로 제공됩니다. 앱 셸 및 채팅 피드를 위한 공식 기본 권장 레이아웃은 SubpageLayout(EXP-04-A)입니다.',
+      en: 'Final choice. Shipped as PageLayout, from v2.0.0 the package\'s only layout: EXP-04-A\'s shell whenever the keyboard is up, an ordinary page whenever it is not. The API is the layout and two refs -- a footer function that is told the keyboard state, a ref handle with scrollToBottom -- with no hook to call. On the phone the lab renders this code from its engine copy; the last rounds are in the findings above.',
+      ko: '최종 선택. PageLayout으로 출시, v2.0.0부터 패키지의 유일한 레이아웃: 키보드가 떠 있을 때는 EXP-04-A의 셸, 아닐 때는 보통 페이지. API는 레이아웃과 레퍼런스 둘 -- 키보드 상태를 받는 footer 함수, scrollToBottom을 가진 ref 핸들 -- 이고 부를 훅이 없다. 폰에서 랩은 이 코드를 엔진 사본에서 렌더하며, 마지막 라운드들은 위 파인딩에 있다.',
     },
   },
 ]

@@ -6,11 +6,10 @@ import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
 /**
  * usePageKeyboard -- PageLayout's own keyboard hook.
  *
- * PageLayout shares no strategy code with SubpageLayout (EXP-04-A): the two are separate
- * experiments and stay separately readable, so the measurement and the reading-position hold live
- * here even though they read the same way as useMobileKeyboard's. What this hook deliberately does
- * not have: a tap handler (PageLayout's tap builds the shell first, then focuses), and a rAF
- * top-lock (the document here is kept at the reader's offset by PageLayout's guard, on the event).
+ * The measurement and the reading-position hold read much like EXP-04-A's engine did (kept in the
+ * lab archive on apps/showcase/src/labs/engine-v1.0); this hook shares no code with it. What it
+ * deliberately does not have: a tap handler (PageLayout's tap builds the shell first, then focuses),
+ * and a rAF top-lock (the document here is kept at the reader's offset by PageLayout's guard, on the event).
  *
  *  1. publish the keyboard height (`--rmkl-kb`) and the covered inset (`--rmkl-kb-inset`)
  *  2. keep a focused body input where it is while the body changes size, and hold the bottom edge
@@ -18,9 +17,9 @@ import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
  */
 
 /** CSS custom property with the keyboard height in px (`0px` while closed), in every browser. */
-export const PAGE_KEYBOARD_HEIGHT_CSS_VAR = '--rmkl-kb'
+export const KEYBOARD_HEIGHT_CSS_VAR = '--rmkl-kb'
 /** CSS custom property with the part of the layout viewport the keyboard covers (Safari); `0px` where the layout viewport itself shrinks. */
-export const PAGE_KEYBOARD_INSET_CSS_VAR = '--rmkl-kb-inset'
+export const KEYBOARD_INSET_CSS_VAR = '--rmkl-kb-inset'
 
 export interface UsePageKeyboardOptions {
   /** The column-reverse body PageLayout renders (its `bodyRef`) */
@@ -78,8 +77,8 @@ export const usePageKeyboard = ({ bodyRef, keyboardThreshold = 100 }: UsePageKey
       const coveredInset = height > 0 ? inset : 0
       if (published.height === height && published.inset === coveredInset) return
       published = { height, inset: coveredInset }
-      root.style.setProperty(PAGE_KEYBOARD_HEIGHT_CSS_VAR, `${height}px`)
-      root.style.setProperty(PAGE_KEYBOARD_INSET_CSS_VAR, `${coveredInset}px`)
+      root.style.setProperty(KEYBOARD_HEIGHT_CSS_VAR, `${height}px`)
+      root.style.setProperty(KEYBOARD_INSET_CSS_VAR, `${coveredInset}px`)
       setKeyboard((prev) => (prev.height === height && prev.inset === coveredInset ? prev : { height, inset: coveredInset }))
     }
 
@@ -96,8 +95,8 @@ export const usePageKeyboard = ({ bodyRef, keyboardThreshold = 100 }: UsePageKey
       vv?.removeEventListener('scroll', update)
       window.removeEventListener('resize', update)
       window.removeEventListener('scroll', update)
-      root.style.removeProperty(PAGE_KEYBOARD_HEIGHT_CSS_VAR)
-      root.style.removeProperty(PAGE_KEYBOARD_INSET_CSS_VAR)
+      root.style.removeProperty(KEYBOARD_HEIGHT_CSS_VAR)
+      root.style.removeProperty(KEYBOARD_INSET_CSS_VAR)
     }
   }, [keyboardThreshold])
 
