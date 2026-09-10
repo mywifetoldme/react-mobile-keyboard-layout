@@ -91,6 +91,15 @@ const lockY = () => document.documentElement.style.getPropertyValue(PAGE_LOCK_Y_
 const SHELL = '.rmkl-page-root[data-rmkl-shell]'
 
 describe('PageLayout: the mode is decided by focus, in CSS', () => {
+  it('ships the theme variables (light and dark) -- they used to live in a stylesheet that is gone', () => {
+    // v2 removed SubpageLayout.css, which carried :root { --rmkl-bg … } for every component; the
+    // Playground's composer lost its background and sat invisible behind the keyboard
+    expect(css).toMatch(/:root\s*\{[^}]*--rmkl-bg:/)
+    expect(css).toMatch(/:root\s*\{[^}]*--rmkl-input-bg:/)
+    expect(css).toMatch(/:root\s*\{[^}]*--rmkl-header-height:/)
+    expect(css).toMatch(/@media \(prefers-color-scheme: dark\)\s*\{\s*:root\s*\{[^}]*--rmkl-bg:/)
+  })
+
   it('hands the document to the browser while idle and pins header and footer in flow', () => {
     expect(ruleFor('html:has(.rmkl-page-root)')).toMatch(/overflow-y:\s*auto/)
     expect(ruleFor('body:has(.rmkl-page-root)')).toMatch(/overflow:\s*visible/)

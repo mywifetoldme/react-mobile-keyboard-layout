@@ -18,6 +18,36 @@
    kills the tap (measured: 3/3 taps died). See the EXP-04-B lab for the measurements.
    ------------------------------------------------------------------------------------------------ */
 
+/* ---- theme: every component reads these; override them to restyle ---- */
+:root {
+  --rmkl-bg: #ffffff;
+  --rmkl-text: #18181b;
+  --rmkl-border: #e4e4e7;
+  --rmkl-header-height: 56px;
+  --rmkl-header-bg: rgba(255, 255, 255, 0.85);
+  --rmkl-header-border: #e4e4e7;
+  --rmkl-input-bg: #f4f4f5;
+  --rmkl-input-text: #18181b;
+  --rmkl-input-border: #e4e4e7;
+  --rmkl-primary: #2563eb;
+  --rmkl-primary-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rmkl-bg: #09090b;
+    --rmkl-text: #f4f4f5;
+    --rmkl-border: #27272a;
+    --rmkl-header-bg: rgba(9, 9, 11, 0.85);
+    --rmkl-header-border: #27272a;
+    --rmkl-input-bg: #18181b;
+    --rmkl-input-text: #f4f4f5;
+    --rmkl-input-border: #27272a;
+    --rmkl-primary: #3b82f6;
+    --rmkl-primary-text: #ffffff;
+  }
+}
+
 /* ---- the document: handed to the browser while idle, capped and frozen while the shell is up ---- */
 html:has(.rmkl-page-root) {
   height: auto;
