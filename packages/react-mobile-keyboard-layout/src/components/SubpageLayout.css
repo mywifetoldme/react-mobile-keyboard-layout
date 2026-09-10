@@ -7,6 +7,10 @@
                              cannot read by itself
      --rmkl-kb-inset         the part of the layout viewport the keyboard covers: equal to --rmkl-kb
                              on Safari, 0 on browsers that shrink the layout viewport (Chrome, Android)
+
+   Layout: one flex column as tall as the viewport minus the keyboard. Header and footer keep their
+   size (flex-shrink: 0); the body takes the rest and scrolls. The host page must not scroll itself
+   (html, body { height: 100%; margin: 0; overflow: hidden }) — otherwise iOS has room to pan it.
    ------------------------------------------------------------------------------------------------ */
 
 :root {
@@ -38,31 +42,38 @@
   }
 }
 
+/* 1. The column: viewport height minus what the keyboard covers (Safari keeps the layout viewport
+   while the keyboard is up, so the covered part is subtracted here; browsers that shrink the
+   viewport themselves report an inset of 0 and 100dvh already fits) */
 .rmkl-subpage-root {
-  position: fixed;
-  inset: 0;
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  height: 100%;
+  height: calc(100dvh - var(--rmkl-kb-inset, 0px));
   overflow: hidden;
   background-color: var(--rmkl-bg);
   color: var(--rmkl-text);
   touch-action: none;
 }
 
-/* 1. The header sits outside the flow that the keyboard resizes */
+/* Closing: :focus-within flips synchronously on blur, while iOS delays visualViewport.resize
+   by ~450ms. Without this rule the floating bar hangs in mid-air until --rmkl-kb is cleared. */
+.rmkl-subpage-root:not(:focus-within) {
+  height: 100dvh;
+}
+
+/* Native pickers do not raise the keyboard: ignore any leftover --rmkl-kb while one is focused */
+.rmkl-subpage-root:has(:is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"], select):focus) {
+  height: 100dvh;
+}
+
+/* 2. Header: a flex row that keeps its height */
 .rmkl-subpage-header-slot {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 60;
+  flex-shrink: 0;
 }
 
 .rmkl-subpage-header {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;
   height: var(--rmkl-header-height, 56px);
   padding-top: env(safe-area-inset-top, 0px);
   box-sizing: content-box;
@@ -75,9 +86,6 @@
   justify-content: space-between;
   padding-left: 16px;
   padding-right: 16px;
-  z-index: 50;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
 }
 
 .rmkl-header-left,
@@ -98,40 +106,10 @@
   padding: 0 8px;
 }
 
-/* 2. Body container: full layout viewport, minus the header on top and the keyboard at the bottom */
-.rmkl-subpage-body-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100dvh;
-  padding-top: calc(var(--rmkl-header-height, 56px) + env(safe-area-inset-top, 0px));
-  /* Safari keeps the layout viewport while the keyboard is up, so the covered part is reserved
-     here; browsers that shrink the viewport themselves report an inset of 0 */
-  padding-bottom: var(--rmkl-kb-inset, 0px);
-  box-sizing: border-box;
-  overflow: hidden;
-  touch-action: none;
-}
-
-/* Closing: :focus-within flips synchronously on blur, while iOS delays visualViewport.resize
-   by ~450ms. Without this rule the floating bar hangs in mid-air until --rmkl-kb is cleared. */
-.rmkl-subpage-root:not(:focus-within) .rmkl-subpage-body-container {
-  padding-bottom: 0;
-}
-
-/* Native pickers do not raise the keyboard: ignore any leftover --rmkl-kb while one is focused */
-.rmkl-subpage-root:has(:is(input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"], select):focus) .rmkl-subpage-body-container {
-  padding-bottom: 0;
-}
-
-/* 3. Scrollable body. The scroll origin sits at the bottom (column-reverse), so when the box
-   shrinks the browser keeps the bottom edge — what you were reading — in place. Children keep
-   their DOM order because they live in one wrapper. */
+/* 3. Scrollable body. min-height: 0 lets the flex item shrink below its content so it scrolls.
+   The scroll origin sits at the bottom (column-reverse), so when the box shrinks the browser keeps
+   the bottom edge — what you were reading — in place. Children keep their DOM order because they
+   live in one wrapper. */
 .rmkl-subpage-body {
   flex: 1 1 0%;
   min-height: 0;
@@ -152,8 +130,6 @@
 }
 
 .rmkl-subpage-footer {
-  position: relative;
-  z-index: 40;
   flex-shrink: 0;
 }
 

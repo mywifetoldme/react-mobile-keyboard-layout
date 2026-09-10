@@ -56,6 +56,8 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
     if (!e.defaultPrevented) engine.bodyProps.onPointerDown(e)
   }
 
+  // One flex column, viewport tall: header / scrolling body / footer. The keyboard takes its space
+  // from the column's height (see SubpageLayout.css); nothing is absolutely positioned.
   return (
     <div
       ref={ref}
@@ -63,7 +65,6 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
       style={style}
       {...rest}
     >
-      {/* 1. Header outside the resizing flow (position: absolute, see SubpageLayout.css) */}
       {header ? (
         <div className="rmkl-subpage-header-slot">{header}</div>
       ) : (
@@ -78,28 +79,26 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
         </header>
       )}
 
-      {/* 2. Body: CSS reserves the keyboard height (--rmkl-kb) and keeps the reading position (column-reverse) */}
-      <div className="rmkl-subpage-body-container">
-        <main
-          role="main"
-          ref={resolvedBodyRef}
-          {...bodyProps}
-          onPointerDown={handleBodyPointerDown}
-          className={`rmkl-subpage-body ${bodyProps?.className ?? ''}`.trim()}
-        >
-          <div className="rmkl-subpage-body-inner">{children}</div>
-        </main>
+      {/* Body: takes what the header and footer leave, and keeps the reading position (column-reverse) */}
+      <main
+        role="main"
+        ref={resolvedBodyRef}
+        {...bodyProps}
+        onPointerDown={handleBodyPointerDown}
+        className={`rmkl-subpage-body ${bodyProps?.className ?? ''}`.trim()}
+      >
+        <div className="rmkl-subpage-body-inner">{children}</div>
+      </main>
 
-        {footer && (
-          <footer
-            role="contentinfo"
-            {...footerProps}
-            className={`rmkl-subpage-footer ${footerProps?.className ?? ''}`.trim()}
-          >
-            {footer}
-          </footer>
-        )}
-      </div>
+      {footer && (
+        <footer
+          role="contentinfo"
+          {...footerProps}
+          className={`rmkl-subpage-footer ${footerProps?.className ?? ''}`.trim()}
+        >
+          {footer}
+        </footer>
+      )}
     </div>
   )
 })
