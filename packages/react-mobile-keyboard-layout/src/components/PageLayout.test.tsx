@@ -87,6 +87,8 @@ const bodyInput = () => screen.getByPlaceholderText('Body input')
 const composer = () => screen.getByPlaceholderText('Write')
 const lockY = () => document.documentElement.style.getPropertyValue(PAGE_LOCK_Y_CSS_VAR)
 
+const SHELL = '.rmkl-page-root[data-rmkl-shell]'
+
 describe('PageLayout: the mode is decided by focus, in CSS', () => {
   it('hands the document to the browser while idle and pins header and footer in flow', () => {
     expect(ruleFor('html:has(.rmkl-page-root)')).toMatch(/overflow-y:\s*auto/)
@@ -97,29 +99,32 @@ describe('PageLayout: the mode is decided by focus, in CSS', () => {
   })
 
   it('caps and freezes the document, never position: fixed, while a keyboard input has the focus', () => {
-    const lock = ruleContaining('body:has(.rmkl-page-root textarea:focus)')
+    const lock = ruleContaining(`body:has(${SHELL})`)
     // the cap is "offset + one full viewport", from CSS, not a number taken at focus time. It must
     // never clamp below the offset: 100% of html is iOS's small viewport (695 while innerHeight is
     // 735 with the URL bar collapsed) and shoved the document up 40px at focus; 100lvh is the large
     // one and is never less than innerHeight. The room it leaves (<= 40px, or what Safari shrinks
     // the viewport by) is the guard's business, not the cap's.
     expect(lock).toMatch(/height:\s*calc\(var\(--rmkl-page-lock-y, 0px\) \+ 100lvh\)/)
-    expect(ruleContaining('html:has(.rmkl-page-root textarea:focus)')).not.toMatch(/height:\s*100%/)
+    expect(ruleContaining(`html:has(${SHELL})`)).not.toMatch(/height:\s*100%/)
     expect(lock).toMatch(/overflow:\s*hidden/)
     // fixing the body resets its offset and makes Safari re-expand its URL bar under the finger
     expect(lock).not.toMatch(/position:\s*fixed/)
-    expect(ruleContaining('.rmkl-page-root:has(textarea:focus)')).toMatch(/position:\s*fixed/)
+    expect(ruleFor(SHELL)).toMatch(/position:\s*fixed/)
   })
 
-  it('keys the shell to keyboard inputs only, so a native picker does not flip it', () => {
+  it('keys the shell to one attribute the tap sets before focusing -- never to :focus, which exists only after', () => {
+    // Safari decides where to reveal a focused input when it is focused; with the shell keyed to
+    // :focus the document was still the scroller at that moment and Safari panned it (9 of 48 opens)
     expect(css).not.toMatch(/:focus-within/)
-    expect(css).toMatch(/\.rmkl-page-root:has\(input:is\(\[type="text"\]/)
-    expect(css).not.toMatch(/\.rmkl-page-root:has\([^)]*\[type="date"\][^)]*\)\s*\{/)
+    expect(css).not.toMatch(/\.rmkl-page-root:has\([^)]*:focus\)\s*[,{]/)
+    expect(css).not.toMatch(/body:has\([^)]*:focus\)/)
+    expect(css).toMatch(/\.rmkl-page-root\[data-rmkl-shell\]\s*\{/)
   })
 
   it('reserves the keyboard inset in the shell and keeps a drag on the composer from chaining into the document', () => {
-    expect(ruleContaining('.rmkl-page-root:has(textarea:focus) .rmkl-page-body-container')).toMatch(/padding-bottom:\s*var\(--rmkl-kb-inset/)
-    expect(ruleContaining('.rmkl-page-root:has(textarea:focus) .rmkl-page-footer')).toMatch(/touch-action:\s*none/)
+    expect(ruleContaining(`${SHELL} .rmkl-page-body-container`)).toMatch(/padding-bottom:\s*var\(--rmkl-kb-inset/)
+    expect(ruleContaining(`${SHELL} .rmkl-page-footer`)).toMatch(/touch-action:\s*none/)
     expect(ruleFor('.rmkl-page-footer textarea')).toMatch(/overscroll-behavior:\s*contain/)
   })
 
@@ -142,6 +147,45 @@ describe('PageLayout: the one JS job -- carry the position into the shell, once'
     Object.defineProperty(window, 'innerHeight', { value: VIEWPORT_HEIGHT - 299, configurable: true, writable: true })
     window.dispatchEvent(new Event('resize'))
     expect(lockY()).toBe('600px')
+  })
+
+  it('builds the shell before the focus: at focus time the attribute is set and the offset already handed over', () => {
+    const { main } = renderPage()
+    windowScroll.set(600)
+    let atFocus: { shell: boolean; scrollTop: number } | null = null
+    bodyInput().addEventListener('focus', () => {
+      atFocus = { shell: (document.querySelector('.rmkl-page-root') as HTMLElement).hasAttribute('data-rmkl-shell'), scrollTop: main.scrollTop }
+    })
+    tap(bodyInput())
+    expect(document.activeElement).toBe(bodyInput())
+    expect(atFocus).toEqual({ shell: true, scrollTop: 600 - MAX_SCROLL })
+  })
+
+  it('opens the shell for a focus that did not come from a tap, and closes it when the focus leaves', () => {
+    renderPage()
+    const root = document.querySelector('.rmkl-page-root') as HTMLElement
+    act(() => {
+      bodyInput().focus()
+    })
+    expect(root.hasAttribute('data-rmkl-shell')).toBe(true)
+    act(() => {
+      composer().focus() // focus moving between inputs inside: still the shell
+    })
+    expect(root.hasAttribute('data-rmkl-shell')).toBe(true)
+    act(() => {
+      ;(document.activeElement as HTMLElement).blur()
+    })
+    expect(root.hasAttribute('data-rmkl-shell')).toBe(false)
+  })
+
+  it('does not open the shell for a native picker', () => {
+    renderPage()
+    const root = document.querySelector('.rmkl-page-root') as HTMLElement
+    tap(document.querySelector('input[type="date"]') as HTMLElement)
+    act(() => {
+      ;(document.querySelector('input[type="date"]') as HTMLElement).focus()
+    })
+    expect(root.hasAttribute('data-rmkl-shell')).toBe(false)
   })
 
   it('transfers the reading position into the column-reverse scroller on entry', () => {
