@@ -226,6 +226,24 @@ describe('useMobileKeyboard hook', () => {
     expect(body.scrollTop).toBe(-200)
   })
 
+  it('keeps the input still through the close however long the close takes -- the grace is the close, not a clock', () => {
+    // the grace window used to be 1000ms from the blur; a slow close (or a slow device) fell out of
+    // it and the newest line slid. The window is now "until the next keyboard input takes the focus".
+    installViewport(700, 700)
+    const { body, input, sizeBody, inputTop } = makeBody(600)
+    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+
+    body.scrollTop = -200
+    input.focus()
+    sizeBody(263)
+    expect(inputTop()).toBe(400)
+    input.blur()
+    now = 5000 // far longer than any grace timer
+    sizeBody(600)
+    expect(inputTop()).toBe(400)
+    expect(body.scrollTop).toBe(-200)
+  })
+
   it('does not over-correct when the browser already clamped the offset as the body grew', () => {
     installViewport(700, 700)
     const { body, input, sizeBody, inputTop } = makeBody(600)

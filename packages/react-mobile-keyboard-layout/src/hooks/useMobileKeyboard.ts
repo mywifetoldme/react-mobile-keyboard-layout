@@ -53,7 +53,6 @@ export interface UseMobileKeyboardReturn {
 
 const INPUT_SELECTOR = 'input, textarea, [contenteditable]'
 /** After a body input blurs, the body still changes size (padding, keyboard leaving) for this long */
-const BLUR_GRACE_MS = 1000
 
 const isBottomAnchored = (el: HTMLElement) => getComputedStyle(el).flexDirection === 'column-reverse'
 
@@ -84,7 +83,8 @@ export const useMobileKeyboard = ({
 }: UseMobileKeyboardOptions = {}): UseMobileKeyboardReturn => {
   const [keyboard, setKeyboard] = useState({ height: 0, inset: 0 })
   const rafIdRef = useRef<number | null>(null)
-  const bodyInputBlurredAtRef = useRef(-Infinity)
+  // a body input has blurred and no keyboard input has taken the focus since: its close is still ours to hold
+  const bodyInputClosingRef = useRef(false)
 
   // 1. Keyboard height → CSS variables + state. A keyboard shows up in one of two ways:
   //    Safari keeps the layout viewport and shrinks the visual one (inset = innerHeight − vv.height);
@@ -176,12 +176,13 @@ export const useMobileKeyboard = ({
       const shrank = height < lastHeight
       lastHeight = height
       if (!changed || !isBottomAnchored(body)) return
-      // The anchor outlives its input's blur (the grace window needs it), so "no anchor" is not
-      // the test for the bar's turn -- "the anchored input is neither focused nor just blurred" is.
-      // And the grace window is for that input's own close: once the bar has the focus, the turn
-      // is the bar's, or the anchor would rewind the shell to where the body input had been.
+      // The anchor outlives its input's blur (its close needs it), so "no anchor" is not the test
+      // for the bar's turn -- "the anchored input is neither focused nor closing" is. Closing lasts
+      // from the blur until the next keyboard input takes the focus: an event, not a timer (a
+      // 1000ms window once let a slow close slide the newest line, and once hijacked a composer
+      // tap that followed within it). Once the bar has the focus, the turn is the bar's.
       const focused = !!anchor && document.activeElement === anchor.el
-      const justBlurred = !!anchor && !floatingHasFocus() && performance.now() - bodyInputBlurredAtRef.current < BLUR_GRACE_MS
+      const justBlurred = !!anchor && !floatingHasFocus() && bodyInputClosingRef.current
       if (!anchor || (!focused && !justBlurred)) {
         // the bar's turn: hold the bottom edge by putting back the offset from before the change
         if (floatingHasFocus()) body.scrollTop = lastScrollTop
@@ -238,17 +239,23 @@ export const useMobileKeyboard = ({
   }, [cancelLock, lockDurationMs])
 
   // Blur of a keyboard input: the keyboard leaves and some browsers pan the window while it does,
-  // so the lock runs once more; a body input's blur also opens the grace window for 2.
+  // so the lock runs once more; a body input's blur also marks its close as ours to hold (2), until
+  // the next keyboard input takes the focus.
   useEffect(() => {
     if (typeof window === 'undefined') return
     const handleFocusOut = (e: FocusEvent) => {
       if (!isKeyboardTextInput(e.target)) return
-      if (isFocusedBodyInput(bodyRef?.current, e.target)) bodyInputBlurredAtRef.current = performance.now()
+      if (isFocusedBodyInput(bodyRef?.current, e.target)) bodyInputClosingRef.current = true
       lockWindowTop()
     }
+    const handleFocusIn = (e: FocusEvent) => {
+      if (isKeyboardTextInput(e.target)) bodyInputClosingRef.current = false
+    }
     window.addEventListener('focusout', handleFocusOut)
+    window.addEventListener('focusin', handleFocusIn)
     return () => {
       window.removeEventListener('focusout', handleFocusOut)
+      window.removeEventListener('focusin', handleFocusIn)
       cancelLock()
     }
   }, [bodyRef, cancelLock, lockWindowTop])

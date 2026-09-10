@@ -271,6 +271,24 @@ describe('PageLayout: the tap, not the touch, opens the shell', () => {
     expect(stray.defaultPrevented).toBe(true)
   })
 
+  it('ends the protection with the tap, not a clock: the next touch is a new gesture', () => {
+    // the window used to be 600ms from the focus; a programmatic focus (no tap, so no click) left
+    // it open and the next touch's mousedown was refused. A pointerdown means the previous tap is
+    // over -- its click, if any, has already been delivered.
+    renderPage()
+    act(() => {
+      bodyInput().focus()
+    })
+    act(() => {
+      screen.getByText('content').dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    })
+    const next = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    act(() => {
+      screen.getByText('content').dispatchEvent(next)
+    })
+    expect(next.defaultPrevented).toBe(false)
+  })
+
   it('stops protecting the focus once the click has landed', () => {
     renderPage()
     tap(bodyInput())
