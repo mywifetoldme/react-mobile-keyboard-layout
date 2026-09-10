@@ -29,17 +29,17 @@ const renderLab = (lang: 'ko' | 'en' = 'ko') =>
   render(<LabSandbox lab={lab} lang={lang} onClose={() => {}} />, { container: document.getElementById('root')! })
 
 describe('EXP-04-B runs on the frozen copy of the library layout', () => {
-  it('renders the copy\'s PageLayout (rmkl-v10- prefix), not the live package', () => {
+  it('renders the copy\'s PageLayout (rmkl-v20- prefix), not the live package', () => {
     renderLab()
-    expect(document.querySelector('.rmkl-v10-page-root')).not.toBeNull()
-    expect(document.querySelector('main.rmkl-v10-page-body')).not.toBeNull()
+    expect(document.querySelector('.rmkl-v20-page-root')).not.toBeNull()
+    expect(document.querySelector('main.rmkl-v20-page-body')).not.toBeNull()
     expect(document.querySelector('.rmkl-page-root')).toBeNull()
-    expect(document.documentElement.style.getPropertyValue('--rmkl-v10-page-lock-y')).not.toBe('')
+    expect(document.documentElement.style.getPropertyValue('--rmkl-v20-page-lock-y')).not.toBe('')
   })
 
   it('keys its HUD to the copy\'s shell attribute, never to :focus', () => {
     renderLab()
-    expect(EXP04B_SHELL).toBe('.rmkl-v10-page-root[data-rmkl-v10-shell]')
+    expect(EXP04B_SHELL).toBe('.rmkl-v20-page-root[data-rmkl-v20-shell]')
     expect(EXP04B_SHELL).not.toMatch(/:focus-within|date|time|select/)
     const css = [...document.querySelectorAll('style')].map((el) => el.textContent ?? '').join('\n')
     expect(css).not.toMatch(/:focus-within/)

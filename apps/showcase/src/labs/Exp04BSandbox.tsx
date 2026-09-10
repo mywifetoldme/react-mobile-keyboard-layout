@@ -1,15 +1,15 @@
 /* ==========================================================================
    EXP-04-B — Unlocked Window Scroll (4B) ⇄ App Shell (4A), decided by focus
 
-   This lab renders the library's PageLayout from the frozen engine copy (./engine-v1.0), so the
-   lab and the library are one code until 4B is concluded; the copy is refreshed as findings land.
+   This lab renders the library's PageLayout from the frozen engine copy (./engine-v2.0, the package
+   at v2.0.0). 4B is the final choice; the copy is the record.
    The mechanism -- state in CSS, one hand-off in JS, the tap protected -- is documented, with its
-   state/transition table, at the top of engine-v1.0/components/PageLayout.tsx. What this file
+   state/transition table, at the top of engine-v2.0/components/PageLayout.tsx. What this file
    owns is the experiment: the HUD, the content that exercises the layout, and the record.
    ========================================================================== */
 
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
-import { PageLayout, FloatingInput, usePageKeyboard } from './engine-v1.0'
+import { PageLayout, FloatingInput, usePageKeyboard } from './engine-v2.0'
 import {
   type LabSandboxProps,
   LabHeader,
@@ -63,9 +63,9 @@ const EXP04B_TEXT = {
 } as const
 
 
-/** The copy's shell selector (engine-v1.0 rewrites the rmkl- prefix to rmkl-v10-): the HUD reads the mode from it.
+/** The copy's shell selector (engine-v2.0 rewrites the rmkl- prefix to rmkl-v20-): the HUD reads the mode from it.
  *  The shell is keyed to one attribute the tap sets before focusing, not to :focus -- see PageLayout.tsx in the copy. */
-export const EXP04B_SHELL = '.rmkl-v10-page-root[data-rmkl-v10-shell]'
+export const EXP04B_SHELL = '.rmkl-v20-page-root[data-rmkl-v20-shell]'
 
 const EXP04B_CSS = `
   /* Mode copy lives in CSS. Both variants are always in the DOM and take the same room, so
