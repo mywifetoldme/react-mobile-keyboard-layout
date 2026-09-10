@@ -58,9 +58,9 @@ On mobile browsers—especially **iOS Safari / WebKit**—virtual software keybo
 ## 🧭 Two Layouts
 
 - **`SubpageLayout` (★ Official Winner / Recommended Default)** — The page is the shell; document scroll is permanently locked to `0`. It establishes an absolute peace treaty with the browser, powered by 100% declarative CSS flexbox (`column-reverse`) and `--rmkl-kb-inset`. Because document scroll never moves, Safari's window pan, caret reveal jump, and delayed click collisions never occur. Zero drift, zero flicker, and zero maintenance overhead across iOS releases. Ideal for chat rooms, messenger apps, dashboards, and interactive forms.
-- **`PageLayout` (Advanced Hybrid Layout)** — For content-first pages (e.g., articles with comments) where native document scrolling to collapse Safari's URL bar (`100lvh`) is strictly required. The document scrolls freely while reading. Upon tapping an input, the layout dynamically freezes the document at `calc(offset + 100lvh)` and hands off control to an App Shell scroller without jumping. Features deep WebKit event interception (pointerup tap locking, synthetic click suppression, and viewport sync deadzones).
+- **`PageLayout` (Advanced Hybrid Layout)** — For content-first pages (e.g., articles with comments) where native document scrolling to collapse Safari's URL bar (`100lvh`) is strictly required. The document scrolls freely while reading. Upon tapping an input, the layout dynamically freezes the document at `calc(offset + 100lvh)` and hands off control to an App Shell scroller without jumping. The shell is keyed to one attribute the tap sets *before* focusing, so Safari finds the input inside the shell's own scroller and has nothing to pan; a guard with no number in it keeps the document at the reader's offset.
 
-Both layouts decide their state in CSS (`:has()` and `:focus-within`) and share `useMobileKeyboard`.
+`SubpageLayout` decides its state in CSS (`:has()` over the inputs that raise the keyboard) and comes with `useMobileKeyboard`. `PageLayout` has its own hook, `usePageKeyboard`, and shares no strategy code with it -- the two are separate experiments and stay separately readable. `PageLayout` owns `html`/`body` overflow while mounted; do not lock them yourself.
 
 ```tsx
 // 1. Primary Recommendation: SubpageLayout (Chat / App Shell)

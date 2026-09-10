@@ -207,7 +207,8 @@ export interface PageLayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 't
  * A page whose document scrolls like any web page — so iOS Safari collapses its URL bar — until an
  * input is tapped. Then a fixed shell takes the screen with the header pinned and the footer on the
  * keyboard, at the same reading position, and hands the document back untouched when the keyboard
- * leaves. Which of the two you are in is decided by focus, in PageLayout.css.
+ * leaves. Which of the two you are in is one attribute on the root, set by the tap before it focuses
+ * and removed when the focus leaves the layout's keyboard inputs; PageLayout.css keys on it.
  *
  * Use SubpageLayout when the page is the shell to begin with (a chat screen that never scrolls the
  * document); use PageLayout when the page is a document with a composer.

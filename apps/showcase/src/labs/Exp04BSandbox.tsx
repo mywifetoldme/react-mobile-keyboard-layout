@@ -9,7 +9,7 @@
    ========================================================================== */
 
 import { useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react'
-import { PageLayout, FloatingInput, useMobileKeyboard } from './engine-v1.0'
+import { PageLayout, FloatingInput, usePageKeyboard } from './engine-v1.0'
 import {
   type LabSandboxProps,
   LabHeader,
@@ -63,14 +63,9 @@ const EXP04B_TEXT = {
 } as const
 
 
-/** The copy's shell selector (engine-v1.0 rewrites the rmkl- prefix to rmkl-v10-): the HUD reads the mode from it. */
-const KEYBOARD_INPUTS = [
-  'textarea',
-  '[contenteditable]:not([contenteditable="false"])',
-  'input:not([type])',
-  'input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"])',
-]
-export const EXP04B_SHELL = `.rmkl-v10-page-root:has(${KEYBOARD_INPUTS.map((input) => `${input}:focus`).join(', ')})`
+/** The copy's shell selector (engine-v1.0 rewrites the rmkl- prefix to rmkl-v10-): the HUD reads the mode from it.
+ *  The shell is keyed to one attribute the tap sets before focusing, not to :focus -- see PageLayout.tsx in the copy. */
+export const EXP04B_SHELL = '.rmkl-v10-page-root[data-rmkl-v10-shell]'
 
 const EXP04B_CSS = `
   /* Mode copy lives in CSS. Both variants are always in the DOM and take the same room, so
@@ -138,7 +133,7 @@ export function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
   const hudInnerHeightRef = useRef<HTMLElement | null>(null)
   const hudVvHeightRef = useRef<HTMLElement | null>(null)
   // PageLayout keeps the window where the reader left it; the hook's top-lock (which scrolls it to 0) is off
-  const engine = useMobileKeyboard({ bodyRef, lockDurationMs: 0 })
+  const engine = usePageKeyboard({ bodyRef })
   const windowScrollY = useScrollGauge({ scrollY: hudScrollYRef, innerHeight: hudInnerHeightRef, vvHeight: hudVvHeightRef })
 
   const handleSubmit = () => {
@@ -175,7 +170,6 @@ export function Exp04BSandbox({ lab, lang, onClose }: LabSandboxProps) {
     <PageLayout
       className="rmkl-exp04b-root"
       bodyRef={bodyRef}
-      keyboardEngine={engine}
       header={<LabHeader lab={lab} lang={lang} onClose={onClose} windowScrollY={windowScrollY} />}
       footer={
         <FloatingInput

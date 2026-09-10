@@ -37,9 +37,9 @@ describe('EXP-04-B runs on the frozen copy of the library layout', () => {
     expect(document.documentElement.style.getPropertyValue('--rmkl-v10-page-lock-y')).not.toBe('')
   })
 
-  it('keys its HUD to the copy\'s shell selector: keyboard inputs only, never :focus-within', () => {
+  it('keys its HUD to the copy\'s shell attribute, never to :focus', () => {
     renderLab()
-    expect(EXP04B_SHELL.startsWith('.rmkl-v10-page-root:has(')).toBe(true)
+    expect(EXP04B_SHELL).toBe('.rmkl-v10-page-root[data-rmkl-v10-shell]')
     expect(EXP04B_SHELL).not.toMatch(/:focus-within|date|time|select/)
     const css = [...document.querySelectorAll('style')].map((el) => el.textContent ?? '').join('\n')
     expect(css).not.toMatch(/:focus-within/)

@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useRef,
   type ReactNode,
@@ -9,7 +10,7 @@ import {
   type ComponentPropsWithoutRef,
   type RefObject,
 } from 'react'
-import { useMobileKeyboard, type UseMobileKeyboardReturn } from '../hooks/useMobileKeyboard'
+import { usePageKeyboard } from '../hooks/usePageKeyboard'
 import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
 import './PageLayout.css'
 
@@ -21,9 +22,9 @@ import './PageLayout.css'
  *   value                       read from                    refreshed on                          written to
  *   --rmkl-v10-page-lock-y          window.scrollY               scroll (idle); focusin (capture)      the CSS cap: calc(y + 100lvh)
  *   main.scrollTop (hand-off)   scrollY, main scroll range   focusin (capture), once               the shell's scroller
- *   window offset (the guard)   scrollY vs lock-y            scroll (locked); vv scroll (nudge<=2) window.scrollTo -- the one write-back
- *   --rmkl-v10-kb / --rmkl-v10-kb-inset innerHeight, vv.height       vv resize, resize, scroll, vv scroll  shell padding, composer bottom  (useMobileKeyboard)
- *   body-input anchor / edge    input rect, main.scrollTop   ResizeObserver(main); focusin (bubble) main.scrollTop                 (useMobileKeyboard)
+ *   window offset (the guard)   scrollY vs lock-y            scroll (locked)                       window.scrollTo -- the one write-back
+ *   --rmkl-v10-kb / --rmkl-v10-kb-inset innerHeight, vv.height       vv resize, resize, scroll, vv scroll  shell padding, composer bottom  (usePageKeyboard)
+ *   body-input anchor / edge    input rect, main.scrollTop   ResizeObserver(main); focusin (bubble) main.scrollTop                 (usePageKeyboard)
  *
  * Order that the code relies on: the hand-off runs in the capture phase so the hook's anchor
  * (bubble) sees the post-transfer position; the guard is driven by the scroll Safari's pan
@@ -38,14 +39,12 @@ import './PageLayout.css'
 export const PAGE_LOCK_Y_CSS_VAR = '--rmkl-v10-page-lock-y'
 
 const INPUT_SELECTOR = 'input, textarea, [contenteditable]'
+/** On the root while the shell is up. Set by the tap before it focuses, so the shell exists when Safari looks. */
+export const PAGE_SHELL_ATTR = 'data-rmkl-v10-shell'
 
 const keyboardInputOf = (target: EventTarget | null): HTMLElement | null => {
   const el = target instanceof Element ? target.closest(INPUT_SELECTOR) : null
   return isKeyboardTextInput(el) ? (el as HTMLElement) : null
-}
-const focusedInputInside = (root: HTMLElement): HTMLElement | null => {
-  const active = document.activeElement
-  return active instanceof HTMLElement && root.contains(active) && isKeyboardTextInput(active) ? active : null
 }
 
 /**
@@ -64,7 +63,7 @@ const focusedInputInside = (root: HTMLElement): HTMLElement | null => {
  * ever coming, has been delivered by then). A focus without a tap therefore cannot leave the
  * protection stuck open.
  */
-const useTapToFocus = (rootRef: RefObject<HTMLElement | null>) => {
+const useTapToFocus = (rootRef: RefObject<HTMLElement | null>, enterShell: () => void) => {
   useEffect(() => {
     const root = rootRef.current
     if (!root) return
@@ -84,7 +83,10 @@ const useTapToFocus = (rootRef: RefObject<HTMLElement | null>) => {
       if (!input || input !== armed) return
       armed = null
       clickPending = true
+      // the shell first, then the focus: Safari must find the input inside our scroller
+      enterShell()
       input.focus({ preventScroll: true })
+      if (document.activeElement !== input) root.removeAttribute(PAGE_SHELL_ATTR)
     }
     const onFocusIn = (e: FocusEvent) => {
       if (keyboardInputOf(e.target)) clickPending = true
@@ -112,7 +114,7 @@ const useTapToFocus = (rootRef: RefObject<HTMLElement | null>) => {
       root.removeEventListener('mousedown', onMouseDown, { capture: true })
       root.removeEventListener('click', onClick, { capture: true })
     }
-  }, [rootRef])
+  }, [rootRef, enterShell])
 }
 
 /**
@@ -124,63 +126,67 @@ const useTapToFocus = (rootRef: RefObject<HTMLElement | null>) => {
  * the live offset and that offset is handed to <main> once; focus moving between inputs inside the
  * shell is not a new entry. Nothing is written back on the way out: the document never moved.
  *
- * Capture phase on purpose: useMobileKeyboard listens for focusin on <main> to remember where a
+ * Capture phase on purpose: usePageKeyboard listens for focusin on <main> to remember where a
  * focused body input sits; it has to see the input where the transfer leaves it.
  */
 const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: RefObject<HTMLElement | null>) => {
+  // Enter the shell: publish the offset, flip the attribute, hand the offset to <main>. Idempotent,
+  // so the tap (before focusing) and focusin (a focus that did not come from a tap) can both call it.
+  const enterShell = useCallback(() => {
+    const root = rootRef.current
+    if (!root || root.hasAttribute(PAGE_SHELL_ATTR)) return
+    const y = Math.round(window.scrollY)
+    document.documentElement.style.setProperty(PAGE_LOCK_Y_CSS_VAR, `${y}px`)
+    root.setAttribute(PAGE_SHELL_ATTR, '')
+    const main = bodyRef.current
+    if (!main) return
+    // column-reverse: 0 is the end of the content; the document's offset from the top is that far
+    // short of it. Reading scrollHeight lays the shell out, so the transfer lands in the shell.
+    main.scrollTop = y - (main.scrollHeight - main.clientHeight)
+  }, [rootRef, bodyRef])
+
   useEffect(() => {
     const root = rootRef.current
     if (!root || typeof window === 'undefined') return
-    // only the offset: the viewport half of the cap is CSS's 100%, which follows Safari's resizes
-    let lockY = 0
+    const inShell = () => root.hasAttribute(PAGE_SHELL_ATTR)
+    // only the offset: the viewport half of the cap is CSS's 100lvh
+    const lockY = () => Math.round(Number.parseFloat(document.documentElement.style.getPropertyValue(PAGE_LOCK_Y_CSS_VAR)) || 0)
     const publishOffset = () => {
-      lockY = Math.round(window.scrollY)
-      document.documentElement.style.setProperty(PAGE_LOCK_Y_CSS_VAR, `${lockY}px`)
+      document.documentElement.style.setProperty(PAGE_LOCK_Y_CSS_VAR, `${Math.round(window.scrollY)}px`)
     }
-    // The cap declares the document frozen; iOS Safari's caret reveal does not ask -- it pans
-    // the window past the document's own maximum (measured offset + 94, + 299) and the fixed
-    // shell rides up with it. So the declaration is enforced: while the shell is up, the
-    // offset is the published one. (EXP-04-A's engine does the same at 0 on a timer.)
+    // The cap declares the document frozen. With the shell built before the focus Safari no
+    // longer pans it (47 opens, 0 pans); what still moves the window under the lock is a URL-bar
+    // transition overlapping the keyboard (measured 17px, once). The declaration is enforced all
+    // the same: while the shell is up, the offset is the published one. No number in it.
     const onScroll = () => {
-      if (!focusedInputInside(root)) publishOffset()
-      else if (Math.round(window.scrollY) !== lockY) window.scrollTo(0, lockY)
+      if (!inShell()) publishOffset()
+      else if (Math.round(window.scrollY) !== lockY()) window.scrollTo(0, lockY())
     }
-    // Safari's pan animates the visual viewport on past the layout viewport after the window
-    // has been put back (measured offsetTop 127 with the window already at the offset). The two
-    // re-sync on a real scroll: the window is asked to move 1px, and the guard above returns it.
-    // Bounded, so a viewport that will not re-sync cannot keep it busy.
-    // Small resting offsets (<= 10px, e.g. collapsed URL bar) are ignored so they don't nudge.
-    let nudges = 0
-    const onViewportScroll = () => {
-      if (!focusedInputInside(root) || !window.visualViewport) return
-      if (Math.abs(window.visualViewport.offsetTop) <= 10) return
-      if (Math.round(window.scrollY) !== lockY || nudges >= 2) return
-      nudges += 1
-      window.scrollTo(0, lockY > 0 ? lockY - 1 : lockY + 1)
-    }
+    // a focus that did not come from the tap (programmatic, keyboard navigation) enters the shell here
     const onFocusIn = (e: FocusEvent) => {
+      if (isKeyboardTextInput(e.target)) enterShell()
+    }
+    // the focus leaves the layout's keyboard inputs: the shell goes, the document is where it was
+    const onFocusOut = (e: FocusEvent) => {
       if (!isKeyboardTextInput(e.target)) return
-      const from = e.relatedTarget
-      if (from instanceof Node && root.contains(from) && isKeyboardTextInput(from)) return
-      nudges = 0
-      publishOffset()
-      const main = bodyRef.current
-      if (!main) return
-      // column-reverse: 0 is the end of the content; the document's offset from the top is that far short of it
-      main.scrollTop = Math.round(window.scrollY) - (main.scrollHeight - main.clientHeight)
+      const to = e.relatedTarget
+      if (to instanceof Node && root.contains(to) && isKeyboardTextInput(to)) return
+      root.removeAttribute(PAGE_SHELL_ATTR)
     }
 
     publishOffset()
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.visualViewport?.addEventListener('scroll', onViewportScroll)
     root.addEventListener('focusin', onFocusIn, { capture: true })
+    root.addEventListener('focusout', onFocusOut, { capture: true })
     return () => {
       window.removeEventListener('scroll', onScroll)
-      window.visualViewport?.removeEventListener('scroll', onViewportScroll)
       root.removeEventListener('focusin', onFocusIn, { capture: true })
+      root.removeEventListener('focusout', onFocusOut, { capture: true })
+      root.removeAttribute(PAGE_SHELL_ATTR)
       document.documentElement.style.removeProperty(PAGE_LOCK_Y_CSS_VAR)
     }
-  }, [rootRef, bodyRef])
+  }, [rootRef, bodyRef, enterShell])
+  return enterShell
 }
 
 export interface PageLayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
@@ -190,13 +196,8 @@ export interface PageLayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 't
   header?: ReactNode
   footer?: ReactNode
   children: ReactNode
+  /** Pass the same ref to `usePageKeyboard({ bodyRef })` to read `isKeyboardOpen` or call `scrollToBottom` */
   bodyRef?: RefObject<HTMLDivElement | null>
-  /**
-   * Share the caller's hook instance (e.g. to read isKeyboardOpen). Create it with
-   * `lockDurationMs: 0`: the fallback top-lock scrolls the window to 0, and this layout keeps the
-   * window where the reader left it.
-   */
-  keyboardEngine?: UseMobileKeyboardReturn
   headerProps?: ComponentPropsWithoutRef<'header'>
   bodyProps?: ComponentPropsWithoutRef<'main'>
   footerProps?: ComponentPropsWithoutRef<'footer'>
@@ -221,7 +222,6 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(({
   bodyRef,
   className = '',
   style,
-  keyboardEngine,
   headerProps,
   bodyProps,
   footerProps,
@@ -230,13 +230,12 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const ownBodyRef = useRef<HTMLDivElement | null>(null)
   const resolvedBodyRef = bodyRef ?? ownBodyRef
-  // The hook publishes --rmkl-v10-kb / --rmkl-v10-kb-inset and keeps the reading position in the
-  // column-reverse body. Its bodyProps/floatingProps are not wired and its top-lock is off: both
-  // scroll the window to 0, and here the window has to stay where the reader left it.
-  const internalEngine = useMobileKeyboard({ bodyRef: resolvedBodyRef, lockDurationMs: 0 })
-  void (keyboardEngine ?? internalEngine)
-  useTapToFocus(rootRef)
-  useDocumentHandoff(rootRef, resolvedBodyRef)
+  // PageLayout's own hook: keyboard geometry as CSS variables, the reading position held in the
+  // column-reverse body. It shares no code with SubpageLayout's useMobileKeyboard -- no tap
+  // handler, no top-lock; the tap and the document are this file's business.
+  usePageKeyboard({ bodyRef: resolvedBodyRef })
+  const enterShell = useDocumentHandoff(rootRef, resolvedBodyRef)
+  useTapToFocus(rootRef, enterShell)
 
   const setRoot = (el: HTMLDivElement | null) => {
     rootRef.current = el

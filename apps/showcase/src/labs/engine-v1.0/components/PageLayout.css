@@ -32,16 +32,10 @@ body:has(.rmkl-v10-page-root) {
   position: static;
 }
 
-html:has(.rmkl-v10-page-root textarea:focus),
-html:has(.rmkl-v10-page-root [contenteditable]:not([contenteditable="false"]):focus),
-html:has(.rmkl-v10-page-root input:not([type]):focus),
-html:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
+html:has(.rmkl-v10-page-root[data-rmkl-v10-shell]) {
   overflow: hidden;
 }
-body:has(.rmkl-v10-page-root textarea:focus),
-body:has(.rmkl-v10-page-root [contenteditable]:not([contenteditable="false"]):focus),
-body:has(.rmkl-v10-page-root input:not([type]):focus),
-body:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
+body:has(.rmkl-v10-page-root[data-rmkl-v10-shell]) {
   /* offset + one full viewport, from CSS. The cap's one hard requirement is to never clamp below
      the offset: 100lvh (URL bar collapsed) is never less than innerHeight, whereas 100% of html is
      iOS's small viewport and, with the bar collapsed (695 vs 735), shoved the document up 40px at
@@ -126,11 +120,13 @@ body:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url
   border-top: 1px solid var(--rmkl-v10-border);
 }
 
-/* ---- shell: while a keyboard input inside has the focus ---- */
-.rmkl-v10-page-root:has(textarea:focus),
-.rmkl-v10-page-root:has([contenteditable]:not([contenteditable="false"]):focus),
-.rmkl-v10-page-root:has(input:not([type]):focus),
-.rmkl-v10-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) {
+/* ---- shell: while data-rmkl-v10-shell is on the root ----
+   The attribute, not :focus, is the shell's key: the tap sets it *before* focusing, so when Safari
+   decides where to reveal the caret the document is already frozen and the input already sits in
+   the shell's own scroller. Keyed to :focus, the shell existed only after the focus, and Safari
+   panned the document in 9 of 48 opens. The attribute follows focus otherwise (set on focusin of a
+   keyboard input, removed when the focus leaves the layout's keyboard inputs). */
+.rmkl-v10-page-root[data-rmkl-v10-shell] {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -142,24 +138,15 @@ body:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url
   z-index: 200;
 }
 
-.rmkl-v10-page-root:has(textarea:focus) .rmkl-v10-page-header-slot,
-.rmkl-v10-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-v10-page-header-slot,
-.rmkl-v10-page-root:has(input:not([type]):focus) .rmkl-v10-page-header-slot,
-.rmkl-v10-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-v10-page-header-slot,
-.rmkl-v10-page-root:has(textarea:focus) .rmkl-v10-page-header,
-.rmkl-v10-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-v10-page-header,
-.rmkl-v10-page-root:has(input:not([type]):focus) .rmkl-v10-page-header,
-.rmkl-v10-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-v10-page-header {
+.rmkl-v10-page-root[data-rmkl-v10-shell] .rmkl-v10-page-header-slot,
+.rmkl-v10-page-root[data-rmkl-v10-shell] .rmkl-v10-page-header {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
 }
 
-.rmkl-v10-page-root:has(textarea:focus) .rmkl-v10-page-body-container,
-.rmkl-v10-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-v10-page-body-container,
-.rmkl-v10-page-root:has(input:not([type]):focus) .rmkl-v10-page-body-container,
-.rmkl-v10-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-v10-page-body-container {
+.rmkl-v10-page-root[data-rmkl-v10-shell] .rmkl-v10-page-body-container {
   position: absolute;
   inset: 0;
   height: 100%;
@@ -170,10 +157,7 @@ body:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url
   padding-bottom: var(--rmkl-v10-kb-inset, 0px);
 }
 
-.rmkl-v10-page-root:has(textarea:focus) .rmkl-v10-page-body,
-.rmkl-v10-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-v10-page-body,
-.rmkl-v10-page-root:has(input:not([type]):focus) .rmkl-v10-page-body,
-.rmkl-v10-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-v10-page-body {
+.rmkl-v10-page-root[data-rmkl-v10-shell] .rmkl-v10-page-body {
   flex: 1 1 0%;
   min-height: 0;
   overflow-y: auto;
@@ -183,10 +167,7 @@ body:has(.rmkl-v10-page-root input:is([type="text"], [type="search"], [type="url
   touch-action: pan-y;
 }
 
-.rmkl-v10-page-root:has(textarea:focus) .rmkl-v10-page-footer,
-.rmkl-v10-page-root:has([contenteditable]:not([contenteditable="false"]):focus) .rmkl-v10-page-footer,
-.rmkl-v10-page-root:has(input:not([type]):focus) .rmkl-v10-page-footer,
-.rmkl-v10-page-root:has(input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-v10-page-footer {
+.rmkl-v10-page-root[data-rmkl-v10-shell] .rmkl-v10-page-footer {
   position: relative;
   z-index: 40;
   /* a drag on the bar must not become a document scroll: overflow: hidden does not stop touch */
