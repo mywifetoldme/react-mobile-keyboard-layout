@@ -26,8 +26,11 @@ export interface UsePageKeyboardOptions {
   /** The column-reverse body PageLayout renders (its `bodyRef`) */
   bodyRef?: RefObject<HTMLElement | null>
   /**
-   * Below this many pixels a viewport contraction is not a keyboard (a URL bar is ~40px). Default: 100.
-   * Safari has no VirtualKeyboard API, so the keyboard is inferred from geometry and needs this floor.
+   * Below this many pixels a viewport contraction is not a keyboard. Default: 100.
+   * The one number here that is not from a specification: Safari has no VirtualKeyboard API, so the
+   * keyboard is inferred from geometry, and the frames of a URL-bar transition contract the visual
+   * viewport by up to ~40px (iOS 18, measured) while a keyboard is 250px or more. Anything between
+   * those two behaves the same -- the value is a floor over the noise, not a property of the keyboard.
    */
   keyboardThreshold?: number
 }
@@ -66,7 +69,9 @@ export const usePageKeyboard = ({ bodyRef, keyboardThreshold = 100 }: UsePageKey
     const update = () => {
       // with no keyboard input focused the current height is the closed one (toolbars, rotation)
       if (!isKeyboardTextInput(document.activeElement)) closedInnerHeight = window.innerHeight
-      const inset = vv ? Math.max(0, Math.round(window.innerHeight - vv.height)) : 0
+      // vv.height is in zoomed CSS pixels; times the scale it is the visible height in layout
+      // pixels, the unit innerHeight is in. Without the scale a 2x zoom alone read as a 348px keyboard.
+      const inset = vv ? Math.max(0, Math.round(window.innerHeight - vv.height * (vv.scale || 1))) : 0
       const shrink = Math.max(0, Math.round(closedInnerHeight - window.innerHeight))
       const measured = Math.max(inset, shrink)
       const height = measured >= keyboardThreshold ? measured : 0

@@ -4,6 +4,7 @@ import { usePageKeyboard, PAGE_KEYBOARD_HEIGHT_CSS_VAR, PAGE_KEYBOARD_INSET_CSS_
 
 /** Minimal stand-in for window.visualViewport, which jsdom does not implement. */
 class FakeVisualViewport extends EventTarget {
+  scale = 1
   constructor(public height: number) {
     super()
   }
@@ -135,6 +136,26 @@ describe('usePageKeyboard (PageLayout\'s own hook)', () => {
     expect(kbVar()).toBe('0px')
     expect(insetVar()).toBe('0px')
     expect(result.current.isKeyboardOpen).toBe(false)
+  })
+
+  it('measures the keyboard in layout pixels under pinch zoom: the visual viewport reports zoomed CSS pixels', () => {
+    // innerHeight is in layout pixels and does not change with zoom; visualViewport.height is the
+    // number of CSS pixels visible, i.e. divided by the scale. Read without the scale, a 2x zoom
+    // alone looked like a 348px keyboard, and a 2x zoom over a 303px keyboard like 499px.
+    const vv = installViewport(695, 695)
+    renderHook(() => usePageKeyboard())
+    act(() => {
+      vv.scale = 2
+      vv.height = 347.5
+      vv.dispatchEvent(new Event('resize'))
+    })
+    expect(kbVar()).toBe('0px')
+    act(() => {
+      vv.height = 196 // 392 layout px visible above the keyboard, at 2x
+      vv.dispatchEvent(new Event('resize'))
+    })
+    expect(kbVar()).toBe('303px')
+    expect(insetVar()).toBe('303px')
   })
 
   it('re-measures when innerHeight comes back on a scroll, not a resize -- iOS restores the layout viewport silently', () => {
