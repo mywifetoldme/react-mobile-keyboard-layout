@@ -17,8 +17,15 @@ export {
 export {
   PageLayout,
   PAGE_LOCK_Y_CSS_VAR,
+  PAGE_SHELL_ATTR,
   type PageLayoutProps,
 } from './components/PageLayout'
+
+export {
+  usePageKeyboard,
+  type UsePageKeyboardOptions,
+  type UsePageKeyboardReturn,
+} from './hooks/usePageKeyboard'
 
 export {
   FloatingInput,

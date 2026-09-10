@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { translations, type Language } from '../i18n'
-import type { UseMobileKeyboardReturn } from 'react-mobile-keyboard-layout'
 
 export interface RmklMetrics {
   transitionState: 'idle' | 'opening' | 'closing'
@@ -20,7 +19,8 @@ declare global {
 }
 
 interface HudOverlayProps {
-  engine: UseMobileKeyboardReturn
+  /** Either layout's hook: only isKeyboardOpen is read */
+  engine: { isKeyboardOpen: boolean }
   lang: Language
 }
 

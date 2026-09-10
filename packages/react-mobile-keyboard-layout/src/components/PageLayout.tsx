@@ -10,7 +10,7 @@ import {
   type ComponentPropsWithoutRef,
   type RefObject,
 } from 'react'
-import { useMobileKeyboard, type UseMobileKeyboardReturn } from '../hooks/useMobileKeyboard'
+import { usePageKeyboard } from '../hooks/usePageKeyboard'
 import { isKeyboardTextInput } from '../utils/isKeyboardTextInput'
 import './PageLayout.css'
 
@@ -23,8 +23,8 @@ import './PageLayout.css'
  *   --rmkl-page-lock-y          window.scrollY               scroll (idle); focusin (capture)      the CSS cap: calc(y + 100lvh)
  *   main.scrollTop (hand-off)   scrollY, main scroll range   focusin (capture), once               the shell's scroller
  *   window offset (the guard)   scrollY vs lock-y            scroll (locked)                       window.scrollTo -- the one write-back
- *   --rmkl-kb / --rmkl-kb-inset innerHeight, vv.height       vv resize, resize, scroll, vv scroll  shell padding, composer bottom  (useMobileKeyboard)
- *   body-input anchor / edge    input rect, main.scrollTop   ResizeObserver(main); focusin (bubble) main.scrollTop                 (useMobileKeyboard)
+ *   --rmkl-kb / --rmkl-kb-inset innerHeight, vv.height       vv resize, resize, scroll, vv scroll  shell padding, composer bottom  (usePageKeyboard)
+ *   body-input anchor / edge    input rect, main.scrollTop   ResizeObserver(main); focusin (bubble) main.scrollTop                 (usePageKeyboard)
  *
  * Order that the code relies on: the hand-off runs in the capture phase so the hook's anchor
  * (bubble) sees the post-transfer position; the guard is driven by the scroll Safari's pan
@@ -126,7 +126,7 @@ const useTapToFocus = (rootRef: RefObject<HTMLElement | null>, enterShell: () =>
  * the live offset and that offset is handed to <main> once; focus moving between inputs inside the
  * shell is not a new entry. Nothing is written back on the way out: the document never moved.
  *
- * Capture phase on purpose: useMobileKeyboard listens for focusin on <main> to remember where a
+ * Capture phase on purpose: usePageKeyboard listens for focusin on <main> to remember where a
  * focused body input sits; it has to see the input where the transfer leaves it.
  */
 const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: RefObject<HTMLElement | null>) => {
@@ -196,13 +196,8 @@ export interface PageLayoutProps extends Omit<HTMLAttributes<HTMLDivElement>, 't
   header?: ReactNode
   footer?: ReactNode
   children: ReactNode
+  /** Pass the same ref to `usePageKeyboard({ bodyRef })` to read `isKeyboardOpen` or call `scrollToBottom` */
   bodyRef?: RefObject<HTMLDivElement | null>
-  /**
-   * Share the caller's hook instance (e.g. to read isKeyboardOpen). Create it with
-   * `lockDurationMs: 0`: the fallback top-lock scrolls the window to 0, and this layout keeps the
-   * window where the reader left it.
-   */
-  keyboardEngine?: UseMobileKeyboardReturn
   headerProps?: ComponentPropsWithoutRef<'header'>
   bodyProps?: ComponentPropsWithoutRef<'main'>
   footerProps?: ComponentPropsWithoutRef<'footer'>
@@ -227,7 +222,6 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(({
   bodyRef,
   className = '',
   style,
-  keyboardEngine,
   headerProps,
   bodyProps,
   footerProps,
@@ -236,11 +230,10 @@ export const PageLayout = forwardRef<HTMLDivElement, PageLayoutProps>(({
   const rootRef = useRef<HTMLDivElement | null>(null)
   const ownBodyRef = useRef<HTMLDivElement | null>(null)
   const resolvedBodyRef = bodyRef ?? ownBodyRef
-  // The hook publishes --rmkl-kb / --rmkl-kb-inset and keeps the reading position in the
-  // column-reverse body. Its bodyProps/floatingProps are not wired and its top-lock is off: both
-  // scroll the window to 0, and here the window has to stay where the reader left it.
-  const internalEngine = useMobileKeyboard({ bodyRef: resolvedBodyRef, lockDurationMs: 0 })
-  void (keyboardEngine ?? internalEngine)
+  // PageLayout's own hook: keyboard geometry as CSS variables, the reading position held in the
+  // column-reverse body. It shares no code with SubpageLayout's useMobileKeyboard -- no tap
+  // handler, no top-lock; the tap and the document are this file's business.
+  usePageKeyboard({ bodyRef: resolvedBodyRef })
   const enterShell = useDocumentHandoff(rootRef, resolvedBodyRef)
   useTapToFocus(rootRef, enterShell)
 
