@@ -22,7 +22,7 @@ import './PageLayout.css'
  *   value                       read from                    refreshed on                          written to
  *   --rmkl-page-lock-y          window.scrollY               scroll (idle); focusin (capture)      the CSS cap: calc(y + 100lvh)
  *   main.scrollTop (hand-off)   scrollY, main scroll range   focusin (capture), once               the shell's scroller
- *   window offset (the guard)   scrollY vs lock-y            scroll (locked); vv scroll (nudge<=2) window.scrollTo -- the one write-back
+ *   window offset (the guard)   scrollY vs lock-y            scroll (locked)                       window.scrollTo -- the one write-back
  *   --rmkl-kb / --rmkl-kb-inset innerHeight, vv.height       vv resize, resize, scroll, vv scroll  shell padding, composer bottom  (useMobileKeyboard)
  *   body-input anchor / edge    input rect, main.scrollTop   ResizeObserver(main); focusin (bubble) main.scrollTop                 (useMobileKeyboard)
  *
@@ -154,32 +154,17 @@ const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: Ref
     const publishOffset = () => {
       document.documentElement.style.setProperty(PAGE_LOCK_Y_CSS_VAR, `${Math.round(window.scrollY)}px`)
     }
-    // The cap declares the document frozen; iOS Safari's caret reveal does not ask -- it pans
-    // the window past the document's own maximum (measured offset + 94, + 299) and the fixed
-    // shell rides up with it. So the declaration is enforced: while the shell is up, the
-    // offset is the published one. (EXP-04-A's engine does the same at 0 on a timer.)
+    // The cap declares the document frozen. With the shell built before the focus Safari no
+    // longer pans it (47 opens, 0 pans); what still moves the window under the lock is a URL-bar
+    // transition overlapping the keyboard (measured 17px, once). The declaration is enforced all
+    // the same: while the shell is up, the offset is the published one. No number in it.
     const onScroll = () => {
       if (!inShell()) publishOffset()
       else if (Math.round(window.scrollY) !== lockY()) window.scrollTo(0, lockY())
     }
-    // Safari's pan animates the visual viewport on past the layout viewport after the window
-    // has been put back (measured offsetTop 127 with the window already at the offset). The two
-    // re-sync on a real scroll: the window is asked to move 1px, and the guard above returns it.
-    // Bounded, so a viewport that will not re-sync cannot keep it busy.
-    // Small resting offsets (<= 10px, e.g. collapsed URL bar) are ignored so they don't nudge.
-    let nudges = 0
-    const onViewportScroll = () => {
-      if (!inShell() || !window.visualViewport) return
-      if (Math.abs(window.visualViewport.offsetTop) <= 10) return
-      if (Math.round(window.scrollY) !== lockY() || nudges >= 2) return
-      nudges += 1
-      window.scrollTo(0, lockY() > 0 ? lockY() - 1 : lockY() + 1)
-    }
     // a focus that did not come from the tap (programmatic, keyboard navigation) enters the shell here
     const onFocusIn = (e: FocusEvent) => {
-      if (!isKeyboardTextInput(e.target)) return
-      nudges = 0
-      enterShell()
+      if (isKeyboardTextInput(e.target)) enterShell()
     }
     // the focus leaves the layout's keyboard inputs: the shell goes, the document is where it was
     const onFocusOut = (e: FocusEvent) => {
@@ -191,12 +176,10 @@ const useDocumentHandoff = (rootRef: RefObject<HTMLElement | null>, bodyRef: Ref
 
     publishOffset()
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.visualViewport?.addEventListener('scroll', onViewportScroll)
     root.addEventListener('focusin', onFocusIn, { capture: true })
     root.addEventListener('focusout', onFocusOut, { capture: true })
     return () => {
       window.removeEventListener('scroll', onScroll)
-      window.visualViewport?.removeEventListener('scroll', onViewportScroll)
       root.removeEventListener('focusin', onFocusIn, { capture: true })
       root.removeEventListener('focusout', onFocusOut, { capture: true })
       root.removeAttribute(PAGE_SHELL_ATTR)

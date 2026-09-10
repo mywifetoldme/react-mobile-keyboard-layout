@@ -218,32 +218,15 @@ describe('PageLayout: the one JS job -- carry the position into the shell, once'
     expect(scrollToSpy).toHaveBeenCalledWith(0, 600)
   })
 
-  it('nudges the window when the visual viewport is left offset with the window already in place -- at most twice', () => {
-    // Safari's pan animates the visual viewport past the layout viewport after the guard has put
-    // the window back (measured offsetTop 127 with y == lockY); a real 1px scroll re-syncs the two
-    // and the guard returns the offset. Bounded, so a viewport that will not re-sync cannot loop.
+  it('does not touch the window for a visual-viewport offset -- there is no pan left to undo', () => {
+    // with the shell built before the focus Safari no longer pans the document (47 opens, 0 pans);
+    // the 1px nudge that re-synced the visual viewport after a pan is gone with the pan
     const vv = Object.assign(new EventTarget(), { offsetTop: 0 })
     Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true, writable: true })
     renderPage()
     windowScroll.set(600)
     tap(bodyInput())
     vv.offsetTop = 127
-    act(() => { vv.dispatchEvent(new Event('scroll')) })
-    expect(scrollToSpy).toHaveBeenLastCalledWith(0, 599)
-    act(() => { vv.dispatchEvent(new Event('scroll')) })
-    act(() => { vv.dispatchEvent(new Event('scroll')) })
-    expect(scrollToSpy.mock.calls.filter(([, y]) => y === 599)).toHaveLength(2)
-    Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true, writable: true })
-  })
-
-  it('does not nudge when the visual viewport offset is within the 10px deadzone (e.g. collapsed URL bar)', () => {
-    const vv = Object.assign(new EventTarget(), { offsetTop: 0 })
-    Object.defineProperty(window, 'visualViewport', { value: vv, configurable: true, writable: true })
-    renderPage()
-    windowScroll.set(600)
-    tap(bodyInput())
-    scrollToSpy.mockClear()
-    vv.offsetTop = 7
     act(() => { vv.dispatchEvent(new Event('scroll')) })
     expect(scrollToSpy).not.toHaveBeenCalled()
     Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true, writable: true })
