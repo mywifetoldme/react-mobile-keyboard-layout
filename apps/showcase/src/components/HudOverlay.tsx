@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
 import { translations, type Language } from '../i18n'
-import type { UseMobileKeyboardReturn } from 'react-mobile-keyboard-layout'
 
 export interface RmklMetrics {
   transitionState: 'idle' | 'opening' | 'closing'
@@ -20,7 +19,8 @@ declare global {
 }
 
 interface HudOverlayProps {
-  engine: UseMobileKeyboardReturn
+  /** Either layout's hook: only isKeyboardOpen is read */
+  engine: { isKeyboardOpen: boolean }
   lang: Language
 }
 
@@ -28,7 +28,7 @@ interface HudOverlayProps {
 const activeInputLabel = () => {
   const el = typeof document !== 'undefined' ? document.activeElement : null
   if (el?.closest('.rmkl-floating-input-wrapper')) return 'FLOATING'
-  if (el?.closest('.rmkl-subpage-body')) return 'BODY'
+  if (el?.closest('.rmkl-subpage-body, .rmkl-page-body')) return 'BODY'
   return 'NONE'
 }
 

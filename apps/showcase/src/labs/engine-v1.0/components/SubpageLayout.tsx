@@ -59,42 +59,42 @@ export const SubpageLayout = forwardRef<HTMLDivElement, SubpageLayoutProps>(({
   return (
     <div
       ref={ref}
-      className={`rmkl-subpage-root ${className}`.trim()}
+      className={`rmkl-v10-subpage-root ${className}`.trim()}
       style={style}
       {...rest}
     >
       {/* 1. Header outside the resizing flow (position: absolute, see SubpageLayout.css) */}
       {header ? (
-        <div className="rmkl-subpage-header-slot">{header}</div>
+        <div className="rmkl-v10-subpage-header-slot">{header}</div>
       ) : (
         <header
           role="banner"
           {...headerProps}
-          className={`rmkl-subpage-header ${headerProps?.className ?? ''}`.trim()}
+          className={`rmkl-v10-subpage-header ${headerProps?.className ?? ''}`.trim()}
         >
-          <div className="rmkl-header-left">{headerLeft}</div>
-          <h1 className="rmkl-header-title">{title}</h1>
-          <div className="rmkl-header-right">{headerRight}</div>
+          <div className="rmkl-v10-header-left">{headerLeft}</div>
+          <h1 className="rmkl-v10-header-title">{title}</h1>
+          <div className="rmkl-v10-header-right">{headerRight}</div>
         </header>
       )}
 
-      {/* 2. Body: CSS reserves the keyboard height (--rmkl-kb) and keeps the reading position (column-reverse) */}
-      <div className="rmkl-subpage-body-container">
+      {/* 2. Body: CSS reserves the keyboard height (--rmkl-v10-kb) and keeps the reading position (column-reverse) */}
+      <div className="rmkl-v10-subpage-body-container">
         <main
           role="main"
           ref={resolvedBodyRef}
           {...bodyProps}
           onPointerDown={handleBodyPointerDown}
-          className={`rmkl-subpage-body ${bodyProps?.className ?? ''}`.trim()}
+          className={`rmkl-v10-subpage-body ${bodyProps?.className ?? ''}`.trim()}
         >
-          <div className="rmkl-subpage-body-inner">{children}</div>
+          <div className="rmkl-v10-subpage-body-inner">{children}</div>
         </main>
 
         {footer && (
           <footer
             role="contentinfo"
             {...footerProps}
-            className={`rmkl-subpage-footer ${footerProps?.className ?? ''}`.trim()}
+            className={`rmkl-v10-subpage-footer ${footerProps?.className ?? ''}`.trim()}
           >
             {footer}
           </footer>

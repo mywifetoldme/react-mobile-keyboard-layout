@@ -1,142 +1,166 @@
 import { useState, type ReactNode } from 'react'
-import { SubpageLayout } from 'react-mobile-keyboard-layout'
+import { PageLayout } from 'react-mobile-keyboard-layout'
 import { translations, type Language } from '../i18n'
 
+const card = {
+  padding: '14px',
+  borderRadius: '10px',
+  backgroundColor: '#18181b',
+  border: '1px solid #27272a',
+  fontSize: '13px',
+  lineHeight: '1.55',
+  color: '#d4d4d8',
+} as const
+
+const Section = ({ title, children }: { title: string; children: ReactNode }) => (
+  <section>
+    <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', color: '#f4f4f5' }}>{title}</h3>
+    {children}
+  </section>
+)
+
+/** One phase of the story: what was tried, what broke, and the sentence that led to the next phase. */
+const Chapter = ({ title, body, bridgeLabel, bridge }: { title: string; body: string; bridgeLabel: string; bridge: string }) => (
+  <article style={{ ...card, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: '#f4f4f5' }}>{title}</h4>
+    <p style={{ margin: 0 }}>{body}</p>
+    <p style={{ margin: 0, paddingLeft: '12px', borderLeft: '3px solid #3b82f6', color: '#93c5fd' }}>
+      <b style={{ color: '#60a5fa' }}>{bridgeLabel}</b> {bridge}
+    </p>
+  </article>
+)
+
+const Bullets = ({ items }: { items: string[] }) => (
+  <ul style={{ ...card, margin: 0, paddingLeft: '28px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    {items.map((item) => (
+      <li key={item}>{item}</li>
+    ))}
+  </ul>
+)
+
+const Code = ({ children, color = '#e4e4e7' }: { children: string; color?: string }) => (
+  <pre style={{ ...card, padding: '14px', fontSize: '12px', lineHeight: '1.5', overflowX: 'auto', color, margin: 0 }}>{children}</pre>
+)
+
+/**
+ * The Docs tab reads as the story the labs tell — why, what was learned, what shape that left
+ * the package in, and how it was verified — with the install snippet at the end.
+ */
 export const DocsView = ({ lang, header }: { lang: Language; header?: ReactNode }) => {
   const t = translations[lang]
   const [copied, setCopied] = useState(false)
 
+  const chapters = [1, 2, 3, 4, 5].map((i) => ({
+    title: t[`docsStory${i}Title` as keyof typeof t] as string,
+    body: t[`docsStory${i}Body` as keyof typeof t] as string,
+    bridge: t[`docsStory${i}Bridge` as keyof typeof t] as string,
+  }))
+
   const handleCopy = () => {
-    navigator.clipboard.writeText('npm i react-mobile-keyboard-layout')
+    navigator.clipboard.writeText(t.installCmd)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
 
   return (
-    <SubpageLayout header={header} title={t.docsTitle}>
+    <PageLayout header={header} title={t.docsTitle}>
       <div style={{ padding: '16px 16px 36px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Installation */}
-        <div>
-          <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', color: '#f4f4f5' }}>
-            {t.quickstartTitle}
-          </h3>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 12px',
-            borderRadius: '10px',
-            backgroundColor: '#18181b',
-            border: '1px solid #3f3f46',
-            gap: '8px',
-          }}>
-            <code style={{
-              fontFamily: 'monospace',
-              fontSize: '12px',
-              color: '#60a5fa',
-              whiteSpace: 'nowrap',
-              overflowX: 'auto',
-              flex: 1,
-            }}>
-              npm i react-mobile-keyboard-layout
-            </code>
-            <button
-              type="button"
-              onClick={handleCopy}
+        <Section title={t.docsWhyTitle}>
+          <div style={{ ...card, backgroundColor: 'rgba(239, 68, 68, 0.06)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>{t.docsWhyBody}</div>
+        </Section>
+
+        <Section title={t.docsStoryTitle}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {chapters.map((c) => (
+              <Chapter key={c.title} bridgeLabel={t.docsBridgeLabel} {...c} />
+            ))}
+          </div>
+        </Section>
+
+        <Section title={t.docsPrinciplesTitle}>
+          <Bullets items={[t.docsPrinciple1, t.docsPrinciple2, t.docsPrinciple3, t.docsPrinciple4, t.docsPrinciple5]} />
+        </Section>
+
+        <Section title={t.docsShapeTitle}>
+          <Bullets items={[t.docsShape1, t.docsShape2, t.docsShape3]} />
+        </Section>
+
+        <Section title={t.docsLayoutsTitle}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ ...card, border: '1px solid rgba(34, 197, 94, 0.35)', backgroundColor: 'rgba(34, 197, 94, 0.06)' }}>{t.docsLayoutShell}</div>
+            <div style={{ ...card, border: '1px solid rgba(59, 130, 246, 0.35)', backgroundColor: 'rgba(59, 130, 246, 0.06)' }}>{t.docsLayoutUnlocked}</div>
+          </div>
+        </Section>
+
+        <Section title={t.docsVerifyTitle}>
+          <div style={card}>{t.docsVerifyBody}</div>
+        </Section>
+
+        <Section title={t.docsUseTitle}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div
               style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: copied ? '#22c55e' : '#27272a',
-                color: '#ffffff',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-                transition: 'background-color 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                backgroundColor: '#18181b',
+                border: '1px solid #3f3f46',
+                gap: '8px',
               }}
             >
-              {copied ? t.copied : t.copy}
-            </button>
-          </div>
-        </div>
-
-        {/* Basic Usage Code Block */}
-        <div>
-          <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', color: '#f4f4f5' }}>
-            {t.basicUsageTitle}
-          </h3>
-          <pre style={{
-            backgroundColor: '#18181b',
-            border: '1px solid #27272a',
-            borderRadius: '10px',
-            padding: '14px',
-            fontSize: '12px',
-            lineHeight: '1.5',
-            overflowX: 'auto',
-            color: '#e4e4e7',
-          }}>
-            {`import { SubpageLayout, FloatingInput } from 'react-mobile-keyboard-layout'
+              <code style={{ fontFamily: 'monospace', fontSize: '12px', color: '#60a5fa', whiteSpace: 'nowrap', overflowX: 'auto', flex: 1 }}>
+                {t.installCmd}
+              </code>
+              <button
+                type="button"
+                onClick={handleCopy}
+                style={{
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  backgroundColor: copied ? '#22c55e' : '#27272a',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  transition: 'background-color 0.15s ease',
+                }}
+              >
+                {copied ? t.copied : t.copy}
+              </button>
+            </div>
+            <Code>{`import { useRef, useState } from 'react'
+import { PageLayout, FloatingInput, type PageLayoutHandle } from 'react-mobile-keyboard-layout'
 import 'react-mobile-keyboard-layout/dist/index.css'
 
 export function ChatPage() {
   const [text, setText] = useState('')
-  const bodyRef = useRef<HTMLDivElement>(null)
+  const layout = useRef<PageLayoutHandle>(null)
+
+  const send = () => {
+    post(text)
+    setText('')
+    layout.current?.scrollToBottom()
+  }
 
   return (
-    <SubpageLayout
-      bodyRef={bodyRef}
+    <PageLayout
+      ref={layout}
       title="Chat"
-      footer={
-        <FloatingInput
-          value={text}
-          onChange={setText}
-          onSubmit={handleSend}
-        />
-      }
+      footer={({ isKeyboardOpen }) => (
+        <FloatingInput value={text} onChange={setText} onSubmit={send} isKeyboardOpen={isKeyboardOpen} />
+      )}
     >
       <MessageList />
-    </SubpageLayout>
+    </PageLayout>
   )
-}`}
-          </pre>
-        </div>
-
-        {/* Mathematical Model */}
-        <div>
-          <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', color: '#f4f4f5' }}>
-            {t.mathModelTitle}
-          </h3>
-          <div style={{
-            padding: '14px',
-            borderRadius: '10px',
-            backgroundColor: 'rgba(59, 130, 246, 0.06)',
-            border: '1px solid rgba(59, 130, 246, 0.3)',
-            fontSize: '13px',
-            lineHeight: '1.5',
-            color: '#d4d4d8',
-          }}>
-            {t.mathModelDesc}
-          </div>
-        </div>
-
-        {/* CSS Variables */}
-        <div>
-          <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '8px', color: '#f4f4f5' }}>
-            {t.themeCustomizationTitle}
-          </h3>
-          <pre style={{
-            backgroundColor: '#18181b',
-            border: '1px solid #27272a',
-            borderRadius: '10px',
-            padding: '14px',
-            fontSize: '12px',
-            lineHeight: '1.5',
-            overflowX: 'auto',
-            color: '#a1a1aa',
-          }}>
-            {`:root {
+}`}</Code>
+            <Code color="#a1a1aa">{`/* ${t.themeCustomizationTitle} */
+:root {
   --rmkl-bg: #09090b;
   --rmkl-text: #f4f4f5;
   --rmkl-border: #27272a;
@@ -144,10 +168,10 @@ export function ChatPage() {
   --rmkl-header-bg: rgba(9, 9, 11, 0.85);
   --rmkl-primary: #3b82f6;
   --rmkl-primary-text: #ffffff;
-}`}
-          </pre>
-        </div>
+}`}</Code>
+          </div>
+        </Section>
       </div>
-    </SubpageLayout>
+    </PageLayout>
   )
 }

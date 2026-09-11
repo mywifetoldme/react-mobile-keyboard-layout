@@ -11,7 +11,8 @@ export interface EvaluationItem {
 
 export interface LabInfo {
   id: string
-  status: 'failed' | 'progress' | 'winner'
+  /** winner = the FINAL of the series (exactly one); passed = every criterion met, superseded since */
+  status: 'failed' | 'progress' | 'passed' | 'winner'
   title: LocalizedString
   hypothesis: LocalizedString
   evaluations: EvaluationItem[]
@@ -359,8 +360,8 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', status: 'fail', comment: { en: 'Safari: Floating input appears mid-screen (508px height on iPhone) before dropping to bottom on blur', ko: '사파리: 본문 포커스 아웃 시 플로팅 인풋이 화면 중간(iPhone 844px 화면 기준 키보드 제외 508px 지점)에 먼저 튀어나온 뒤 바닥으로 떨어지는 2단계 시차 잔존' } },
     ],
     keyFinding: {
-      en: 'Physical header isolation achieves 100% motionless header lock and runs flawlessly in PWA. However, in Safari browser mode, Safari throttles viewport resize events for 350ms on keyboard dismiss, causing the floating bar to pop up mid-screen (at 508px height) before dropping to bottom, along with late scroll un-anchoring.',
-      ko: '상단 헤더를 물리적으로 분리하여 어떤 상황에서도 헤더가 1픽셀도 흔들리지 않는 고정을 달성했고 PWA에서는 완벽히 동작합니다. 그러나 일반 사파리 탭에서는 사파리가 키보드가 내려가는 0.35초 동안 화면 크기 변경 알림(visualViewport.resize)을 브라우저 툴바 보호를 위해 일부러 지연시킵니다. 이 때문에 키보드가 닫힐 때 플로팅 바가 화면 정중앙(508px 높이)에 먼저 툭 튀어나왔다가 0.35초 뒤 바닥으로 떨어지는 어색한 2단계 시차와 스크롤 늦은 복원이 관찰되었습니다.',
+      en: 'Physical header isolation achieves 100% motionless header lock and runs flawlessly in PWA. However, in Safari browser mode, Safari throttles viewport resize events for 350ms on keyboard dismiss, causing the floating bar to pop up mid-screen (at 508px height) before dropping to bottom, along with late scroll un-anchoring. (The sandbox here runs on the frozen v1.0 engine, which no longer has this flaw; the pop is the observation of the time.)',
+      ko: '상단 헤더를 물리적으로 분리하여 어떤 상황에서도 헤더가 1픽셀도 흔들리지 않는 고정을 달성했고 PWA에서는 완벽히 동작합니다. 그러나 일반 사파리 탭에서는 사파리가 키보드가 내려가는 0.35초 동안 화면 크기 변경 알림(visualViewport.resize)을 브라우저 툴바 보호를 위해 일부러 지연시킵니다. 이 때문에 키보드가 닫힐 때 플로팅 바가 화면 정중앙(508px 높이)에 먼저 툭 튀어나왔다가 0.35초 뒤 바닥으로 떨어지는 어색한 2단계 시차와 스크롤 늦은 복원이 관찰되었습니다. (이 샌드박스는 이 결함이 없는 v1.0 엔진 사본 위에서 돌아갑니다. 팝은 당시의 관찰입니다.)',
     },
     nextDecision: {
       en: 'Abandon passive viewport waiting (waiting for 350ms resize event) and implement Focus-Driven Synchronous Teardown in EXP-03-E to restore full-screen height, scroll position, and bottom bar instantaneously at 0ms upon touch.',
@@ -387,20 +388,20 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', status: 'pass', comment: { en: 'Zero mid-screen pop; floating bar seats cleanly at bottom on dismiss', ko: '중간 뜸 현상 완전 제거 및 닫힘 시 바닥 즉시 안착 완료' } },
     ],
     keyFinding: {
-      en: 'Synchronous viewport restoration eliminates mid-screen pop and dismiss latency. However, when tapping an inline text input, the 1-step immediate suppression (display: none) causes a sudden 60px layout reflow under the touching finger while Safari calculates focus rects. Combined with missing boundary safe padding (16px alignPadding), Safari WebKit loses touch hit-testing, causing the keyboard to bounce and dismiss immediately. Traditional direct suppression techniques hit an impassable wall here (almost gave up on the project).',
-      ko: '동기적 복원으로 화면 중간 뜸과 닫힘 시차는 해결함. 그러나 본문 폼 인풋을 터치할 때 플로팅 바가 1단계 즉각 증발(display: none)하면서 손가락 아래에서 순간적인 60px 높이 리플로우가 발생하고, 16px 안전 여백(Boundary Margin) 부재로 인해 사파리 WebKit의 터치 히트 테스팅 및 뷰포트 정렬 휴리스틱이 깨져 키보드가 올라오다 도로 닫혀버리는(Bounce & Dismiss) 결함 발생. 단순한 DOM 강제 은닉이나 억제 방식으로는 해결할 수 없어 거의 포기할 뻔했던 최대의 난관 지점.',
+      en: 'Synchronous viewport restoration eliminates mid-screen pop and dismiss latency. However, when tapping an inline text input, the 1-step immediate suppression (display: none) causes a sudden 60px layout reflow under the touching finger while Safari calculates focus rects. Combined with missing boundary safe padding (16px alignPadding), Safari WebKit loses touch hit-testing, causing the keyboard to bounce and dismiss immediately. Traditional direct suppression techniques hit an impassable wall here (almost gave up on the project). (The sandbox runs on the frozen v1.0 engine, where the bounce no longer happens; the failure is the observation of the time.)',
+      ko: '동기적 복원으로 화면 중간 뜸과 닫힘 시차는 해결함. 그러나 본문 폼 인풋을 터치할 때 플로팅 바가 1단계 즉각 증발(display: none)하면서 손가락 아래에서 순간적인 60px 높이 리플로우가 발생하고, 16px 안전 여백(Boundary Margin) 부재로 인해 사파리 WebKit의 터치 히트 테스팅 및 뷰포트 정렬 휴리스틱이 깨져 키보드가 올라오다 도로 닫혀버리는(Bounce & Dismiss) 결함 발생. 단순한 DOM 강제 은닉이나 억제 방식으로는 해결할 수 없어 거의 포기할 뻔했던 최대의 난관 지점. (이 샌드박스는 튕김이 없는 v1.0 엔진 사본 위에서 돌아갑니다. 실패는 당시의 관찰입니다.)',
     },
     nextDecision: {
-      en: 'Develop 2-step suppression (visibility: hidden -> display: none upon keyboard open) and In-Viewport Boundary Evasion in EXP-03-F (FINAL WINNER): Preserve 60px slot geometry during touch while proactively aligning focused body inputs into the safe visible zone ([topLimit, bottomLimit] with 16px padding).',
-      ko: '터치 순간에는 60px 레이아웃 높이를 그대로 보존하는 2단계 서프레션(visibility: hidden ➔ 키보드 완전히 열린 후 display: none)과, 포커스된 인풋을 안전 가시 영역(16px 패딩) 안쪽으로 부드럽게 사전 정렬하는 경계 회피 전략(EXP-03-F, 최종 완성형)으로 연계.',
+      en: 'Develop 2-step suppression (visibility: hidden -> display: none upon keyboard open) and In-Viewport Boundary Evasion in EXP-03-F: Preserve 60px slot geometry during touch while proactively aligning focused body inputs into the safe visible zone ([topLimit, bottomLimit] with 16px padding).',
+      ko: '터치 순간에는 60px 레이아웃 높이를 그대로 보존하는 2단계 서프레션(visibility: hidden ➔ 키보드 완전히 열린 후 display: none)과, 포커스된 인풋을 안전 가시 영역(16px 패딩) 안쪽으로 부드럽게 사전 정렬하는 경계 회피 전략(EXP-03-F)으로 연계.',
     },
   },
   {
     id: 'exp03_f',
-    status: 'winner',
+    status: 'passed',
     title: {
-      en: 'EXP-03-F: In-Viewport Boundary Evasion (FINAL WINNER)',
-      ko: 'EXP-03-F: 뷰포트 경계 회피를 통한 사파리 개입 무력화 (최종 완성형)',
+      en: 'EXP-03-F: In-Viewport Boundary Evasion',
+      ko: 'EXP-03-F: 뷰포트 경계 회피를 통한 사파리 개입 무력화',
     },
     hypothesis: {
       en: 'Proactively aligning focused body elements within [topLimit, bottomLimit] with 16px safe padding and 2-step suppression will eliminate the trigger condition for Safari aggressive compositor scroll, achieving 100% stable keyboard presentation on bottom inputs.',
@@ -419,20 +420,20 @@ export const LABS_DATA: LabInfo[] = [
       ko: '네이티브 앱 수준의 최종 완성 달성! 브라우저와 억지로 싸우는 대신 사파리의 개입 조건 자체를 사전에 소멸시키는 16px 경계 회피(Boundary Evasion)와 터치 지오메트리를 보존하는 2단계 서프레션(60px 슬롯 보존)으로 키보드 튕김까지 완벽 정복. 상단 헤더 0.0px 고정, 단일 통합 스크롤, 기준 좌표 무손실 복원까지 6개 평가 항목 100% All Pass 달성.',
     },
     nextDecision: {
-      en: 'Adopted as the core production engine of react-mobile-keyboard-layout library.',
-      ko: 'react-mobile-keyboard-layout 라이브러리의 최종 공식 프로덕션 엔진으로 채택 및 배포.',
+      en: 'Adopted as the production engine of react-mobile-keyboard-layout v0.2.0; superseded by the CSS-first consolidation (EXP-04-A). Kept as-is on engine-v0.2/.',
+      ko: 'react-mobile-keyboard-layout v0.2.0의 프로덕션 엔진으로 채택·배포. 이후 CSS-first 통합(EXP-04-A)이 대체했고, engine-v0.2/에 그대로 보존.',
     },
   },
 
   /* ==========================================================================
-     PHASE 4: CSS-First Consolidation (개념 정리와 CSS 이관)
+     PHASE 4: CSS-First Consolidation & Unlocked Window Scroll (CSS 이관, 그리고 문서 스크롤 개방)
      ========================================================================== */
   {
     id: 'exp04_a',
-    status: 'winner',
+    status: 'passed',
     title: {
-      en: 'EXP-04-A: CSS-First Consolidation (CURRENT)',
-      ko: 'EXP-04-A: 개념 정리와 CSS 이관 (현재 버전)',
+      en: 'EXP-04-A: CSS-First Consolidation',
+      ko: 'EXP-04-A: 개념 정리와 CSS 이관',
     },
     hypothesis: {
       en: 'Everything EXP-01 through EXP-03-F uncovered - physical header isolation, tap interception, 2-step suppression, scroll anchoring, native picker pass-through, keyboard height - can be restated as CSS state selectors, leaving JavaScript only the values CSS cannot read. If that holds, the layout engine, its rule matrix and its FSM can be deleted without losing behaviour.',
@@ -447,12 +448,41 @@ export const LABS_DATA: LabInfo[] = [
       { id: '3-1', status: 'pass', comment: { en: 'Dismiss restores synchronously through :not(:focus-within), without waiting for the delayed resize event', ko: '닫힘은 :not(:focus-within)으로 동기 복귀 — 지연되는 resize 이벤트를 기다리지 않음' } },
     ],
     keyFinding: {
-      en: 'Moved to CSS: state resolution (:focus-within), input-bar suppression and native picker pass-through (:has()), body anchoring (column-reverse). Left in JS: publishing --rmkl-kb / --rmkl-kb-inset, tap interception with preventScroll focus, an insurance rAF top-lock, and keeping a focused body input in its reading position. With that split the whole src/core layer - layout engine, rule matrix, FSM - was deleted and all six criteria still pass.',
-      ko: 'CSS로 옮긴 것: 상태 판정(:focus-within), 입력바 서프레션과 네이티브 피커 통과(:has()), 본문 앵커(column-reverse). JS에 남은 것: --rmkl-kb / --rmkl-kb-inset 갱신, preventScroll 포커스로 하는 탭 가로채기, 보험용 rAF 탑락, 포커스된 본문 입력의 읽던 위치 유지. 이 갈래로 src/core(레이아웃 엔진·룰 매트릭스·FSM)를 통째로 지우고도 6개 항목이 그대로 통과했다.',
+      en: 'Moved to CSS: state resolution (:focus-within), input-bar suppression and native picker pass-through (:has()), body anchoring (column-reverse). Left in JS: publishing --rmkl-kb / --rmkl-kb-inset, tap interception with preventScroll focus, an insurance rAF top-lock, and keeping a focused body input in its reading position. With that split the whole src/core layer - layout engine, rule matrix, FSM - was deleted and all six criteria still pass. (EXP-04-B later measured that WebKit bottom-anchors a column-reverse body only at scrollTop 0; the hook now holds the bottom edge for the floating bar as well.)',
+      ko: 'CSS로 옮긴 것: 상태 판정(:focus-within), 입력바 서프레션과 네이티브 피커 통과(:has()), 본문 앵커(column-reverse). JS에 남은 것: --rmkl-kb / --rmkl-kb-inset 갱신, preventScroll 포커스로 하는 탭 가로채기, 보험용 rAF 탑락, 포커스된 본문 입력의 읽던 위치 유지. 이 갈래로 src/core(레이아웃 엔진·룰 매트릭스·FSM)를 통째로 지우고도 6개 항목이 그대로 통과했다. (뒤에 EXP-04-B가 WebKit은 column-reverse 본문을 scrollTop 0에서만 하단 고정한다는 것을 측정했고, 훅이 플로팅 바 포커스 중에도 하단 가장자리를 붙잡게 됐다.)',
     },
     nextDecision: {
-      en: 'Adopted as the default behaviour of the current package. EXP-03-F is kept as-is on an isolated copy of the v0.2.0 engine (apps/showcase/src/labs/engine-v0.2/).',
-      ko: '현재 패키지의 기본 동작으로 채택. EXP-03-F는 v0.2.0 엔진 사본(apps/showcase/src/labs/engine-v0.2/)으로 격리해 그대로 남긴다.',
+      en: 'The shell that PageLayout uses whenever the keyboard is up. Shipped as SubpageLayout in v1.0.0 and briefly the default again while 04-B was being cleaned; removed from the package in v2.0.0, because 04-B is this shell plus an ordinary page around it and covers the chat screen too. The code lives on here, on the frozen v1.0 engine copy (apps/showcase/src/labs/engine-v1.0/), as the record of how the shell was found.',
+      ko: '키보드가 떠 있을 때 PageLayout이 쓰는 셸. v1.0.0에 SubpageLayout으로 출시되었고 04-B를 정리하는 동안 잠시 다시 기본이었으나, 04-B가 이 셸에 보통 페이지를 두른 것이라 채팅 화면까지 덮으므로 v2.0.0에서 패키지에서 제거. 코드는 셸을 찾아낸 과정의 기록으로 얼린 v1.0 엔진 사본(apps/showcase/src/labs/engine-v1.0/)에 남아 있다.',
+    },
+  },
+  {
+    id: 'exp04_b',
+    status: 'winner',
+    title: {
+      en: 'EXP-04-B: Unlocked Window Scroll & Loose Coupling',
+      ko: 'EXP-04-B: 윈도우 스크롤 개방과 루즈 커플링 오버레이',
+    },
+    hypothesis: {
+      en: 'Unlocking the root container to native window scroll while isolating Header and FloatingInput as independent floating overlays will allow Mobile Safari to collapse the address bar naturally on scroll, expanding the viewport to 100lvh while tap interception prevents window pan.',
+      ko: '최상위 루트 잠금을 해제하고 본문을 브라우저 윈도우 스크롤에 위임하며 헤더와 하단 인풋을 독립 플로팅 오버레이로 분리하면, 스크롤 시 모바일 사파리 주소창이 자연스럽게 축소(Collapse)되어 전체 화면(100lvh)을 확보하면서도 탭 가로채기를 통해 키보드 오픈 시 윈도우 밀림을 방지할 수 있는지 검증한다.',
+    },
+    evaluations: [
+      { id: '1-1', status: 'pass', comment: { en: 'Header stays at 0 in both modes: a fixed overlay while the document scrolls, part of the shell while the keyboard is up', ko: '두 모드 모두 헤더 0 고정 — 문서 스크롤 중엔 fixed 오버레이, 키보드 중엔 셸의 일부' } },
+      { id: '1-2', status: 'pass', comment: { en: 'One scroller at a time: the document, then the shell body; a drag on the composer no longer chains into the frozen document', ko: '한 번에 스크롤러 하나 — 문서, 그다음 셸 본문. 작성기 드래그가 얼린 문서로 체이닝되지 않음' } },
+      { id: '1-3', status: 'pass', comment: { en: 'Composer sits flush on the keyboard inset in the shell; the URL bar collapses to 100lvh while the document scrolls', ko: '셸에서 작성기가 키보드 인셋에 밀착; 문서 스크롤 중엔 주소창이 100lvh로 접힘' } },
+      { id: '1-4', status: 'pass', comment: { en: 'The document never moves: capped at "offset + one viewport", its reading position survives every keyboard cycle unchanged', ko: '문서는 한 번도 움직이지 않음 — "오프셋 + 뷰포트 하나"로 캡되어 모든 키보드 사이클에서 읽던 위치 그대로' } },
+      { id: '2-1', status: 'pass', comment: { en: 'Bottom body input keeps the keyboard: the tap locks at pointerup and its stray mousedown is refused', ko: '최하단 본문 인풋이 키보드를 유지 — pointerup에 잠그고 빗나간 mousedown은 거부' } },
+      { id: '3-1', status: 'pass', comment: { en: 'Dismiss flips back through :not(:focus-within) with nothing written back', ko: '닫힘은 :not(:focus-within)으로 복귀, 되돌려 쓰는 값 없음' } },
+    ],
+    keyFinding: {
+      en: 'Two scroll owners are the whole problem. Every bug the first build had -- the position reset on blur, the 15px-per-cycle drift, the 40px push, the tap that died as the keyboard opened -- was a coordinate handed from the document to the shell and back while Safari changed the terms in between. Locking the document with position: fixed resets its offset and makes Safari re-expand its URL bar under the finger (spike B: 3/3 taps died); overflow: hidden alone keeps the offset but Safari pans +507 for the focused input and touch still scrolls the page (spike A). Capping the document at exactly "scroll position + one viewport" with overflow: hidden (spike C) leaves Safari nothing to pan, keeps the offset, and keeps the URL bar as it was. With that, the mode is decided in CSS (:focus-within / :has()) as in EXP-04-A, and JS does one thing: publish the cap as the document scrolls (the way the engine publishes the keyboard height) and carry the position into the column-reverse shell scroller, once, on entry. Nothing is written back on unlock. Two more device findings shaped the tap itself: focusing at pointerdown swapped the layout mid-gesture (a drag from an input scrolled the document and the shell at once) and iOS pans the visual viewport itself if the caret is left under the keyboard for ~35ms, so the tap locks at pointerup, the inset applies at once, and the mousedown the same tap synthesizes elsewhere is refused instead of blurring the input. One finding reached the engine: a column-reverse body is bottom-anchored by WebKit only at scrollTop 0 -- scrolled up, a shrinking box keeps its top-based offset and the newest content slides behind the keyboard -- so useMobileKeyboard now holds the bottom edge while the floating bar has the focus. Two more came from the shipped layout on the phone: the body-input anchor\'s blur grace window hijacked a composer tap that followed within a second (the reading position was lost), and revealing a hidden input with scrollIntoView could scroll the document itself while the keyboard was closing and take the header with it -- the hook now yields to the bar inside the grace window and reveals by scrolling the body alone. The last one explained every report that was left: in most opens iOS Safari shrinks the layout viewport by part or all of the keyboard height (innerHeight 695 -> 601 for a top input, 695 -> 396 for the bottom one) and scrolls the window into the room a cap frozen in px leaves -- 94px, 299px -- taking the fixed shell with it: header off the top, a body-black void where the composer should be, the bottom input hidden, a different offset handed back on blur. The cap is now calc(offset + 100%): JS publishes the offset, CSS supplies the live viewport, the room is zero whatever Safari does to innerHeight. And still 5 of 18 opens rode up: Safari\'s caret reveal scrolls the window past the document\'s own maximum (y = offset + 94, + 299) and, with the URL bar pulled open, slides the visual viewport 40px without moving the window -- no overflow rule is consulted. So the one JS duty left is to enforce the declaration: while the shell is up, a scroll that finds the window off the published offset puts it back. It is 04-A\'s lockWindowTop with its target generalized from 0 to the reading offset, on the event instead of a 350ms timer. One more from the same traces: with the URL bar collapsed the cap itself shoved the document up 40px at focus, because 100% of html is iOS\'s small viewport (695) while innerHeight is 735 -- the cap is offset + 100lvh now, never less than the viewport; the room it leaves is the guard\'s to close. Then the same traces, read for the inset instead of the header: in ~40% of opens --rmkl-kb-inset settled at 4px or 209px against a 303px keyboard. Safari had shrunk innerHeight as the keyboard opened, the guard had put the window back, innerHeight had returned -- and iOS fires no resize for that, only scroll. The hook measured on resize alone, so the composer and the bottom input sat behind the keyboard while the header read 0. The hook now measures on scroll as well. Then the numbers themselves were audited -- which of them come from a specification and which from measuring Safari: the tap\'s 600ms click window and the body input\'s 1000ms blur grace were the second kind, and both are now bounded by events (the click, a cancelled pointer or the next pointerdown; the next keyboard input\'s focusin). What is left that no spec gives is keyboardThreshold -- Safari has no VirtualKeyboard API, so the keyboard is inferred from geometry and needs a noise floor -- and the 1px nudge with its 10px dead zone, which waited on the next experiment. That experiment: build the shell before focusing. Safari decides where to reveal a caret at focus time, and with the shell keyed to :focus the document was still the scroller then. Keyed to one attribute the tap sets first, 47 opens produced 0 pans (9 of 48 before); the nudge and dead zone went (30 opens, same profile); PageLayout got its own hook so SubpageLayout\'s 350ms top-lock no longer exists on its path; the inset formula gained the visual viewport\'s scale so it is right under zoom. What remains: the keyboard threshold (a floor over the URL bar\'s ~40px transition noise, the one number no spec gives), one bit of JS state (the shell must exist before the focus, which :focus cannot express), and a rare pan when the keyboard itself grows after opening (4 of 103, all put back by the guard within 40ms).',
+      ko: '스크롤 주인이 둘이라는 것이 문제의 전부였다. 첫 구현의 모든 버그 -- 블러 시 위치 리셋, 사이클당 15px 드리프트, 40px 밀림, 키보드가 열리며 죽는 탭 -- 는 문서와 셸 사이에서 좌표를 주고받는 동안 Safari가 조건을 바꿔서 생겼다. position: fixed로 문서를 잠그면 오프셋이 리셋되고 Safari가 손가락 아래에서 주소창을 다시 펼친다(스파이크 B: 탭 3/3 사망). overflow: hidden만 쓰면 오프셋은 남지만 Safari가 포커스 인풋을 향해 +507 밀고 터치가 뒤 페이지를 밀어낸다(스파이크 A). 문서 높이를 정확히 "스크롤 위치 + 뷰포트 하나"로 캡하고 overflow: hidden(스파이크 C)을 걸면 Safari가 밀 곳이 없고, 오프셋도 주소창도 그대로다. 그 위에서 모드는 EXP-04-A처럼 CSS(:focus-within / :has())가 결정하고, JS는 문서가 스크롤될 때 캡을 발행하고(엔진이 키보드 높이를 발행하는 방식 그대로) 진입 시 column-reverse 셸 스크롤러로 위치를 한 번 옮기는 일만 한다. 해제 시엔 아무것도 되돌려 쓰지 않는다. 탭 자체에 대한 실기기 발견 둘: pointerdown 포커스는 제스처 도중 레이아웃을 바꿔 인풋을 짚고 끌면 문서와 셸이 동시에 스크롤됐고, 캐럿을 키보드 뒤에 ~35ms 두면 iOS가 visual viewport를 스스로 밀어올린다. 그래서 pointerup에 잠그고, inset은 즉시 반영하며, 같은 탭이 다른 곳에 합성하는 mousedown은 blur 대신 거부한다. 발견 하나는 엔진까지 갔다: column-reverse 본문은 WebKit에서 scrollTop 0일 때만 하단 고정이고, 위로 스크롤된 상태에서 상자가 줄면 위쪽 기준 오프셋을 유지해 최신 내용이 키보드 뒤로 사라진다. 그래서 useMobileKeyboard가 플로팅 바 포커스 중엔 하단 가장자리를 붙잡는다. 출시된 레이아웃을 폰에서 쓰며 둘이 더 나왔다: 본문 인풋 blur의 유예창이 1초 안에 이어진 작성기 탭을 가로채 읽던 위치를 잃게 했고, 가려진 인풋을 scrollIntoView로 드러내면 키보드가 닫히는 중엔 문서까지 스크롤되어 헤더가 함께 밀렸다 -- 훅은 이제 유예창 안에서도 바에 차례를 넘기고, <main>만 스크롤해 드러낸다. 마지막 하나가 남은 보고 전부를 설명했다: iOS 사파리는 대부분의 키보드 열림에서 레이아웃 뷰포트를 키보드 높이의 일부 또는 전부만큼 줄이고(상단 인풋 innerHeight 695→601, 하단 인풋 695→396 측정), px로 얼린 캡이 남긴 여지 -- 94px, 299px -- 만큼 윈도우를 스크롤한다. 고정 셸이 함께 올라가 헤더가 사라지고, 작성기 자리에 문서 끝 너머의 까만 공백이 보이고, 하단 인풋이 숨고, blur 때 다른 오프셋이 돌아왔다. 캡은 이제 calc(offset + 100%): JS는 오프셋만 발표하고 뷰포트는 CSS의 100%가 따라가므로 사파리가 innerHeight를 어떻게 바꾸든 여지는 0이다. 그래도 18번 중 5번은 올라갔다: 사파리의 캐럿 리빌은 문서 자체의 최대치를 넘어 윈도우를 밀고(y = offset + 94, + 299), 주소창을 펼친 뒤엔 윈도우는 그대로 두고 시각 뷰포트만 40px 밀었다 -- overflow 규칙은 참조되지 않는다. 그래서 JS에 남은 한 가지 의무는 선언을 집행하는 것: 셸이 떠 있는 동안 윈도우가 발표한 오프셋을 벗어나면 되돌린다. 04-A의 lockWindowTop을 목표 0 대신 읽던 위치로 일반화하고, 350ms 타이머 대신 이벤트로 트리거한 것이다. 같은 트레이스에서 하나 더: 주소창이 접힌 상태에선 캡 자체가 포커스 순간 문서를 40px 밀어올렸다 -- iOS에서 html의 100%는 innerHeight가 735일 때도 작은 뷰포트(695)이기 때문. 캡은 이제 offset + 100lvh로 뷰포트보다 작아지는 일이 없고, 남는 여지는 가드가 닫는다. 그리고 같은 트레이스를 헤더가 아니라 inset으로 다시 읽으니, 열림의 ~40%에서 --rmkl-kb-inset이 키보드 303px에 대해 4px나 209px로 정착해 있었다. 사파리가 키보드와 함께 innerHeight를 줄였고, 가드가 윈도우를 되돌렸고, innerHeight가 돌아왔는데 -- iOS는 그때 resize를 보내지 않는다, scroll만 보낸다. 훅은 resize에서만 측정했으므로 헤더는 0인데 작성기와 하단 인풋은 키보드 뒤에 있었다. 훅은 이제 scroll에서도 측정한다. 그 다음엔 숫자 자체를 감사했다 -- 어느 것이 명세에서 왔고 어느 것이 Safari를 재서 나왔는가. 탭의 600ms 클릭 대기창과 본문 인풋의 1000ms blur 유예가 후자였고, 둘 다 이제 이벤트로 닫힌다(click·pointercancel·다음 pointerdown; 다음 키보드 인풋의 focusin). 명세가 주지 않아 남은 것은 keyboardThreshold -- Safari에 VirtualKeyboard API가 없어 키보드를 기하로 추론하므로 노이즈 바닥이 필요하다 -- 그리고 다음 실험에 달렸던 1px 넛지와 10px 데드존이다. 그 실험: 셸을 포커스보다 먼저 만든다. Safari는 캐럿을 어디로 드러낼지 포커스 시점에 정하는데, 셸이 :focus에 걸려 있으면 그때 문서는 아직 스크롤러였다. 탭이 먼저 세팅하는 속성 하나에 걸자 47회 열림에 밀림 0(직전 48회 중 9회); 넛지와 데드존은 사라졌고(30회, 같은 프로필); PageLayout이 자기 훅을 갖자 SubpageLayout의 350ms 탑락은 이 경로에 존재하지 않게 되었으며; inset 공식은 시각 뷰포트의 scale을 얻어 줌 아래에서도 맞다. 남은 것: 키보드 임계값(주소창 ~40px 전환 노이즈 위의 바닥, 명세가 주지 않는 유일한 숫자), JS 상태 한 비트(포커스보다 먼저 있어야 하는 셸은 :focus로 표현 불가), 그리고 키보드가 열린 뒤 스스로 자랄 때의 드문 밀림(103회 중 4회, 전부 가드가 40ms 안에 되돌림).',
+    },
+    nextDecision: {
+      en: 'Final choice. Shipped as PageLayout, from v2.0.0 the package\'s only layout: EXP-04-A\'s shell whenever the keyboard is up, an ordinary page whenever it is not. The API is the layout and two refs -- a footer function that is told the keyboard state, a ref handle with scrollToBottom -- with no hook to call. On the phone the lab renders this code from its engine copy; the last rounds are in the findings above.',
+      ko: '최종 선택. PageLayout으로 출시, v2.0.0부터 패키지의 유일한 레이아웃: 키보드가 떠 있을 때는 EXP-04-A의 셸, 아닐 때는 보통 페이지. API는 레이아웃과 레퍼런스 둘 -- 키보드 상태를 받는 footer 함수, scrollToBottom을 가진 ref 핸들 -- 이고 부를 훅이 없다. 폰에서 랩은 이 코드를 엔진 사본에서 렌더하며, 마지막 라운드들은 위 파인딩에 있다.',
     },
   },
 ]
+

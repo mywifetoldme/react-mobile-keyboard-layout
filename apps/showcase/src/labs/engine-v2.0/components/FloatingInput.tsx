@@ -106,13 +106,13 @@ export const FloatingInput = ({
     <div
       role="region"
       aria-label="Floating input bar"
-      className={`rmkl-floating-input-wrapper${isKeyboardOpen ? ' rmkl-floating-input-wrapper--keyboard-open' : ''}${isSuppressed ? ' rmkl-floating-input-wrapper--suppressed' : ''} ${className}`.trim()}
+      className={`rmkl-v20-floating-input-wrapper${isKeyboardOpen ? ' rmkl-v20-floating-input-wrapper--keyboard-open' : ''}${isSuppressed ? ' rmkl-v20-floating-input-wrapper--suppressed' : ''} ${className}`.trim()}
       style={{
         ...style,
         ...suppressedStyle,
       }}
     >
-      <div className="rmkl-floating-input-bar">
+      <div className="rmkl-v20-floating-input-bar">
         <textarea
           ref={textareaRef}
           rows={1}
@@ -121,7 +121,7 @@ export const FloatingInput = ({
           disabled={disabled}
           aria-label={placeholder}
           {...restTextareaProps}
-          className={`rmkl-floating-input-textarea ${textareaClassName}`.trim()}
+          className={`rmkl-v20-floating-input-textarea ${textareaClassName}`.trim()}
           style={textareaStyle}
           value={value}
           onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -170,7 +170,7 @@ export const FloatingInput = ({
           aria-label="Send"
           disabled={!canSubmit}
           {...restButtonProps}
-          className={`rmkl-floating-input-send${canSubmit ? ' rmkl-floating-input-send--active' : ''} ${buttonClassName}`.trim()}
+          className={`rmkl-v20-floating-input-send${canSubmit ? ' rmkl-v20-floating-input-send--active' : ''} ${buttonClassName}`.trim()}
           style={buttonStyle}
           onClick={(e) => {
             restButtonProps.onClick?.(e)

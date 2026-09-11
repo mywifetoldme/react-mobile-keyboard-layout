@@ -1,0 +1,222 @@
+/* ------------------------------------------------------------------------------------------------
+   PageLayout — the document scrolls until an input is tapped; then a shell takes the screen.
+
+   Two states, decided by focus, in CSS:
+     idle    no keyboard input focused    the document scrolls (Safari collapses its URL bar);
+                                          header and footer are sticky, in flow
+     shell   a keyboard input is focused  the root is a fixed shell, <main> scrolls, the footer
+                                          sits on the keyboard inset; the document is capped at
+                                          its offset (--rmkl-page-lock-y) + one viewport and frozen,
+                                          so it keeps its place and Safari has nothing to pan
+
+   The shell is keyed to the inputs that raise the keyboard (the list mirrors isKeyboardTextInput
+   and EXP-04-A's shell): a native picker must not flip it — iOS does not resize the viewport for
+   one, and no position is handed over for it.
+
+   Why the document is capped rather than position: fixed: fixing the body resets its offset to 0
+   and makes iOS Safari re-expand its URL bar under the finger, which moves the tapped input and
+   kills the tap (measured: 3/3 taps died). See the EXP-04-B lab for the measurements.
+   ------------------------------------------------------------------------------------------------ */
+
+/* ---- theme: every component reads these; override them to restyle ---- */
+:root {
+  --rmkl-bg: #ffffff;
+  --rmkl-text: #18181b;
+  --rmkl-border: #e4e4e7;
+  --rmkl-header-height: 56px;
+  --rmkl-header-bg: rgba(255, 255, 255, 0.85);
+  --rmkl-header-border: #e4e4e7;
+  --rmkl-input-bg: #f4f4f5;
+  --rmkl-input-text: #18181b;
+  --rmkl-input-border: #e4e4e7;
+  --rmkl-primary: #2563eb;
+  --rmkl-primary-text: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rmkl-bg: #09090b;
+    --rmkl-text: #f4f4f5;
+    --rmkl-border: #27272a;
+    --rmkl-header-bg: rgba(9, 9, 11, 0.85);
+    --rmkl-header-border: #27272a;
+    --rmkl-input-bg: #18181b;
+    --rmkl-input-text: #f4f4f5;
+    --rmkl-input-border: #27272a;
+    --rmkl-primary: #3b82f6;
+    --rmkl-primary-text: #ffffff;
+  }
+}
+
+/* ---- the document: handed to the browser while idle, capped and frozen while the shell is up ---- */
+html:has(.rmkl-page-root) {
+  height: auto;
+  min-height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+body:has(.rmkl-page-root) {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+  position: static;
+}
+
+html:has(.rmkl-page-root[data-rmkl-shell]) {
+  overflow: hidden;
+}
+body:has(.rmkl-page-root[data-rmkl-shell]) {
+  /* offset + one full viewport, from CSS. The cap's one hard requirement is to never clamp below
+     the offset: 100lvh (URL bar collapsed) is never less than innerHeight, whereas 100% of html is
+     iOS's small viewport and, with the bar collapsed (695 vs 735), shoved the document up 40px at
+     focus. The room the cap leaves -- the 40px of an expanded bar, or whatever Safari shrinks
+     the viewport by as the keyboard opens (measured 695 -> 396) -- is closed by the layout's
+     guard, which puts the window back when Safari pans it. */
+  height: calc(var(--rmkl-page-lock-y, 0px) + 100lvh);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---- idle: document flow, sticky header and footer ---- */
+.rmkl-page-root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  background-color: var(--rmkl-bg);
+  color: var(--rmkl-text);
+  /* no double-tap-to-zoom arbitration: the click follows the tap in ~100ms instead of ~400ms */
+  touch-action: manipulation;
+}
+
+.rmkl-page-header-slot,
+.rmkl-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+.rmkl-page-header {
+  height: var(--rmkl-header-height, 56px);
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: content-box;
+  background-color: var(--rmkl-header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rmkl-header-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.rmkl-page-body-container {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* column-reverse: the end of the content is the scroll origin in the shell, so the keyboard inset
+   keeps the newest content in view and the hook can hold a focused body input in place */
+.rmkl-page-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column-reverse;
+  width: 100%;
+  overflow: visible;
+}
+
+.rmkl-page-body-inner {
+  margin-bottom: auto;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rmkl-page-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  background-color: var(--rmkl-bg);
+  border-top: 1px solid var(--rmkl-border);
+}
+
+/* ---- shell: while data-rmkl-shell is on the root ----
+   The attribute, not :focus, is the shell's key: the tap sets it *before* focusing, so when Safari
+   decides where to reveal the caret the document is already frozen and the input already sits in
+   the shell's own scroller. Keyed to :focus, the shell existed only after the focus, and Safari
+   panned the document in 9 of 48 opens. The attribute follows focus otherwise (set on focusin of a
+   keyboard input, removed when the focus leaves the layout's keyboard inputs). */
+.rmkl-page-root[data-rmkl-shell] {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  display: block;
+  overflow: hidden;
+  touch-action: none;
+  z-index: 200;
+}
+
+.rmkl-page-root[data-rmkl-shell] .rmkl-page-header-slot,
+.rmkl-page-root[data-rmkl-shell] .rmkl-page-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.rmkl-page-root[data-rmkl-shell] .rmkl-page-body-container {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+  padding-top: calc(var(--rmkl-header-height, 56px) + env(safe-area-inset-top, 0px));
+  /* Safari keeps the layout viewport while the keyboard is up, so the covered part is reserved here */
+  padding-bottom: var(--rmkl-kb-inset, 0px);
+}
+
+.rmkl-page-root[data-rmkl-shell] .rmkl-page-body {
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
+.rmkl-page-root[data-rmkl-shell] .rmkl-page-footer {
+  position: relative;
+  z-index: 40;
+  /* a drag on the bar must not become a document scroll: overflow: hidden does not stop touch */
+  touch-action: none;
+}
+
+/* the textarea scrolls its own lines; when they end, the gesture must not chain into the document */
+.rmkl-page-footer textarea {
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+/* ---- a text input in the body has the focus → the floating bar steps aside (2-step, as EXP-04-A's shell) ---- */
+.rmkl-page-root:has(.rmkl-page-body textarea:focus) .rmkl-floating-input-wrapper,
+.rmkl-page-root:has(.rmkl-page-body [contenteditable]:not([contenteditable="false"]):focus) .rmkl-floating-input-wrapper,
+.rmkl-page-root:has(.rmkl-page-body input:not([type]):focus) .rmkl-floating-input-wrapper,
+.rmkl-page-root:has(.rmkl-page-body input:is([type="text"], [type="search"], [type="url"], [type="tel"], [type="email"], [type="password"], [type="number"]):focus) .rmkl-floating-input-wrapper {
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+  max-height: max(0px, calc(var(--rmkl-floating-slot, 240px) - var(--rmkl-kb, 0px)));
+}

@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useMobileKeyboard, KEYBOARD_HEIGHT_CSS_VAR, KEYBOARD_INSET_CSS_VAR } from './useMobileKeyboard'
+import { usePageKeyboard, KEYBOARD_HEIGHT_CSS_VAR, KEYBOARD_INSET_CSS_VAR } from './usePageKeyboard'
 
 /** Minimal stand-in for window.visualViewport, which jsdom does not implement. */
 class FakeVisualViewport extends EventTarget {
+  scale = 1
   constructor(public height: number) {
     super()
   }
@@ -41,17 +42,10 @@ const cssVar = (name: string) => document.documentElement.style.getPropertyValue
 const kbVar = () => cssVar(KEYBOARD_HEIGHT_CSS_VAR)
 const insetVar = () => cssVar(KEYBOARD_INSET_CSS_VAR)
 
-const pointerDownOn = (el: Element) => ({ target: el }) as unknown as PointerEvent
 
-// rAF is driven by hand so the top-lock loop can be stepped frame by frame
+// performance.now() is stubbed so the tests can state that no timing is involved
 let frames: FrameRequestCallback[] = []
 let now = 0
-const runFrame = (at: number) => {
-  now = at
-  const pending = frames
-  frames = []
-  pending.forEach((cb) => cb(at))
-}
 
 // ResizeObserver is driven by hand too: `sizeBody` changes the mocked clientHeight and notifies
 let resizeCallbacks: ResizeObserverCallback[] = []
@@ -77,10 +71,12 @@ const makeBody = (height: number) => {
   let scrollTop = 0
   Object.defineProperty(body, 'clientHeight', { get: () => clientHeight, configurable: true })
   Object.defineProperty(body, 'scrollTop', { get: () => scrollTop, set: (v: number) => (scrollTop = v), configurable: true })
+  body.getBoundingClientRect = () => ({ top: 0, bottom: clientHeight, height: clientHeight }) as DOMRect
+  body.scrollBy = vi.fn() as unknown as typeof body.scrollBy
   const input = document.createElement('input')
   input.type = 'text'
   input.scrollIntoView = vi.fn()
-  input.getBoundingClientRect = () => ({ top: clientHeight - 400 - scrollTop }) as DOMRect
+  input.getBoundingClientRect = () => ({ top: clientHeight - 400 - scrollTop, bottom: clientHeight - 400 - scrollTop + 40 }) as DOMRect
   body.appendChild(input)
   document.body.appendChild(body)
   const setHeight = (px: number) => {
@@ -95,7 +91,7 @@ const makeBody = (height: number) => {
   return { body, input, sizeBody, setHeight, notifyResize, inputTop }
 }
 
-describe('useMobileKeyboard hook', () => {
+describe('usePageKeyboard (PageLayout\'s own hook)', () => {
   beforeEach(() => {
     frames = []
     now = 0
@@ -122,19 +118,19 @@ describe('useMobileKeyboard hook', () => {
 
   it('publishes the keyboard height as --rmkl-kb (the prototype --kb) and the covered inset as --rmkl-kb-inset on Safari', () => {
     const vv = installViewport(700, 700)
-    const { result } = renderHook(() => useMobileKeyboard())
+    const { result } = renderHook(() => usePageKeyboard())
 
     expect(kbVar()).toBe('0px')
     expect(insetVar()).toBe('0px')
     expect(result.current.isKeyboardOpen).toBe(false)
-    expect(result.current.containerStyle.paddingBottom).toBe('0px')
+    expect(result.current.keyboardInset).toBe(0)
 
     // iOS Safari: innerHeight stays, visualViewport shrinks by 337px → the keyboard covers 337px
     resizeViewport(vv, 363)
     expect(kbVar()).toBe('337px')
     expect(insetVar()).toBe('337px')
     expect(result.current.isKeyboardOpen).toBe(true)
-    expect(result.current.containerStyle.paddingBottom).toBe('337px')
+    expect(result.current.keyboardInset).toBe(337)
 
     resizeViewport(vv, 700)
     expect(kbVar()).toBe('0px')
@@ -142,9 +138,55 @@ describe('useMobileKeyboard hook', () => {
     expect(result.current.isKeyboardOpen).toBe(false)
   })
 
+  it('measures the keyboard in layout pixels under pinch zoom: the visual viewport reports zoomed CSS pixels', () => {
+    // innerHeight is in layout pixels and does not change with zoom; visualViewport.height is the
+    // number of CSS pixels visible, i.e. divided by the scale. Read without the scale, a 2x zoom
+    // alone looked like a 348px keyboard, and a 2x zoom over a 303px keyboard like 499px.
+    const vv = installViewport(695, 695)
+    renderHook(() => usePageKeyboard())
+    act(() => {
+      vv.scale = 2
+      vv.height = 347.5
+      vv.dispatchEvent(new Event('resize'))
+    })
+    expect(kbVar()).toBe('0px')
+    act(() => {
+      vv.height = 196 // 392 layout px visible above the keyboard, at 2x
+      vv.dispatchEvent(new Event('resize'))
+    })
+    expect(kbVar()).toBe('303px')
+    expect(insetVar()).toBe('303px')
+  })
+
+  it('re-measures when innerHeight comes back on a scroll, not a resize -- iOS restores the layout viewport silently', () => {
+    // device: as the keyboard opens Safari shrinks innerHeight 735 -> 400 with the visual viewport at
+    // 392 (inset 8); a layout's guard scrolls the window back and innerHeight returns to 735 with only
+    // scroll events fired. Measured only on resize, the inset stayed 8px and the composer sat 335px
+    // behind the keyboard.
+    const vv = installViewport(735, 735)
+    const input = document.createElement('input')
+    input.type = 'text'
+    document.body.appendChild(input)
+    renderHook(() => usePageKeyboard())
+    input.focus()
+    act(() => {
+      setInnerHeight(400)
+      vv.height = 392
+      vv.dispatchEvent(new Event('resize'))
+    })
+    expect(insetVar()).toBe('8px')
+    act(() => {
+      setInnerHeight(735)
+      vv.dispatchEvent(new Event('scroll'))
+    })
+    expect(insetVar()).toBe('343px')
+    expect(kbVar()).toBe('343px')
+    input.remove()
+  })
+
   it('reads the keyboard height from the layout viewport shrinking (Chrome for iOS, Android) — nothing is covered, so the inset stays 0', () => {
     const vv = installViewport(700, 700)
-    const { result } = renderHook(() => useMobileKeyboard())
+    const { result } = renderHook(() => usePageKeyboard())
     const input = document.createElement('input')
     input.type = 'text'
     document.body.appendChild(input)
@@ -154,7 +196,7 @@ describe('useMobileKeyboard hook', () => {
     expect(kbVar()).toBe('337px')
     expect(insetVar()).toBe('0px')
     expect(result.current.isKeyboardOpen).toBe(true)
-    expect(result.current.containerStyle.paddingBottom).toBe('0px')
+    expect(result.current.keyboardInset).toBe(0)
 
     resizeLayoutViewport(vv, 700)
     expect(kbVar()).toBe('0px')
@@ -168,17 +210,17 @@ describe('useMobileKeyboard hook', () => {
 
   it('treats viewport changes below keyboardThreshold (browser toolbar) as keyboard closed', () => {
     const vv = installViewport(700, 700)
-    const { result } = renderHook(() => useMobileKeyboard({ keyboardThreshold: 100 }))
+    const { result } = renderHook(() => usePageKeyboard({ keyboardThreshold: 100 }))
 
     resizeViewport(vv, 650)
     expect(kbVar()).toBe('0px')
     expect(result.current.isKeyboardOpen).toBe(false)
   })
 
-  it('keeps a focused body input still when the body shrinks or grows, and reveals it (scrollIntoView block: nearest) when it shrinks', () => {
+  it('keeps a focused body input still when the body shrinks or grows, and reveals it by scrolling the body only when it shrinks', () => {
     installViewport(700, 700)
     const { body, input, sizeBody, inputTop } = makeBody(600)
-    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
 
     body.scrollTop = -200 // the feed is scrolled up a bit
     input.focus()
@@ -187,7 +229,10 @@ describe('useMobileKeyboard hook', () => {
     sizeBody(263) // keyboard: the body lost 337px at the bottom; bottom-anchoring moved the input up
     expect(inputTop()).toBe(400) // …and it was put back
     expect(body.scrollTop).toBe(-537)
-    expect(input.scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
+    // the input (400..440) now sits below the box (263): the body scrolls it in, smoothly, and
+    // nothing else -- scrollIntoView could scroll the document too and take the header with it
+    expect(body.scrollBy).toHaveBeenCalledWith({ top: 177, behavior: 'smooth' })
+    expect(input.scrollIntoView).not.toHaveBeenCalled()
 
     input.blur()
     sizeBody(600) // the body got its space back right after the blur
@@ -195,10 +240,28 @@ describe('useMobileKeyboard hook', () => {
     expect(body.scrollTop).toBe(-200)
   })
 
+  it('keeps the input still through the close however long the close takes -- the grace is the close, not a clock', () => {
+    // the grace window used to be 1000ms from the blur; a slow close (or a slow device) fell out of
+    // it and the newest line slid. The window is now "until the next keyboard input takes the focus".
+    installViewport(700, 700)
+    const { body, input, sizeBody, inputTop } = makeBody(600)
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
+
+    body.scrollTop = -200
+    input.focus()
+    sizeBody(263)
+    expect(inputTop()).toBe(400)
+    input.blur()
+    now = 5000 // far longer than any grace timer
+    sizeBody(600)
+    expect(inputTop()).toBe(400)
+    expect(body.scrollTop).toBe(-200)
+  })
+
   it('does not over-correct when the browser already clamped the offset as the body grew', () => {
     installViewport(700, 700)
     const { body, input, sizeBody, inputTop } = makeBody(600)
-    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
 
     body.scrollTop = -200
     input.focus()
@@ -215,7 +278,7 @@ describe('useMobileKeyboard hook', () => {
   it('follows the user scrolling the body while the input is focused: the position kept on close is the new one', () => {
     installViewport(700, 700)
     const { body, input, sizeBody, inputTop } = makeBody(600)
-    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
 
     body.scrollTop = -200
     input.focus()
@@ -235,7 +298,7 @@ describe('useMobileKeyboard hook', () => {
   it('ignores the scroll event the browser fires while clamping the offset to the grown box (that is not the user scrolling)', () => {
     installViewport(700, 700)
     const { body, input, sizeBody, setHeight, notifyResize, inputTop } = makeBody(600)
-    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
 
     body.scrollTop = -200
     input.focus()
@@ -254,11 +317,11 @@ describe('useMobileKeyboard hook', () => {
     expect(body.scrollTop).toBe(-200)
   })
 
-  it('corrects the scroll offset once even when two hook instances share the body (SubpageLayout next to the caller)', () => {
+  it('corrects the scroll offset once even when two hook instances share the body (PageLayout next to the caller)', () => {
     installViewport(700, 700)
     const { body, input, sizeBody, inputTop } = makeBody(600)
-    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
-    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
 
     input.focus()
     sizeBody(263)
@@ -266,27 +329,120 @@ describe('useMobileKeyboard hook', () => {
     expect(body.scrollTop).toBe(-337)
   })
 
-  it('leaves the bottom-anchoring alone while the floating bar (outside the body) has the focus', () => {
+  it('keeps the bottom edge in view while the floating bar (outside the body) has the focus', () => {
+    // WebKit keeps the TOP-based offset when a column-reverse box changes height: a body scrolled
+    // up by 200px and shrunk by 337px lands at -537, and the newest 337px slide behind the
+    // keyboard (measured on iPhone: -2347 -> -2690 for a 343px inset). Only at scrollTop 0 does it
+    // look bottom-anchored, which is why a chat sitting at its end never showed this.
     installViewport(700, 700)
-    const { body, sizeBody } = makeBody(600)
+    const { body, setHeight, notifyResize } = makeBody(600)
     const floating = document.createElement('textarea')
     document.body.appendChild(floating)
-    renderHook(() => useMobileKeyboard({ bodyRef: { current: body } }))
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
+
+    body.scrollTop = -200
+    body.dispatchEvent(new Event('scroll'))
+    floating.focus()
+
+    setHeight(263)
+    body.scrollTop = -200 - 337 // what the browser did before the observer ran
+    notifyResize()
+    expect(body.scrollTop).toBe(-200) // the same content sits above the keyboard as before
+
+    setHeight(600)
+    body.scrollTop = -200 + 337
+    notifyResize()
+    expect(body.scrollTop).toBe(-200)
+  })
+
+  it('holds the bottom edge for the floating bar even after a body input was used earlier', () => {
+    // the body-input anchor stays set after that input blurs (its grace window needs it); it must
+    // not keep the floating bar's turn from ever running -- on device the fix was dead code until
+    // the page was reloaded
+    installViewport(700, 700)
+    const { body, input, setHeight, notifyResize } = makeBody(600)
+    const floating = document.createElement('textarea')
+    document.body.appendChild(floating)
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
+
+    input.focus()
+    input.blur()
+    now = 5000 // well past the blur grace window
 
     body.scrollTop = -200
     floating.focus()
-    sizeBody(263)
-    expect(body.scrollTop).toBe(-200) // the browser keeps the bottom edge; nothing to correct
+    setHeight(263)
+    body.scrollTop = -200 - 337
+    notifyResize()
 
-    floating.blur()
-    now = 5000
-    sizeBody(600)
     expect(body.scrollTop).toBe(-200)
+  })
+
+  it('gives the bar its turn even inside the blur grace window of a body input', () => {
+    // bottom input tapped, dismissed, and the composer tapped right away (within BLUR_GRACE_MS):
+    // the grace window is for the body input's own close, not for a new lock -- on device the
+    // anchor path rewound the shell to where the body input had been
+    installViewport(700, 700)
+    const { body, input, setHeight, notifyResize } = makeBody(600)
+    const floating = document.createElement('textarea')
+    document.body.appendChild(floating)
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
+
+    input.focus()
+    input.blur()
+    now = 500 // still inside the grace window
+
+    body.scrollTop = -200
+    floating.focus()
+    setHeight(263)
+    body.scrollTop = -200 - 337
+    notifyResize()
+
+    expect(body.scrollTop).toBe(-200)
+  })
+
+  it('takes the offset at the moment the floating bar gains focus as the one to hold', () => {
+    // a caller may move the body right before focusing the bar (EXP-04-B hands the document's
+    // reading position over in a capture-phase focusin); no scroll event has been delivered yet
+    installViewport(700, 700)
+    const { body, setHeight, notifyResize } = makeBody(600)
+    const floating = document.createElement('textarea')
+    document.body.appendChild(floating)
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
+
+    body.scrollTop = -1500 // set synchronously, no scroll event
+    floating.focus()
+    setHeight(263)
+    body.scrollTop = -1500 - 337
+    notifyResize()
+
+    expect(body.scrollTop).toBe(-1500)
+  })
+
+  it('does not fight the user scrolling the body while the floating bar has the focus', () => {
+    installViewport(700, 700)
+    const { body, setHeight, notifyResize } = makeBody(600)
+    const floating = document.createElement('textarea')
+    document.body.appendChild(floating)
+    renderHook(() => usePageKeyboard({ bodyRef: { current: body } }))
+
+    floating.focus()
+    setHeight(263)
+    body.scrollTop = -337
+    notifyResize()
+    expect(body.scrollTop).toBe(0) // opened at the end: still at the end
+
+    body.scrollTop = -500 // the user scrolls up while typing
+    body.dispatchEvent(new Event('scroll'))
+    setHeight(600)
+    body.scrollTop = -500 + 337
+    notifyResize()
+    expect(body.scrollTop).toBe(-500) // the position they chose survives the keyboard leaving
   })
 
   it('removes --rmkl-kb and --rmkl-kb-inset and stops listening to visualViewport on unmount', () => {
     const vv = installViewport(700, 363)
-    const { unmount } = renderHook(() => useMobileKeyboard())
+    const { unmount } = renderHook(() => usePageKeyboard())
     expect(kbVar()).toBe('337px')
 
     unmount()
@@ -297,62 +453,6 @@ describe('useMobileKeyboard hook', () => {
     expect(kbVar()).toBe('')
   })
 
-  it('bodyProps.onPointerDown focuses text inputs with preventScroll: true and runs the fallback top-lock', () => {
-    installViewport(700, 700)
-    const { result } = renderHook(() => useMobileKeyboard({ lockDurationMs: 350 }))
-    const input = document.createElement('input')
-    input.type = 'text'
-    document.body.appendChild(input)
-    const focusSpy = vi.spyOn(input, 'focus')
-
-    act(() => {
-      result.current.bodyProps.onPointerDown(pointerDownOn(input))
-    })
-
-    expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true })
-    expect(frames).toHaveLength(1)
-
-    // iOS panned the window anyway → the lock puts it back
-    Object.defineProperty(window, 'scrollY', { value: 42, configurable: true, writable: true })
-    runFrame(16)
-    expect(window.scrollTo).toHaveBeenCalledWith(0, 0)
-    expect(frames).toHaveLength(1) // still inside lockDurationMs
-
-    runFrame(400)
-    expect(frames).toHaveLength(0) // lock ended by itself
-  })
-
-  it('bodyProps.onPointerDown intercepts only isKeyboardTextInput targets: date pickers, selects and buttons keep the native default action', () => {
-    installViewport(700, 700)
-    const { result } = renderHook(() => useMobileKeyboard())
-    const dateInput = document.createElement('input')
-    dateInput.type = 'date'
-
-    for (const el of [dateInput, document.createElement('select'), document.createElement('button')]) {
-      document.body.appendChild(el)
-      const focusSpy = vi.spyOn(el, 'focus')
-      act(() => {
-        result.current.bodyProps.onPointerDown(pointerDownOn(el))
-      })
-      expect(focusSpy).not.toHaveBeenCalled()
-    }
-    expect(frames).toHaveLength(0)
-  })
-
-  it('runs the top-lock once more on focusout of a text input (the keyboard leaves) and lets it end by itself', () => {
-    installViewport(700, 700)
-    renderHook(() => useMobileKeyboard({ lockDurationMs: 350 }))
-    const textarea = document.createElement('textarea')
-    document.body.appendChild(textarea)
-
-    textarea.focus()
-    act(() => textarea.blur())
-    expect(frames).toHaveLength(1)
-
-    runFrame(400)
-    expect(frames).toHaveLength(0)
-  })
-
   it('scrollToBottom scrolls to the end, which is scrollTop 0 for a column-reverse body', () => {
     installViewport(700, 700)
     const div = document.createElement('div')
@@ -360,7 +460,7 @@ describe('useMobileKeyboard hook', () => {
     Object.defineProperty(div, 'clientHeight', { value: 400, configurable: true })
     div.scrollTo = vi.fn()
     document.body.appendChild(div)
-    const { result } = renderHook(() => useMobileKeyboard({ bodyRef: { current: div } }))
+    const { result } = renderHook(() => usePageKeyboard({ bodyRef: { current: div } }))
 
     act(() => result.current.scrollToBottom('smooth'))
     expect(div.scrollTo).toHaveBeenCalledWith({ top: 600, behavior: 'smooth' })

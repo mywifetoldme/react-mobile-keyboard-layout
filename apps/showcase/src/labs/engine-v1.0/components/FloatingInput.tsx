@@ -29,11 +29,11 @@ export interface FloatingInputProps {
   isKeyboardOpen?: boolean
   /** Maximum height in pixels for the auto-growing textarea. Default: 120 */
   maxHeight?: number
-  /** Optional focus handler, called after the component's own */
+  /** Focus handler forwarded from keyboardEngine.floatingProps */
   onFocus?: () => void
-  /** Optional blur handler, called after the component's own */
+  /** Blur handler forwarded from keyboardEngine.floatingProps */
   onBlur?: () => void
-  /** Optional pointerdown handler, called after the component's own */
+  /** PointerDown handler forwarded from keyboardEngine.floatingProps */
   onPointerDown?: (e: ReactPointerEvent<HTMLElement> | PointerEvent) => void
   /** Class name for outer wrapper */
   className?: string
@@ -106,13 +106,13 @@ export const FloatingInput = ({
     <div
       role="region"
       aria-label="Floating input bar"
-      className={`rmkl-floating-input-wrapper${isKeyboardOpen ? ' rmkl-floating-input-wrapper--keyboard-open' : ''}${isSuppressed ? ' rmkl-floating-input-wrapper--suppressed' : ''} ${className}`.trim()}
+      className={`rmkl-v10-floating-input-wrapper${isKeyboardOpen ? ' rmkl-v10-floating-input-wrapper--keyboard-open' : ''}${isSuppressed ? ' rmkl-v10-floating-input-wrapper--suppressed' : ''} ${className}`.trim()}
       style={{
         ...style,
         ...suppressedStyle,
       }}
     >
-      <div className="rmkl-floating-input-bar">
+      <div className="rmkl-v10-floating-input-bar">
         <textarea
           ref={textareaRef}
           rows={1}
@@ -121,7 +121,7 @@ export const FloatingInput = ({
           disabled={disabled}
           aria-label={placeholder}
           {...restTextareaProps}
-          className={`rmkl-floating-input-textarea ${textareaClassName}`.trim()}
+          className={`rmkl-v10-floating-input-textarea ${textareaClassName}`.trim()}
           style={textareaStyle}
           value={value}
           onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -170,7 +170,7 @@ export const FloatingInput = ({
           aria-label="Send"
           disabled={!canSubmit}
           {...restButtonProps}
-          className={`rmkl-floating-input-send${canSubmit ? ' rmkl-floating-input-send--active' : ''} ${buttonClassName}`.trim()}
+          className={`rmkl-v10-floating-input-send${canSubmit ? ' rmkl-v10-floating-input-send--active' : ''} ${buttonClassName}`.trim()}
           style={buttonStyle}
           onClick={(e) => {
             restButtonProps.onClick?.(e)
